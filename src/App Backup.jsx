@@ -16,8 +16,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [mensajeExito, setMensajeExito] = useState("");
   const [mensajeError, setMensajeError] = useState("");
-  const [editingId, setEditingId] = useState(null);
-  const [ultimoInput, setUltimoInput] = useState(null);
 
   const limpiarFormulario = () => {
     setFecha("");
@@ -31,87 +29,6 @@ function App() {
     setCombustibleTanqueIzquierdo("");
     setCombustibleTanqueDerecho("");
     setObservaciones("");
-    setEditingId(null);
-  };
-
-  const cargarUltimoInputParaEditar = () => {
-    if (!ultimoInput) return;
-
-    const fechaReconstruida = `${ultimoInput.anio}-${String(ultimoInput.mes).padStart(2, "0")}-${String(ultimoInput.dia).padStart(2, "0")}`;
-
-    setFecha(fechaReconstruida);
-    setDesde(ultimoInput.desde ?? "");
-    setHasta(ultimoInput.hasta ?? "");
-    setTiempoVueloJPI(
-      ultimoInput.tiempoVueloJPI === "" || ultimoInput.tiempoVueloJPI == null
-        ? ""
-        : String(ultimoInput.tiempoVueloJPI)
-    );
-    setTiempoEnServicioGarmin(
-      ultimoInput.tiempoEnServicioGarmin === "" || ultimoInput.tiempoEnServicioGarmin == null
-        ? ""
-        : String(ultimoInput.tiempoEnServicioGarmin)
-    );
-    setPiloto(ultimoInput.piloto ?? "");
-    setPropietario(ultimoInput.propietario ?? "");
-    setAceiteAgregado(
-      ultimoInput.aceiteAgregado === "" || ultimoInput.aceiteAgregado == null
-        ? ""
-        : String(ultimoInput.aceiteAgregado)
-    );
-    setCombustibleTanqueIzquierdo(
-      ultimoInput.combustibleTanqueIzquierdo === "" ||
-        ultimoInput.combustibleTanqueIzquierdo == null
-        ? ""
-        : String(ultimoInput.combustibleTanqueIzquierdo)
-    );
-    setCombustibleTanqueDerecho(
-      ultimoInput.combustibleTanqueDerecho === "" ||
-        ultimoInput.combustibleTanqueDerecho == null
-        ? ""
-        : String(ultimoInput.combustibleTanqueDerecho)
-    );
-    setObservaciones(ultimoInput.observaciones ?? "");
-    setEditingId(ultimoInput.id);
-  };
-
-  const replicarUltimoInput = () => {
-    if (!ultimoInput) return;
-
-    setFecha("");
-    setDesde(ultimoInput.desde ?? "");
-    setHasta(ultimoInput.hasta ?? "");
-    setTiempoVueloJPI(
-      ultimoInput.tiempoVueloJPI === "" || ultimoInput.tiempoVueloJPI == null
-        ? ""
-        : String(ultimoInput.tiempoVueloJPI)
-    );
-    setTiempoEnServicioGarmin(
-      ultimoInput.tiempoEnServicioGarmin === "" || ultimoInput.tiempoEnServicioGarmin == null
-        ? ""
-        : String(ultimoInput.tiempoEnServicioGarmin)
-    );
-    setPiloto(ultimoInput.piloto ?? "");
-    setPropietario(ultimoInput.propietario ?? "");
-    setAceiteAgregado(
-      ultimoInput.aceiteAgregado === "" || ultimoInput.aceiteAgregado == null
-        ? ""
-        : String(ultimoInput.aceiteAgregado)
-    );
-    setCombustibleTanqueIzquierdo(
-      ultimoInput.combustibleTanqueIzquierdo === "" ||
-        ultimoInput.combustibleTanqueIzquierdo == null
-        ? ""
-        : String(ultimoInput.combustibleTanqueIzquierdo)
-    );
-    setCombustibleTanqueDerecho(
-      ultimoInput.combustibleTanqueDerecho === "" ||
-        ultimoInput.combustibleTanqueDerecho == null
-        ? ""
-        : String(ultimoInput.combustibleTanqueDerecho)
-    );
-    setObservaciones(ultimoInput.observaciones ?? "");
-    setEditingId(null);
   };
 
   const handleSubmit = async (e) => {
@@ -135,8 +52,6 @@ function App() {
     const [anio, mes, dia] = fecha.split("-");
 
     const payload = {
-      modo: editingId ? "update" : "create",
-      id: editingId || String(Date.now()),
       dia,
       mes,
       anio,
@@ -173,13 +88,7 @@ function App() {
         throw new Error(result.error || "No se pudo guardar el vuelo.");
       }
     
-      setMensajeExito(
-        payload.modo === "update"
-          ? "Vuelo actualizado correctamente."
-          : "Vuelo guardado correctamente."
-      );
-      
-      setUltimoInput(payload);
+      setMensajeExito("Vuelo guardado correctamente.");
       limpiarFormulario();
     } catch (error) {
       console.error(error);
@@ -353,28 +262,7 @@ function App() {
             fontSize: "14px",
           }}
         >
-          {loading
-            ? "Guardando..."
-            : editingId
-            ? "Actualizar vuelo"
-            : "Guardar vuelo"}
-        </button>
-        <button
-          type="button"
-          onClick={limpiarFormulario}
-          disabled={loading}
-          style={{
-            marginLeft: "10px",
-            padding: "10px 16px",
-            border: "1px solid #d1d5db",
-            borderRadius: "6px",
-            backgroundColor: "#ffffff",
-            color: "#111827",
-            cursor: loading ? "not-allowed" : "pointer",
-            fontSize: "14px",
-          }}
-        >
-          Clear All
+          {loading ? "Guardando..." : "Guardar vuelo"}
         </button>
 
         {mensajeExito ? (
@@ -385,82 +273,6 @@ function App() {
           <p style={{ color: "#dc2626", marginTop: "12px" }}>{mensajeError}</p>
         ) : null}
       </form>
-
-      {ultimoInput ? (
-        <section
-          style={{
-            maxWidth: "720px",
-            margin: "0 auto 32px",
-            padding: "16px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "8px",
-            backgroundColor: "#ffffff",
-            fontFamily: "Arial, sans-serif",
-          }}
-        >
-          <h2 style={{ marginTop: 0, marginBottom: "12px" }}>Ultimo input</h2>
-          <p style={{ margin: "4px 0" }}>
-            <strong>Fecha:</strong> {`${ultimoInput.dia}-${ultimoInput.mes}-${ultimoInput.anio}`}
-          </p>
-          <p style={{ margin: "4px 0" }}>
-            <strong>Desde:</strong> {ultimoInput.desde}
-          </p>
-          <p style={{ margin: "4px 0" }}>
-            <strong>Hasta:</strong> {ultimoInput.hasta}
-          </p>
-          <p style={{ margin: "4px 0" }}>
-            <strong>Piloto:</strong> {ultimoInput.piloto}
-          </p>
-          <p style={{ margin: "4px 0 12px" }}>
-            <strong>Propietario:</strong> {ultimoInput.propietario}
-          </p>
-
-          <button
-            type="button"
-            onClick={cargarUltimoInputParaEditar}
-            disabled={loading}
-            style={{
-              padding: "8px 12px",
-              border: "none",
-              borderRadius: "6px",
-              backgroundColor: loading ? "#9ca3af" : "#1d4ed8",
-              color: "#ffffff",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontSize: "14px",
-            }}
-          >
-            Modificar ultimo input
-          </button>
-          <button
-            type="button"
-            onClick={replicarUltimoInput}
-            disabled={loading}
-            style={{
-              marginLeft: "10px",
-              padding: "8px 12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-              backgroundColor: "#ffffff",
-              color: loading ? "#9ca3af" : "#111827",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontSize: "14px",
-            }}
-          >
-            Replicar ultimo input
-          </button>
-        </section>
-      ) : (
-        <p
-          style={{
-            maxWidth: "720px",
-            margin: "0 auto 32px",
-            fontFamily: "Arial, sans-serif",
-            color: "#374151",
-          }}
-        >
-          Todavia no hay un ultimo input disponible
-        </p>
-      )}
     </main>
   );
 }
