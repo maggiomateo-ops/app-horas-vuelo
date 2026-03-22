@@ -216,7 +216,7 @@ function App() {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "3px",
+    gap: "0px",
     width: "100%",
     textAlign: "center",
   };
@@ -228,19 +228,20 @@ function App() {
     alignItems: "center",
     justifyContent: "center",
     columnGap: "6px",
-    rowGap: "2px",
+    rowGap: "0px",
     width: "100%",
   };
-
+  
   const labelTextStyle = {
     textTransform: "uppercase",
     fontSize: "13px",
     fontWeight: 600,
     letterSpacing: "0.04em",
     color: "#111827",
-    lineHeight: 1.25,
+    lineHeight: 1.2,
+    textAlign: "center",
   };
-
+  
   const labelRequiredStyle = {
     color: "#dc2626",
     fontWeight: 700,
@@ -248,15 +249,14 @@ function App() {
     lineHeight: 1,
     transform: "translateY(1px)",
   };
-
+  
   const labelSubTechnicalStyle = {
-    fontSize: "11px",
-    fontWeight: 500,
+    fontSize: "13px",
+    fontWeight: 600,
     color: "#9ca3af",
-    textTransform: "lowercase",
-    letterSpacing: "0.06em",
-    lineHeight: 1.3,
-    marginTop: "1px",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    lineHeight: 1.2,
     textAlign: "center",
   };
 
@@ -280,13 +280,15 @@ function App() {
     <label htmlFor={htmlFor} style={labelBlockStyle}>
       <div style={labelTitleRowStyle}>
         <span style={labelTextStyle}>{title}</span>
+        {subTechnical ? (
+          <span style={labelSubTechnicalStyle}>{subTechnical}</span>
+        ) : null}
         {required ? (
           <span style={labelRequiredStyle} aria-hidden="true">
             *
           </span>
         ) : null}
       </div>
-      {subTechnical ? <span style={labelSubTechnicalStyle}>{subTechnical}</span> : null}
     </label>
   );
 
