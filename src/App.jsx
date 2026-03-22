@@ -292,8 +292,18 @@ function App() {
     </label>
   );
 
+  const placeholderClassName = "flight-form-placeholder";
+
   return (
     <main style={{ padding: "16px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
+      <style>
+        {`
+          .flight-form-placeholder::placeholder {
+            color: #9ca3af;
+            opacity: 1;
+          }
+        `}
+      </style>
       <form onSubmit={handleSubmit} style={formStyle}>
         <h1 style={{ marginTop: 0, marginBottom: "20px" }}>Registro de Vuelo LV-MHZ</h1>
 
@@ -315,6 +325,8 @@ function App() {
             type="text"
             value={desde}
             onChange={(e) => setDesde(e.target.value)}
+            placeholder="Ej: AGR"
+            className={placeholderClassName}
             style={inputStyle}
           />
         </div>
@@ -326,6 +338,8 @@ function App() {
             type="text"
             value={hasta}
             onChange={(e) => setHasta(e.target.value)}
+            placeholder="Ej: SACO"
+            className={placeholderClassName}
             style={inputStyle}
           />
         </div>
@@ -338,6 +352,8 @@ function App() {
             step="0.1"
             value={tiempoVueloJPI}
             onChange={(e) => setTiempoVueloJPI(e.target.value)}
+            placeholder="Ej: 1.0"
+            className={placeholderClassName}
             style={inputStyle}
           />
         </div>
@@ -355,6 +371,8 @@ function App() {
             step="0.1"
             value={tiempoEnServicioGarmin}
             onChange={(e) => setTiempoEnServicioGarmin(e.target.value)}
+            placeholder="Ej: 0.8"
+            className={placeholderClassName}  
             style={inputStyle}
           />
         </div>
@@ -366,6 +384,8 @@ function App() {
             type="text"
             value={piloto}
             onChange={(e) => setPiloto(e.target.value)}
+            placeholder="Nombre y apellido"
+            className={placeholderClassName}
             style={inputStyle}
           />
         </div>
@@ -391,6 +411,8 @@ function App() {
             type="number"
             value={aceiteAgregado}
             onChange={(e) => setAceiteAgregado(e.target.value)}
+            placeholder="Ej: 0.5"
+            className={placeholderClassName}
             style={inputStyle}
           />
         </div>
@@ -402,6 +424,8 @@ function App() {
             type="number"
             value={combustibleTanqueIzquierdo}
             onChange={(e) => setCombustibleTanqueIzquierdo(e.target.value)}
+            placeholder="Ej: 50"
+            className={placeholderClassName}
             style={inputStyle}
           />
         </div>
@@ -413,6 +437,8 @@ function App() {
             type="number"
             value={combustibleTanqueDerecho}
             onChange={(e) => setCombustibleTanqueDerecho(e.target.value)}
+            placeholder="Ej: 70"
+            className={placeholderClassName}
             style={inputStyle}
           />
         </div>
@@ -423,6 +449,8 @@ function App() {
             id="observaciones"
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
+            placeholder="escribe aqui tus observaciones..."
+            className={placeholderClassName}
             style={{ ...inputStyle, minHeight: "90px", resize: "vertical" }}
           />
         </div>
