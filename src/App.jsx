@@ -19,6 +19,11 @@ function App() {
   const [editingId, setEditingId] = useState(null);
   const [ultimoInput, setUltimoInput] = useState(null);
 
+  const normalizarPropietarioSelect = (valor) => {
+    const u = String(valor ?? "").trim().toUpperCase();
+    return u === "ALEGRE" || u === "MAGGIO" ? u : "";
+  };
+
   const limpiarFormulario = () => {
     setFecha("");
     setDesde("");
@@ -53,7 +58,7 @@ function App() {
         : String(ultimoInput.tiempoEnServicioGarmin)
     );
     setPiloto(ultimoInput.piloto ?? "");
-    setPropietario(ultimoInput.propietario ?? "");
+    setPropietario(normalizarPropietarioSelect(ultimoInput.propietario));
     setAceiteAgregado(
       ultimoInput.aceiteAgregado === "" || ultimoInput.aceiteAgregado == null
         ? ""
@@ -92,7 +97,7 @@ function App() {
         : String(ultimoInput.tiempoEnServicioGarmin)
     );
     setPiloto(ultimoInput.piloto ?? "");
-    setPropietario(ultimoInput.propietario ?? "");
+    setPropietario(normalizarPropietarioSelect(ultimoInput.propietario));
     setAceiteAgregado(
       ultimoInput.aceiteAgregado === "" || ultimoInput.aceiteAgregado == null
         ? ""
@@ -202,24 +207,97 @@ function App() {
   const fieldStyle = {
     display: "flex",
     flexDirection: "column",
-    marginBottom: "14px",
-    gap: "6px",
+    marginBottom: "16px",
+    gap: "8px",
+    alignItems: "stretch",
+  };
+
+  const labelBlockStyle = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "3px",
+    width: "100%",
+  };
+
+  const labelTitleRowStyle = {
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    columnGap: "6px",
+    rowGap: "2px",
+  };
+
+  const labelTextStyle = {
+    textTransform: "uppercase",
+    fontSize: "13px",
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    color: "#111827",
+    lineHeight: 1.25,
+  };
+
+  const labelRequiredStyle = {
+    color: "#dc2626",
+    fontWeight: 700,
+    fontSize: "15px",
+    lineHeight: 1,
+    transform: "translateY(1px)",
+  };
+
+  const labelSubTechnicalStyle = {
+    fontSize: "11px",
+    fontWeight: 500,
+    color: "#9ca3af",
+    textTransform: "lowercase",
+    letterSpacing: "0.06em",
+    lineHeight: 1.3,
+    marginTop: "1px",
   };
 
   const inputStyle = {
+    boxSizing: "border-box",
+    width: "100%",
     padding: "10px",
     border: "1px solid #d1d5db",
     borderRadius: "6px",
     fontSize: "14px",
   };
 
+  const selectStyle = {
+    ...inputStyle,
+    backgroundColor: "#ffffff",
+    cursor: "pointer",
+    width: "100%",
+  };
+
+  const FieldLabel = ({ htmlFor, title, required, subTechnical }) => (
+    <label htmlFor={htmlFor} style={labelBlockStyle}>
+      <div style={labelTitleRowStyle}>
+        <span style={labelTextStyle}>{title}</span>
+        {required ? (
+          <span style={labelRequiredStyle} aria-hidden="true">
+            *
+          </span>
+        ) : null}
+      </div>
+      {subTechnical ? <span style={labelSubTechnicalStyle}>{subTechnical}</span> : null}
+    </label>
+  );
+
   return (
     <main style={{ padding: "16px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
       <form onSubmit={handleSubmit} style={formStyle}>
-        <h1 style={{ marginTop: 0, marginBottom: "20px" }}>Registro de vuelo</h1>
+        <h1 style={{ marginTop: 0, marginBottom: "20px" }}>Registro de Vuelo LV-MHZ</h1>
 
         <div style={fieldStyle}>
-          <label htmlFor="fecha">Fecha *</label>
+          <label htmlFor="fecha">
+            <span style={labelTextStyle}>Fecha</span>{" "}
+            <span style={labelRequiredStyle} aria-hidden="true">
+              *
+            </span>
+          </label>
           <input
             id="fecha"
             type="date"
@@ -230,7 +308,7 @@ function App() {
         </div>
 
         <div style={fieldStyle}>
-          <label htmlFor="desde">Desde *</label>
+          <FieldLabel htmlFor="desde" title="Desde" required />
           <input
             id="desde"
             type="text"
@@ -241,7 +319,7 @@ function App() {
         </div>
 
         <div style={fieldStyle}>
-          <label htmlFor="hasta">Hasta *</label>
+          <FieldLabel htmlFor="hasta" title="Hasta" required />
           <input
             id="hasta"
             type="text"
@@ -252,7 +330,7 @@ function App() {
         </div>
 
         <div style={fieldStyle}>
-          <label htmlFor="tiempoVueloJPI">Tiempo Vuelo JPI *</label>
+          <FieldLabel htmlFor="tiempoVueloJPI" title="Tiempo vuelo" required subTechnical="(jpi)" />
           <input
             id="tiempoVueloJPI"
             type="number"
@@ -264,7 +342,12 @@ function App() {
         </div>
 
         <div style={fieldStyle}>
-          <label htmlFor="tiempoEnServicioGarmin">Tiempo en Servicio Garmin *</label>
+          <FieldLabel
+            htmlFor="tiempoEnServicioGarmin"
+            title="Tiempo en servicio"
+            required
+            subTechnical="(garmin)"
+          />
           <input
             id="tiempoEnServicioGarmin"
             type="number"
@@ -276,7 +359,7 @@ function App() {
         </div>
 
         <div style={fieldStyle}>
-          <label htmlFor="piloto">Piloto *</label>
+          <FieldLabel htmlFor="piloto" title="Piloto" required />
           <input
             id="piloto"
             type="text"
@@ -287,18 +370,21 @@ function App() {
         </div>
 
         <div style={fieldStyle}>
-          <label htmlFor="propietario">Propietario *</label>
-          <input
+          <FieldLabel htmlFor="propietario" title="Propietario" required />
+          <select
             id="propietario"
-            type="text"
             value={propietario}
             onChange={(e) => setPropietario(e.target.value)}
-            style={inputStyle}
-          />
+            style={selectStyle}
+          >
+            <option value="">Seleccionar…</option>
+            <option value="ALEGRE">ALEGRE</option>
+            <option value="MAGGIO">MAGGIO</option>
+          </select>
         </div>
 
         <div style={fieldStyle}>
-          <label htmlFor="aceiteAgregado">Aceite agregado</label>
+          <FieldLabel htmlFor="aceiteAgregado" title="Aceite agregado" />
           <input
             id="aceiteAgregado"
             type="number"
@@ -309,7 +395,7 @@ function App() {
         </div>
 
         <div style={fieldStyle}>
-          <label htmlFor="combustibleTanqueIzquierdo">Combustible tanque izquierdo</label>
+          <FieldLabel htmlFor="combustibleTanqueIzquierdo" title="Combustible tanque izquierdo" />
           <input
             id="combustibleTanqueIzquierdo"
             type="number"
@@ -320,7 +406,7 @@ function App() {
         </div>
 
         <div style={fieldStyle}>
-          <label htmlFor="combustibleTanqueDerecho">Combustible tanque derecho</label>
+          <FieldLabel htmlFor="combustibleTanqueDerecho" title="Combustible tanque derecho" />
           <input
             id="combustibleTanqueDerecho"
             type="number"
@@ -331,7 +417,7 @@ function App() {
         </div>
 
         <div style={fieldStyle}>
-          <label htmlFor="observaciones">Observaciones</label>
+          <FieldLabel htmlFor="observaciones" title="Observaciones" />
           <textarea
             id="observaciones"
             value={observaciones}
