@@ -215,18 +215,21 @@ function App() {
   const labelBlockStyle = {
     display: "flex",
     flexDirection: "column",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: "3px",
     width: "100%",
+    textAlign: "center",
   };
-
+  
   const labelTitleRowStyle = {
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
-    alignItems: "baseline",
+    alignItems: "center",
+    justifyContent: "center",
     columnGap: "6px",
     rowGap: "2px",
+    width: "100%",
   };
 
   const labelTextStyle = {
@@ -254,6 +257,7 @@ function App() {
     letterSpacing: "0.06em",
     lineHeight: 1.3,
     marginTop: "1px",
+    textAlign: "center",
   };
 
   const inputStyle = {
@@ -292,12 +296,7 @@ function App() {
         <h1 style={{ marginTop: 0, marginBottom: "20px" }}>Registro de Vuelo LV-MHZ</h1>
 
         <div style={fieldStyle}>
-          <label htmlFor="fecha">
-            <span style={labelTextStyle}>Fecha</span>{" "}
-            <span style={labelRequiredStyle} aria-hidden="true">
-              *
-            </span>
-          </label>
+          <FieldLabel htmlFor="fecha" title="Fecha" required />
           <input
             id="fecha"
             type="date"
