@@ -39,6 +39,16 @@ function App() {
     setEditingId(null);
   };
 
+  const rellenadoRapido = () => {
+    const hoy = new Date().toISOString().split("T")[0];
+  
+    if (!fecha) setFecha(hoy);
+    if (!desde) setDesde("AGR");
+    if (!hasta) setHasta("AGR");
+    if (!tiempoVueloJPI) setTiempoVueloJPI("0.5");
+    if (!tiempoEnServicioGarmin) setTiempoEnServicioGarmin("0.4");
+  };
+
   const cargarUltimoInputParaEditar = () => {
     if (!ultimoInput) return;
 
@@ -472,7 +482,7 @@ function App() {
             ? "Guardando..."
             : editingId
             ? "Actualizar vuelo"
-            : "Guardar vuelo"}
+            : "Save Flight"}
         </button>
         <button
           type="button"
@@ -490,6 +500,23 @@ function App() {
           }}
         >
           Clear All
+        </button>
+        <button
+          type="button"
+          onClick={rellenadoRapido}
+          disabled={loading}
+          style={{
+            marginLeft: "10px",
+            padding: "10px 16px",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            backgroundColor: "#f3f4f6",
+            color: "#111827",
+            cursor: loading ? "not-allowed" : "pointer",
+            fontSize: "14px",
+          }}
+        >
+          Quick FLight
         </button>
 
         {mensajeExito ? (
@@ -573,7 +600,7 @@ function App() {
             color: "#374151",
           }}
         >
-          Todavia no hay un ultimo input disponible
+          No se han registrado vuelos hoy
         </p>
       )}
     </main>
