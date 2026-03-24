@@ -335,7 +335,7 @@ function App() {
             type="text"
             value={desde}
             onChange={(e) => setDesde(e.target.value)}
-            placeholder="Ej: AGR"
+            placeholder="Ej: AGR1"
             className={placeholderClassName}
             style={inputStyle}
           />
