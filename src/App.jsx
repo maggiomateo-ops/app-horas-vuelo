@@ -315,7 +315,20 @@ function App() {
         `}
       </style>
       <form onSubmit={handleSubmit} style={formStyle}>
-        <h1 style={{ marginTop: 0, marginBottom: "20px" }}>Registro de Vuelo LV-MHZ</h1>
+        <h1
+          style={{
+            marginTop: 0,
+            marginBottom: "20px",
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "20px",
+          }}
+        >
+          <span>Registro de Vuelo</span>
+          <span style={{ fontSize: "0.8em", letterSpacing: "0.06em" }}>LV-MHZ</span>
+        </h1>
 
         <div style={fieldStyle}>
           <FieldLabel htmlFor="fecha" title="Fecha" required />
@@ -335,7 +348,7 @@ function App() {
             type="text"
             value={desde}
             onChange={(e) => setDesde(e.target.value)}
-            placeholder="Ej: AGR1"
+            placeholder="Ej: AGR"
             className={placeholderClassName}
             style={inputStyle}
           />
