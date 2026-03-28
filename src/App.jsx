@@ -472,7 +472,7 @@ function App() {
             id="observaciones"
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
-            placeholder="escribe aqui tus observaciones..."
+            placeholder="Escribe aqui tus observaciones..."
             className={placeholderClassName}
             style={{ ...inputStyle, minHeight: "90px", resize: "vertical" }}
           />
