@@ -1,6 +1,9 @@
-import { useState } from "react";
+﻿import { useState } from "react";
+import "./App.css";
+import HistorialesPanel from "./components/HistorialesPanel";
 
 function App() {
+  const [activeMainTab, setActiveMainTab] = useState("registro");
   const [fecha, setFecha] = useState("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
@@ -41,7 +44,7 @@ function App() {
 
   const rellenadoRapido = () => {
     const hoy = new Date().toISOString().split("T")[0];
-  
+
     if (!fecha) setFecha(hoy);
     if (!desde) setDesde("AGR");
     if (!hasta) setHasta("AGR");
@@ -173,7 +176,7 @@ function App() {
 
     try {
       setLoading(true);
-    
+
       const response = await fetch("/api/guardar-vuelo", {
         method: "POST",
         headers: {
@@ -181,19 +184,19 @@ function App() {
         },
         body: JSON.stringify(payload),
       });
-    
+
       const result = await response.json();
-    
+
       if (!response.ok || !result.ok) {
         throw new Error(result.error || "No se pudo guardar el vuelo.");
       }
-    
+
       setMensajeExito(
         payload.modo === "update"
           ? "Vuelo actualizado correctamente."
           : "Vuelo guardado correctamente."
       );
-      
+
       setUltimoInput(payload);
       limpiarFormulario();
     } catch (error) {
@@ -202,8 +205,8 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }
-  
+  };
+
   const formStyle = {
     maxWidth: "720px",
     margin: "32px auto",
@@ -230,7 +233,7 @@ function App() {
     width: "100%",
     textAlign: "center",
   };
-  
+
   const labelTitleRowStyle = {
     display: "flex",
     flexDirection: "row",
@@ -241,7 +244,7 @@ function App() {
     rowGap: "0px",
     width: "100%",
   };
-  
+
   const labelTextStyle = {
     textTransform: "uppercase",
     fontSize: "13px",
@@ -251,7 +254,7 @@ function App() {
     lineHeight: 1.2,
     textAlign: "center",
   };
-  
+
   const labelRequiredStyle = {
     color: "#dc2626",
     fontWeight: 700,
@@ -259,7 +262,7 @@ function App() {
     lineHeight: 1,
     transform: "translateY(1px)",
   };
-  
+
   const labelSubTechnicalStyle = {
     fontSize: "13px",
     fontWeight: 600,
@@ -305,7 +308,7 @@ function App() {
   const placeholderClassName = "flight-form-placeholder";
 
   return (
-    <main style={{ padding: "16px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
+    <main className="app-shell">
       <style>
         {`
           .flight-form-placeholder::placeholder {
@@ -314,310 +317,350 @@ function App() {
           }
         `}
       </style>
-      <form onSubmit={handleSubmit} style={formStyle}>
-        <h1
-          style={{
-            marginTop: 0,
-            marginBottom: "20px",
-            textAlign: "center",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "20px",
-          }}
-        >
-          <span>Registro de Vuelo</span>
-          <span style={{ fontSize: "0.8em", letterSpacing: "0.06em" }}>LV-MHZ</span>
-        </h1>
 
-        <div style={fieldStyle}>
-          <FieldLabel htmlFor="fecha" title="Fecha" required />
-          <input
-            id="fecha"
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={fieldStyle}>
-          <FieldLabel htmlFor="desde" title="Desde" required />
-          <input
-            id="desde"
-            type="text"
-            value={desde}
-            onChange={(e) => setDesde(e.target.value)}
-            placeholder="Ej: AGR"
-            className={placeholderClassName}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={fieldStyle}>
-          <FieldLabel htmlFor="hasta" title="Hasta" required />
-          <input
-            id="hasta"
-            type="text"
-            value={hasta}
-            onChange={(e) => setHasta(e.target.value)}
-            placeholder="Ej: SACO"
-            className={placeholderClassName}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={fieldStyle}>
-          <FieldLabel htmlFor="tiempoVueloJPI" title="Tiempo vuelo" required subTechnical="(jpi)" />
-          <input
-            id="tiempoVueloJPI"
-            type="number"
-            step="0.1"
-            value={tiempoVueloJPI}
-            onChange={(e) => setTiempoVueloJPI(e.target.value)}
-            placeholder="Ej: 1.0"
-            className={placeholderClassName}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={fieldStyle}>
-          <FieldLabel
-            htmlFor="tiempoEnServicioGarmin"
-            title="Tiempo en servicio"
-            required
-            subTechnical="(garmin)"
-          />
-          <input
-            id="tiempoEnServicioGarmin"
-            type="number"
-            step="0.1"
-            value={tiempoEnServicioGarmin}
-            onChange={(e) => setTiempoEnServicioGarmin(e.target.value)}
-            placeholder="Ej: 0.8"
-            className={placeholderClassName}  
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={fieldStyle}>
-          <FieldLabel htmlFor="piloto" title="Piloto" required />
-          <input
-            id="piloto"
-            type="text"
-            value={piloto}
-            onChange={(e) => setPiloto(e.target.value)}
-            placeholder="Nombre y apellido"
-            className={placeholderClassName}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={fieldStyle}>
-          <FieldLabel htmlFor="propietario" title="Propietario" required />
-          <select
-            id="propietario"
-            value={propietario}
-            onChange={(e) => setPropietario(e.target.value)}
-            style={selectStyle}
-          >
-            <option value="">Seleccionar…</option>
-            <option value="ALEGRE">ALEGRE</option>
-            <option value="MAGGIO">MAGGIO</option>
-          </select>
-        </div>
-
-        <div style={fieldStyle}>
-          <FieldLabel htmlFor="aceiteAgregado" title="Aceite agregado" />
-          <input
-            id="aceiteAgregado"
-            type="number"
-            value={aceiteAgregado}
-            onChange={(e) => setAceiteAgregado(e.target.value)}
-            placeholder="Ej: 0.5"
-            className={placeholderClassName}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={fieldStyle}>
-          <FieldLabel htmlFor="combustibleTanqueIzquierdo" title="Combustible tanque izquierdo" />
-          <input
-            id="combustibleTanqueIzquierdo"
-            type="number"
-            value={combustibleTanqueIzquierdo}
-            onChange={(e) => setCombustibleTanqueIzquierdo(e.target.value)}
-            placeholder="Ej: 50"
-            className={placeholderClassName}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={fieldStyle}>
-          <FieldLabel htmlFor="combustibleTanqueDerecho" title="Combustible tanque derecho" />
-          <input
-            id="combustibleTanqueDerecho"
-            type="number"
-            value={combustibleTanqueDerecho}
-            onChange={(e) => setCombustibleTanqueDerecho(e.target.value)}
-            placeholder="Ej: 70"
-            className={placeholderClassName}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={fieldStyle}>
-          <FieldLabel htmlFor="observaciones" title="Observaciones" />
-          <textarea
-            id="observaciones"
-            value={observaciones}
-            onChange={(e) => setObservaciones(e.target.value)}
-            placeholder="Escribe aqui tus observaciones..."
-            className={placeholderClassName}
-            style={{ ...inputStyle, minHeight: "90px", resize: "vertical" }}
-          />
-        </div>
-
+      <div className="app-tabs" role="tablist" aria-label="Secciones principales">
         <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: "10px 16px",
-            border: "none",
-            borderRadius: "6px",
-            backgroundColor: loading ? "#9ca3af" : "#2563eb",
-            color: "#ffffff",
-            cursor: loading ? "not-allowed" : "pointer",
-            fontSize: "14px",
-          }}
+          type="button"
+          role="tab"
+          aria-selected={activeMainTab === "registro"}
+          className={`app-tab ${activeMainTab === "registro" ? "is-active" : ""}`}
+          onClick={() => setActiveMainTab("registro")}
         >
-          {loading
-            ? "Guardando..."
-            : editingId
-            ? "Actualizar vuelo"
-            : "Save Flight"}
+          Registro
         </button>
         <button
           type="button"
-          onClick={limpiarFormulario}
-          disabled={loading}
-          style={{
-            marginLeft: "10px",
-            padding: "10px 16px",
-            border: "1px solid #d1d5db",
-            borderRadius: "6px",
-            backgroundColor: "#ffffff",
-            color: "#111827",
-            cursor: loading ? "not-allowed" : "pointer",
-            fontSize: "14px",
-          }}
+          role="tab"
+          aria-selected={activeMainTab === "historiales"}
+          className={`app-tab ${activeMainTab === "historiales" ? "is-active" : ""}`}
+          onClick={() => setActiveMainTab("historiales")}
         >
-          Clear All
+          Historiales
         </button>
-        <button
-          type="button"
-          onClick={rellenadoRapido}
-          disabled={loading}
-          style={{
-            marginLeft: "10px",
-            padding: "10px 16px",
-            border: "1px solid #d1d5db",
-            borderRadius: "6px",
-            backgroundColor: "#f3f4f6",
-            color: "#111827",
-            cursor: loading ? "not-allowed" : "pointer",
-            fontSize: "14px",
-          }}
-        >
-          Quick FLight
-        </button>
+      </div>
 
-        {mensajeExito ? (
-          <p style={{ color: "#15803d", marginTop: "12px" }}>{mensajeExito}</p>
-        ) : null}
+      {activeMainTab === "registro" ? (
+        <>
+          <form onSubmit={handleSubmit} style={formStyle}>
+            <h1
+              style={{
+                marginTop: 0,
+                marginBottom: "20px",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "20px",
+              }}
+            >
+              <span>Registro de Vuelo</span>
+              <span style={{ fontSize: "0.8em", letterSpacing: "0.06em" }}>LV-MHZ</span>
+            </h1>
 
-        {mensajeError ? (
-          <p style={{ color: "#dc2626", marginTop: "12px" }}>{mensajeError}</p>
-        ) : null}
-      </form>
+            <div style={fieldStyle}>
+              <FieldLabel htmlFor="fecha" title="Fecha" required />
+              <input
+                id="fecha"
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
 
-      {ultimoInput ? (
-        <section
-          style={{
-            maxWidth: "720px",
-            margin: "0 auto 32px",
-            padding: "16px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "8px",
-            backgroundColor: "#ffffff",
-            fontFamily: "Arial, sans-serif",
-          }}
-        >
-          <h2 style={{ marginTop: 0, marginBottom: "12px" }}>Ultimo input</h2>
-          <p style={{ margin: "4px 0" }}>
-            <strong>Fecha:</strong> {`${ultimoInput.dia}-${ultimoInput.mes}-${ultimoInput.anio}`}
-          </p>
-          <p style={{ margin: "4px 0" }}>
-            <strong>Desde:</strong> {ultimoInput.desde}
-          </p>
-          <p style={{ margin: "4px 0" }}>
-            <strong>Hasta:</strong> {ultimoInput.hasta}
-          </p>
-          <p style={{ margin: "4px 0" }}>
-            <strong>Piloto:</strong> {ultimoInput.piloto}
-          </p>
-          <p style={{ margin: "4px 0 12px" }}>
-            <strong>Propietario:</strong> {ultimoInput.propietario}
-          </p>
+            <div style={fieldStyle}>
+              <FieldLabel htmlFor="desde" title="Desde" required />
+              <input
+                id="desde"
+                type="text"
+                value={desde}
+                onChange={(e) => setDesde(e.target.value)}
+                placeholder="Ej: AGR"
+                className={placeholderClassName}
+                style={inputStyle}
+              />
+            </div>
 
-          <button
-            type="button"
-            onClick={cargarUltimoInputParaEditar}
-            disabled={loading}
-            style={{
-              padding: "8px 12px",
-              border: "none",
-              borderRadius: "6px",
-              backgroundColor: loading ? "#9ca3af" : "#1d4ed8",
-              color: "#ffffff",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontSize: "14px",
-            }}
-          >
-            Modificar ultimo input
-          </button>
-          <button
-            type="button"
-            onClick={replicarUltimoInput}
-            disabled={loading}
-            style={{
-              marginLeft: "10px",
-              padding: "8px 12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-              backgroundColor: "#ffffff",
-              color: loading ? "#9ca3af" : "#111827",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontSize: "14px",
-            }}
-          >
-            Replicar ultimo input
-          </button>
-        </section>
+            <div style={fieldStyle}>
+              <FieldLabel htmlFor="hasta" title="Hasta" required />
+              <input
+                id="hasta"
+                type="text"
+                value={hasta}
+                onChange={(e) => setHasta(e.target.value)}
+                placeholder="Ej: SACO"
+                className={placeholderClassName}
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <FieldLabel
+                htmlFor="tiempoVueloJPI"
+                title="Tiempo vuelo"
+                required
+                subTechnical="(jpi)"
+              />
+              <input
+                id="tiempoVueloJPI"
+                type="number"
+                step="0.1"
+                value={tiempoVueloJPI}
+                onChange={(e) => setTiempoVueloJPI(e.target.value)}
+                placeholder="Ej: 1.0"
+                className={placeholderClassName}
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <FieldLabel
+                htmlFor="tiempoEnServicioGarmin"
+                title="Tiempo en servicio"
+                required
+                subTechnical="(garmin)"
+              />
+              <input
+                id="tiempoEnServicioGarmin"
+                type="number"
+                step="0.1"
+                value={tiempoEnServicioGarmin}
+                onChange={(e) => setTiempoEnServicioGarmin(e.target.value)}
+                placeholder="Ej: 0.8"
+                className={placeholderClassName}
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <FieldLabel htmlFor="piloto" title="Piloto" required />
+              <input
+                id="piloto"
+                type="text"
+                value={piloto}
+                onChange={(e) => setPiloto(e.target.value)}
+                placeholder="Nombre y apellido"
+                className={placeholderClassName}
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <FieldLabel htmlFor="propietario" title="Propietario" required />
+              <select
+                id="propietario"
+                value={propietario}
+                onChange={(e) => setPropietario(e.target.value)}
+                style={selectStyle}
+              >
+                <option value="">Seleccionar...</option>
+                <option value="ALEGRE">ALEGRE</option>
+                <option value="MAGGIO">MAGGIO</option>
+              </select>
+            </div>
+
+            <div style={fieldStyle}>
+              <FieldLabel htmlFor="aceiteAgregado" title="Aceite agregado" />
+              <input
+                id="aceiteAgregado"
+                type="number"
+                value={aceiteAgregado}
+                onChange={(e) => setAceiteAgregado(e.target.value)}
+                placeholder="Ej: 0.5"
+                className={placeholderClassName}
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <FieldLabel
+                htmlFor="combustibleTanqueIzquierdo"
+                title="Combustible tanque izquierdo"
+              />
+              <input
+                id="combustibleTanqueIzquierdo"
+                type="number"
+                value={combustibleTanqueIzquierdo}
+                onChange={(e) => setCombustibleTanqueIzquierdo(e.target.value)}
+                placeholder="Ej: 50"
+                className={placeholderClassName}
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <FieldLabel
+                htmlFor="combustibleTanqueDerecho"
+                title="Combustible tanque derecho"
+              />
+              <input
+                id="combustibleTanqueDerecho"
+                type="number"
+                value={combustibleTanqueDerecho}
+                onChange={(e) => setCombustibleTanqueDerecho(e.target.value)}
+                placeholder="Ej: 70"
+                className={placeholderClassName}
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <FieldLabel htmlFor="observaciones" title="Observaciones" />
+              <textarea
+                id="observaciones"
+                value={observaciones}
+                onChange={(e) => setObservaciones(e.target.value)}
+                placeholder="Escribe aqui tus observaciones..."
+                className={placeholderClassName}
+                style={{ ...inputStyle, minHeight: "90px", resize: "vertical" }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: "10px 16px",
+                border: "none",
+                borderRadius: "6px",
+                backgroundColor: loading ? "#9ca3af" : "#2563eb",
+                color: "#ffffff",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontSize: "14px",
+              }}
+            >
+              {loading
+                ? "Guardando..."
+                : editingId
+                  ? "Actualizar vuelo"
+                  : "Save Flight"}
+            </button>
+            <button
+              type="button"
+              onClick={limpiarFormulario}
+              disabled={loading}
+              style={{
+                marginLeft: "10px",
+                padding: "10px 16px",
+                border: "1px solid #d1d5db",
+                borderRadius: "6px",
+                backgroundColor: "#ffffff",
+                color: "#111827",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontSize: "14px",
+              }}
+            >
+              Clear All
+            </button>
+            <button
+              type="button"
+              onClick={rellenadoRapido}
+              disabled={loading}
+              style={{
+                marginLeft: "10px",
+                padding: "10px 16px",
+                border: "1px solid #d1d5db",
+                borderRadius: "6px",
+                backgroundColor: "#f3f4f6",
+                color: "#111827",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontSize: "14px",
+              }}
+            >
+              Quick FLight
+            </button>
+
+            {mensajeExito ? (
+              <p style={{ color: "#15803d", marginTop: "12px" }}>{mensajeExito}</p>
+            ) : null}
+
+            {mensajeError ? (
+              <p style={{ color: "#dc2626", marginTop: "12px" }}>{mensajeError}</p>
+            ) : null}
+          </form>
+
+          {ultimoInput ? (
+            <section
+              style={{
+                maxWidth: "720px",
+                margin: "0 auto 32px",
+                padding: "16px",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                backgroundColor: "#ffffff",
+                fontFamily: "Arial, sans-serif",
+              }}
+            >
+              <h2 style={{ marginTop: 0, marginBottom: "12px" }}>Ultimo input</h2>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Fecha:</strong> {`${ultimoInput.dia}-${ultimoInput.mes}-${ultimoInput.anio}`}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Desde:</strong> {ultimoInput.desde}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Hasta:</strong> {ultimoInput.hasta}
+              </p>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Piloto:</strong> {ultimoInput.piloto}
+              </p>
+              <p style={{ margin: "4px 0 12px" }}>
+                <strong>Propietario:</strong> {ultimoInput.propietario}
+              </p>
+
+              <button
+                type="button"
+                onClick={cargarUltimoInputParaEditar}
+                disabled={loading}
+                style={{
+                  padding: "8px 12px",
+                  border: "none",
+                  borderRadius: "6px",
+                  backgroundColor: loading ? "#9ca3af" : "#1d4ed8",
+                  color: "#ffffff",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                }}
+              >
+                Modificar ultimo input
+              </button>
+              <button
+                type="button"
+                onClick={replicarUltimoInput}
+                disabled={loading}
+                style={{
+                  marginLeft: "10px",
+                  padding: "8px 12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  backgroundColor: "#ffffff",
+                  color: loading ? "#9ca3af" : "#111827",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                }}
+              >
+                Replicar ultimo input
+              </button>
+            </section>
+          ) : (
+            <p
+              style={{
+                maxWidth: "720px",
+                margin: "0 auto 32px",
+                fontFamily: "Arial, sans-serif",
+                color: "#374151",
+              }}
+            >
+              No se han registrado vuelos hoy
+            </p>
+          )}
+        </>
       ) : (
-        <p
-          style={{
-            maxWidth: "720px",
-            margin: "0 auto 32px",
-            fontFamily: "Arial, sans-serif",
-            color: "#374151",
-          }}
-        >
-          No se han registrado vuelos hoy
-        </p>
+        <HistorialesPanel />
       )}
     </main>
   );
 }
 
 export default App;
+
