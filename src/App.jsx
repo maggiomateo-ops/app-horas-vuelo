@@ -1,8 +1,162 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useState } from "react";
 import "./App.css";
+import DashboardPanel from "./components/DashboardPanel";
 import HistorialesPanel from "./components/HistorialesPanel";
+import SettingsPanel from "./components/SettingsPanel";
+import { DEFAULT_SETTINGS, fetchSettings, saveSettings } from "./services/settingsService";
+
+const AUTH_STATUS = {
+  loading: "loading",
+  authenticated: "authenticated",
+  unauthenticated: "unauthenticated",
+};
+
+const THEME_MODE = {
+  auto: "auto",
+  light: "light",
+  dark: "dark",
+};
+
+const THEME_LABELS = {
+  auto: "Tema: Auto",
+  light: "Tema: Claro",
+  dark: "Tema: Noche",
+};
+
+function LoginScreen({ loginLoading, loginError, onLoginSubmit }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onLoginSubmit({ username, password });
+  };
+
+  return (
+    <main className="app-shell app-auth-shell">
+      <section className="login-card">
+        <p className="login-eyebrow">Acceso protegido</p>
+        <h1 className="login-title">App Horas de Vuelo</h1>
+        <p className="login-copy">
+          Ingresa tus credenciales para cargar vuelos y revisar historiales.
+        </p>
+
+        <form className="login-form" onSubmit={handleSubmit}>
+          <label className="login-label" htmlFor="login-username">
+            Usuario
+          </label>
+          <input
+            id="login-username"
+            className="login-input"
+            type="text"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            autoComplete="username"
+            disabled={loginLoading}
+          />
+
+          <label className="login-label" htmlFor="login-password">
+            Contrasena
+          </label>
+          <input
+            id="login-password"
+            className="login-input"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            disabled={loginLoading}
+          />
+
+          <button className="login-button" type="submit" disabled={loginLoading}>
+            {loginLoading ? "Ingresando..." : "Ingresar"}
+          </button>
+        </form>
+
+        {loginError ? <p className="login-error">{loginError}</p> : null}
+      </section>
+    </main>
+  );
+}
+
+function PropietarioSelect({ value, onChange, disabled }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const options = [
+    { value: "", label: "Seleccionar..." },
+    { value: "ALEGRE", label: "ALEGRE" },
+    { value: "MAGGIO", label: "MAGGIO" },
+  ];
+
+  const selectedOption =
+    options.find((option) => option.value === value) ?? options[0];
+
+  const handleSelect = (nextValue) => {
+    onChange(nextValue);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className={`custom-select ${isOpen ? "is-open" : ""} ${disabled ? "is-disabled" : ""}`}>
+      <button
+        type="button"
+        className="custom-select-trigger"
+        onClick={() => !disabled && setIsOpen((open) => !open)}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span className={!selectedOption.value ? "is-placeholder" : ""}>
+          {selectedOption.label}
+        </span>
+        <span className="custom-select-arrow" aria-hidden="true" />
+      </button>
+
+      {isOpen ? (
+        <div className="custom-select-menu" role="listbox" aria-label="Propietario">
+          {options.map((option) => (
+            <button
+              key={option.value || "placeholder"}
+              type="button"
+              role="option"
+              className={`custom-select-option ${value === option.value ? "is-selected" : ""}`}
+              aria-selected={value === option.value}
+              onClick={() => handleSelect(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function App() {
+  const [authStatus, setAuthStatus] = useState(AUTH_STATUS.loading);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [themeMode, setThemeMode] = useState(() => {
+    if (typeof window === "undefined") {
+      return THEME_MODE.auto;
+    }
+
+    const savedThemeMode = window.localStorage.getItem("theme-mode");
+    return Object.values(THEME_MODE).includes(savedThemeMode)
+      ? savedThemeMode
+      : THEME_MODE.auto;
+  });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
   const [activeMainTab, setActiveMainTab] = useState("registro");
   const [fecha, setFecha] = useState("");
   const [desde, setDesde] = useState("");
@@ -21,6 +175,127 @@ function App() {
   const [mensajeError, setMensajeError] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [ultimoInput, setUltimoInput] = useState(null);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function checkSession() {
+      try {
+        const response = await fetch("/api/session", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (ignore) {
+          return;
+        }
+
+        if (response.ok && result?.authenticated) {
+          setCurrentUser(result.user ?? null);
+          setAuthStatus(AUTH_STATUS.authenticated);
+          return;
+        }
+
+        setCurrentUser(null);
+        setAuthStatus(AUTH_STATUS.unauthenticated);
+      } catch {
+        if (!ignore) {
+          setCurrentUser(null);
+          setAuthStatus(AUTH_STATUS.unauthenticated);
+        }
+      }
+    }
+
+    checkSession();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authStatus !== AUTH_STATUS.authenticated) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    let ignore = false;
+
+    async function loadRemoteSettings() {
+      try {
+        setSettingsLoading(true);
+        setSettingsError("");
+        const nextSettings = await fetchSettings(controller.signal);
+
+        if (!ignore) {
+          setSettings(nextSettings);
+        }
+      } catch (error) {
+        if (error.name === "AbortError") {
+          return;
+        }
+
+        if (error.message === "UNAUTHORIZED") {
+          setCurrentUser(null);
+          setAuthStatus(AUTH_STATUS.unauthenticated);
+          return;
+        }
+
+        if (!ignore) {
+          setSettingsError(error.message || "No se pudieron cargar los settings.");
+        }
+      } finally {
+        if (!ignore) {
+          setSettingsLoading(false);
+        }
+      }
+    }
+
+    loadRemoteSettings();
+
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [authStatus]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const handleChange = (event) => {
+      setSystemPrefersDark(event.matches);
+    };
+
+    setSystemPrefersDark(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem("theme-mode", themeMode);
+
+    const resolvedTheme = themeMode === THEME_MODE.auto
+      ? (systemPrefersDark ? THEME_MODE.dark : THEME_MODE.light)
+      : themeMode;
+
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.dataset.themeMode = themeMode;
+    document.documentElement.style.colorScheme =
+      resolvedTheme === THEME_MODE.dark ? "dark" : "light";
+  }, [systemPrefersDark, themeMode]);
 
   const normalizarPropietarioSelect = (valor) => {
     const u = String(valor ?? "").trim().toUpperCase();
@@ -132,6 +407,59 @@ function App() {
     setEditingId(null);
   };
 
+  const handleDeleteUltimoVuelo = async () => {
+    if (!ultimoInput?.id || loading) {
+      return;
+    }
+
+    const confirmarBorrado = window.confirm(
+      "Se eliminara el ultimo vuelo cargado de la planilla. Deseas continuar?"
+    );
+
+    if (!confirmarBorrado) {
+      return;
+    }
+
+    setMensajeExito("");
+    setMensajeError("");
+
+    try {
+      setLoading(true);
+
+      const response = await fetch("/api/guardar-vuelo", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          modo: "delete",
+          id: ultimoInput.id,
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (response.status === 401) {
+        setCurrentUser(null);
+        setAuthStatus(AUTH_STATUS.unauthenticated);
+        throw new Error("Tu sesion expiro. Vuelve a iniciar sesion.");
+      }
+
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "No se pudo borrar el vuelo.");
+      }
+
+      limpiarFormulario();
+      setUltimoInput(null);
+      setMensajeExito("Ultimo vuelo eliminado correctamente.");
+    } catch (error) {
+      setMensajeError(error.message || "Hubo un error al borrar el vuelo.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMensajeExito("");
@@ -146,7 +474,7 @@ function App() {
       !piloto.trim() ||
       !propietario.trim()
     ) {
-      setMensajeError("Completá todos los campos obligatorios.");
+      setMensajeError("Completa todos los campos obligatorios.");
       return;
     }
 
@@ -172,23 +500,28 @@ function App() {
       observaciones: observaciones.trim(),
     };
 
-    console.log(payload);
-
     try {
       setLoading(true);
 
       const response = await fetch("/api/guardar-vuelo", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => null);
 
-      if (!response.ok || !result.ok) {
-        throw new Error(result.error || "No se pudo guardar el vuelo.");
+      if (response.status === 401) {
+        setCurrentUser(null);
+        setAuthStatus(AUTH_STATUS.unauthenticated);
+        throw new Error("Tu sesion expiro. Vuelve a iniciar sesion.");
+      }
+
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "No se pudo guardar el vuelo.");
       }
 
       setMensajeExito(
@@ -200,21 +533,93 @@ function App() {
       setUltimoInput(payload);
       limpiarFormulario();
     } catch (error) {
-      console.error(error);
       setMensajeError(error.message || "Hubo un error al guardar el vuelo.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleLoginSubmit = async ({ username, password }) => {
+    setLoginLoading(true);
+    setLoginError("");
+
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: username.trim(),
+          password,
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "No se pudo iniciar sesion.");
+      }
+
+      setCurrentUser(result.user ?? null);
+      setAuthStatus(AUTH_STATUS.authenticated);
+    } catch (error) {
+      setCurrentUser(null);
+      setAuthStatus(AUTH_STATUS.unauthenticated);
+      setLoginError(error.message || "No se pudo iniciar sesion.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } finally {
+      setCurrentUser(null);
+      setAuthStatus(AUTH_STATUS.unauthenticated);
+      setLoginError("");
+      setMensajeError("");
+      setMensajeExito("");
+    }
+  };
+
+  const handleToggleTheme = () => {
+    setThemeMode((currentThemeMode) => {
+      if (currentThemeMode === THEME_MODE.auto) {
+        return THEME_MODE.dark;
+      }
+
+      if (currentThemeMode === THEME_MODE.dark) {
+        return THEME_MODE.light;
+      }
+
+      return THEME_MODE.auto;
+    });
+  };
+
+  const handleSaveSettings = async (nextSettings) => {
+    setSettingsError("");
+    const savedSettings = await saveSettings(nextSettings);
+    setSettings(savedSettings);
+    return savedSettings;
+  };
+
   const formStyle = {
     maxWidth: "720px",
     margin: "32px auto",
     padding: "24px",
-    border: "1px solid #e5e7eb",
-    borderRadius: "8px",
-    backgroundColor: "#ffffff",
+    border: "1px solid var(--app-border)",
+    borderRadius: "18px",
+    background:
+      "linear-gradient(180deg, var(--app-surface) 0%, color-mix(in srgb, var(--app-surface) 92%, var(--app-surface-muted) 8%) 100%)",
+    color: "var(--app-text)",
     fontFamily: "Arial, sans-serif",
+    boxShadow: "var(--app-shadow)",
   };
 
   const fieldStyle = {
@@ -250,13 +655,13 @@ function App() {
     fontSize: "13px",
     fontWeight: 600,
     letterSpacing: "0.04em",
-    color: "#111827",
+    color: "var(--app-text)",
     lineHeight: 1.2,
     textAlign: "center",
   };
 
   const labelRequiredStyle = {
-    color: "#dc2626",
+    color: "var(--app-danger)",
     fontWeight: 700,
     fontSize: "15px",
     lineHeight: 1,
@@ -266,7 +671,7 @@ function App() {
   const labelSubTechnicalStyle = {
     fontSize: "13px",
     fontWeight: 600,
-    color: "#9ca3af",
+    color: "var(--app-text-soft)",
     textTransform: "uppercase",
     letterSpacing: "0.04em",
     lineHeight: 1.2,
@@ -276,10 +681,12 @@ function App() {
   const inputStyle = {
     boxSizing: "border-box",
     width: "100%",
-    padding: "10px",
-    border: "1px solid #d1d5db",
-    borderRadius: "6px",
+    padding: "13px 14px",
+    border: "1px solid var(--app-border-strong)",
+    borderRadius: "12px",
     fontSize: "14px",
+    color: "var(--app-text)",
+    backgroundColor: "var(--app-surface-muted)",
   };
 
   const selectStyle = {
@@ -288,6 +695,16 @@ function App() {
     cursor: "pointer",
     width: "100%",
   };
+
+  const resolvedTheme = themeMode === THEME_MODE.auto
+    ? (systemPrefersDark ? THEME_MODE.dark : THEME_MODE.light)
+    : themeMode;
+
+  const themeIcon = resolvedTheme === THEME_MODE.dark ? "☾" : "☀";
+  const themeButtonLabel =
+    themeMode === THEME_MODE.auto
+      ? `Tema automatico (${resolvedTheme === THEME_MODE.dark ? "noche" : "claro"})`
+      : `Tema ${resolvedTheme === THEME_MODE.dark ? "noche" : "claro"}`;
 
   const FieldLabel = ({ htmlFor, title, required, subTechnical }) => (
     <label htmlFor={htmlFor} style={labelBlockStyle}>
@@ -307,6 +724,28 @@ function App() {
 
   const placeholderClassName = "flight-form-placeholder";
 
+  if (authStatus === AUTH_STATUS.loading) {
+    return (
+      <main className="app-shell app-auth-shell">
+        <section className="login-card">
+          <p className="login-eyebrow">Acceso protegido</p>
+          <h1 className="login-title">App Horas de Vuelo</h1>
+          <p className="login-copy">Verificando sesion...</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (authStatus !== AUTH_STATUS.authenticated) {
+    return (
+      <LoginScreen
+        loginLoading={loginLoading}
+        loginError={loginError}
+        onLoginSubmit={handleLoginSubmit}
+      />
+    );
+  }
+
   return (
     <main className="app-shell">
       <style>
@@ -317,6 +756,26 @@ function App() {
           }
         `}
       </style>
+
+      <div className="app-toolbar">
+        <div className="app-session-bar">
+          <div className="app-user-chip">
+            Sesion activa: <strong>{currentUser?.username ?? "usuario"}</strong>
+          </div>
+          <button
+            type="button"
+            className="app-theme-toggle"
+            onClick={handleToggleTheme}
+            aria-label={themeButtonLabel}
+            title={themeButtonLabel}
+          >
+            <span aria-hidden="true">{themeIcon}</span>
+          </button>
+        </div>
+        <button type="button" className="app-logout" onClick={handleLogout}>
+          Cerrar sesion
+        </button>
+      </div>
 
       <div className="app-tabs" role="tablist" aria-label="Secciones principales">
         <button
@@ -337,6 +796,24 @@ function App() {
         >
           Historiales
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeMainTab === "dashboards"}
+          className={`app-tab ${activeMainTab === "dashboards" ? "is-active" : ""}`}
+          onClick={() => setActiveMainTab("dashboards")}
+        >
+          Dashboards
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeMainTab === "settings"}
+          className={`app-tab ${activeMainTab === "settings" ? "is-active" : ""}`}
+          onClick={() => setActiveMainTab("settings")}
+        >
+          Settings
+        </button>
       </div>
 
       {activeMainTab === "registro" ? (
@@ -351,6 +828,7 @@ function App() {
                 flexDirection: "column",
                 alignItems: "center",
                 gap: "20px",
+                color: "var(--app-text)",
               }}
             >
               <span>Registro de Vuelo</span>
@@ -447,16 +925,11 @@ function App() {
 
             <div style={fieldStyle}>
               <FieldLabel htmlFor="propietario" title="Propietario" required />
-              <select
-                id="propietario"
+              <PropietarioSelect
                 value={propietario}
-                onChange={(e) => setPropietario(e.target.value)}
-                style={selectStyle}
-              >
-                <option value="">Seleccionar...</option>
-                <option value="ALEGRE">ALEGRE</option>
-                <option value="MAGGIO">MAGGIO</option>
-              </select>
+                onChange={setPropietario}
+                disabled={loading}
+              />
             </div>
 
             <div style={fieldStyle}>
@@ -516,66 +989,42 @@ function App() {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                padding: "10px 16px",
-                border: "none",
-                borderRadius: "6px",
-                backgroundColor: loading ? "#9ca3af" : "#2563eb",
-                color: "#ffffff",
-                cursor: loading ? "not-allowed" : "pointer",
-                fontSize: "14px",
-              }}
-            >
-              {loading
-                ? "Guardando..."
-                : editingId
-                  ? "Actualizar vuelo"
-                  : "Save Flight"}
-            </button>
-            <button
-              type="button"
-              onClick={limpiarFormulario}
-              disabled={loading}
-              style={{
-                marginLeft: "10px",
-                padding: "10px 16px",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                backgroundColor: "#ffffff",
-                color: "#111827",
-                cursor: loading ? "not-allowed" : "pointer",
-                fontSize: "14px",
-              }}
-            >
-              Clear All
-            </button>
-            <button
-              type="button"
-              onClick={rellenadoRapido}
-              disabled={loading}
-              style={{
-                marginLeft: "10px",
-                padding: "10px 16px",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                backgroundColor: "#f3f4f6",
-                color: "#111827",
-                cursor: loading ? "not-allowed" : "pointer",
-                fontSize: "14px",
-              }}
-            >
-              Quick FLight
-            </button>
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="form-action-button is-primary"
+                disabled={loading}
+              >
+                {loading
+                  ? "Guardando..."
+                  : editingId
+                    ? "Actualizar vuelo"
+                    : "Save Flight"}
+              </button>
+              <button
+                type="button"
+                className="form-action-button"
+                onClick={rellenadoRapido}
+                disabled={loading}
+              >
+                Quick Flight
+              </button>
+              <button
+                type="button"
+                className="form-action-button"
+                onClick={limpiarFormulario}
+                disabled={loading}
+              >
+                Clear All
+              </button>
+            </div>
 
             {mensajeExito ? (
-              <p style={{ color: "#15803d", marginTop: "12px" }}>{mensajeExito}</p>
+              <p style={{ color: "var(--app-success)", marginTop: "12px" }}>{mensajeExito}</p>
             ) : null}
 
             {mensajeError ? (
-              <p style={{ color: "#dc2626", marginTop: "12px" }}>{mensajeError}</p>
+              <p style={{ color: "var(--app-danger)", marginTop: "12px" }}>{mensajeError}</p>
             ) : null}
           </form>
 
@@ -585,10 +1034,13 @@ function App() {
                 maxWidth: "720px",
                 margin: "0 auto 32px",
                 padding: "16px",
-                border: "1px solid #e5e7eb",
-                borderRadius: "8px",
-                backgroundColor: "#ffffff",
+                border: "1px solid var(--app-border)",
+                borderRadius: "18px",
+                background:
+                  "linear-gradient(180deg, var(--app-surface) 0%, color-mix(in srgb, var(--app-surface) 92%, var(--app-surface-muted) 8%) 100%)",
+                color: "var(--app-text)",
                 fontFamily: "Arial, sans-serif",
+                boxShadow: "var(--app-shadow)",
               }}
             >
               <h2 style={{ marginTop: 0, marginBottom: "12px" }}>Ultimo input</h2>
@@ -615,8 +1067,8 @@ function App() {
                 style={{
                   padding: "8px 12px",
                   border: "none",
-                  borderRadius: "6px",
-                  backgroundColor: loading ? "#9ca3af" : "#1d4ed8",
+                  borderRadius: "10px",
+                  backgroundColor: loading ? "#94a3b8" : "var(--app-primary-strong)",
                   color: "#ffffff",
                   cursor: loading ? "not-allowed" : "pointer",
                   fontSize: "14px",
@@ -631,15 +1083,33 @@ function App() {
                 style={{
                   marginLeft: "10px",
                   padding: "8px 12px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  backgroundColor: "#ffffff",
-                  color: loading ? "#9ca3af" : "#111827",
+                  border: "1px solid var(--app-border-strong)",
+                  borderRadius: "10px",
+                  backgroundColor: "var(--app-surface-muted)",
+                  color: loading ? "var(--app-text-soft)" : "var(--app-text)",
                   cursor: loading ? "not-allowed" : "pointer",
                   fontSize: "14px",
                 }}
               >
                 Replicar ultimo input
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteUltimoVuelo}
+                disabled={loading}
+                style={{
+                  marginLeft: "10px",
+                  padding: "8px 12px",
+                  border: "1px solid var(--app-danger-border)",
+                  borderRadius: "10px",
+                  backgroundColor: loading ? "var(--app-danger-soft)" : "var(--app-surface-soft)",
+                  color: loading ? "var(--app-text-soft)" : "var(--app-danger)",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                }}
+              >
+                Borrar ultimo vuelo
               </button>
             </section>
           ) : (
@@ -648,19 +1118,32 @@ function App() {
                 maxWidth: "720px",
                 margin: "0 auto 32px",
                 fontFamily: "Arial, sans-serif",
-                color: "#374151",
+                color: "var(--app-text-muted)",
               }}
             >
               No se han registrado vuelos hoy
             </p>
           )}
         </>
+      ) : activeMainTab === "historiales" ? (
+        <HistorialesPanel onUnauthorized={() => setAuthStatus(AUTH_STATUS.unauthenticated)} />
+      ) : activeMainTab === "dashboards" ? (
+        <DashboardPanel
+          settings={settings}
+          settingsLoading={settingsLoading}
+          settingsError={settingsError}
+          onUnauthorized={() => setAuthStatus(AUTH_STATUS.unauthenticated)}
+        />
       ) : (
-        <HistorialesPanel />
+        <SettingsPanel
+          settings={settings}
+          loading={settingsLoading}
+          error={settingsError}
+          onSave={handleSaveSettings}
+        />
       )}
     </main>
   );
 }
 
 export default App;
-

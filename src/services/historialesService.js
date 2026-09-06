@@ -1,11 +1,13 @@
-﻿const HISTORIALES_URL =
-  "https://script.google.com/macros/s/AKfycbxxLAVrji2H6yFwFIzECtnr_zIAjZAvPfOKkVRHSTvfSmOrozOluoAj1DBJr8Sbp1Ep/exec?action=historiales";
-
 export async function fetchHistoriales(signal) {
-  const response = await fetch(HISTORIALES_URL, {
+  const response = await fetch("/api/historiales", {
     method: "GET",
     signal,
+    credentials: "include",
   });
+
+  if (response.status === 401) {
+    throw new Error("UNAUTHORIZED");
+  }
 
   let data = null;
 
@@ -21,4 +23,3 @@ export async function fetchHistoriales(signal) {
 
   return data;
 }
-
