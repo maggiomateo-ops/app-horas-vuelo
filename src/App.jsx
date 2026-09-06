@@ -689,13 +689,6 @@ function App() {
     backgroundColor: "var(--app-surface-muted)",
   };
 
-  const selectStyle = {
-    ...inputStyle,
-    backgroundColor: "#ffffff",
-    cursor: "pointer",
-    width: "100%",
-  };
-
   const resolvedTheme = themeMode === THEME_MODE.auto
     ? (systemPrefersDark ? THEME_MODE.dark : THEME_MODE.light)
     : themeMode;

@@ -148,7 +148,7 @@ function HistorialesPanel({ onUnauthorized }) {
         rows: currentRows,
       },
     ];
-  }, [currentRows, currentTab.id, currentTab.label, currentTab.responseKey, historiales, printMode, recordsLimit]);
+  }, [currentRows, currentTab.id, currentTab.label, historiales, printMode, recordsLimit]);
 
   const handlePrintCurrent = () => {
     setPrintMode("single");
