@@ -43,7 +43,7 @@ const HISTORIAL_COLUMNS = {
   ],
 };
 
-function HistorialesPanel({ onUnauthorized }) {
+function HistorialesPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
   const [activeHistorial, setActiveHistorial] = useState("aeronave");
   const [recordsLimit, setRecordsLimit] = useState(HISTORIAL_LIMIT_OPTIONS[0]);
   const [printMode, setPrintMode] = useState(null);
@@ -63,7 +63,7 @@ function HistorialesPanel({ onUnauthorized }) {
         setLoading(true);
         setError("");
 
-        const data = await fetchHistoriales(controller.signal);
+        const data = await fetchHistoriales(aircraftId, controller.signal);
 
         setHistoriales({
           historialAeronave: Array.isArray(data.historialAeronave)
@@ -93,7 +93,7 @@ function HistorialesPanel({ onUnauthorized }) {
     return () => {
       controller.abort();
     };
-  }, [onUnauthorized]);
+  }, [aircraftId, onUnauthorized]);
 
   useEffect(() => {
     if (!printMode) {
@@ -227,7 +227,7 @@ function HistorialesPanel({ onUnauthorized }) {
 
       <div className="history-print-layout">
         <div className="history-print-header">
-          <h2>Historiales LV-MHZ</h2>
+          <h2>Historiales {aircraftRegistration}</h2>
           <p>Registros incluidos: ultimos {recordsLimit}</p>
         </div>
 

@@ -73,8 +73,9 @@ async function readResponseData(response) {
   }
 }
 
-export async function fetchSettings(signal) {
-  const response = await fetch("/api/settings", {
+export async function fetchSettings(aircraftId, signal) {
+  const searchParams = new URLSearchParams({ aircraft_id: aircraftId });
+  const response = await fetch(`/api/settings?${searchParams}`, {
     method: "GET",
     signal,
     credentials: "include",
@@ -93,7 +94,7 @@ export async function fetchSettings(signal) {
   return normalizeSettings(data.settings);
 }
 
-export async function saveSettings(nextSettings) {
+export async function saveSettings(aircraftId, nextSettings) {
   const normalized = normalizeSettings(nextSettings);
 
   const response = await fetch("/api/settings", {
@@ -103,6 +104,7 @@ export async function saveSettings(nextSettings) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      aircraft_id: aircraftId,
       settings: normalized,
     }),
   });

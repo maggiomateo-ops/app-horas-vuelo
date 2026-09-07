@@ -54,7 +54,7 @@ function DataTable({ columns, rows, emptyMessage, compact = false }) {
   );
 }
 
-function DashboardPanel({ onUnauthorized, settings, settingsLoading, settingsError }) {
+function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading, settingsError }) {
   const [historiales, setHistoriales] = useState({
     computacionHoras: [],
     historialAeronave: [],
@@ -71,7 +71,7 @@ function DashboardPanel({ onUnauthorized, settings, settingsLoading, settingsErr
       try {
         setLoading(true);
         setError("");
-        const response = await fetchHistoriales(controller.signal);
+        const response = await fetchHistoriales(aircraftId, controller.signal);
 
         setHistoriales({
           computacionHoras: Array.isArray(response.computacionHoras)
@@ -108,7 +108,7 @@ function DashboardPanel({ onUnauthorized, settings, settingsLoading, settingsErr
     return () => {
       controller.abort();
     };
-  }, [onUnauthorized]);
+  }, [aircraftId, onUnauthorized]);
 
   const metrics = useMemo(
     () => buildDashboardMetrics(historiales, settings),

@@ -58,31 +58,9 @@
   max-width: 720px;
   margin: 24px auto 0;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
-}
-
-.app-session-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  flex: 1;
-}
-
-.app-user-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: var(--app-primary-soft);
-  color: var(--app-text);
-  font-size: 14px;
-  border: 1px solid color-mix(in srgb, var(--app-primary) 18%, transparent);
-  min-width: 0;
-  flex: 1;
 }
 
 .app-toolbar-actions {
@@ -132,6 +110,44 @@
   display: flex;
   gap: 12px;
   align-items: stretch;
+}
+
+.aircraft-selector {
+  max-width: 720px;
+  margin: 16px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface);
+}
+
+.aircraft-selector-label {
+  color: var(--app-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.aircraft-selector select {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 10px;
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  font: inherit;
+  font-weight: 600;
+}
+
+.aircraft-selector select:disabled {
+  cursor: default;
+  opacity: 1;
 }
 
 .app-tab {
@@ -922,10 +938,6 @@ select {
     gap: 10px;
   }
 
-  .app-session-bar {
-    min-width: 0;
-  }
-
   .app-logout {
     flex: 0 0 auto;
   }
@@ -998,6 +1010,12 @@ select {
     flex-wrap: nowrap;
   }
 
+  .aircraft-selector {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+
   .app-tabs {
     gap: 10px;
     flex-wrap: wrap;
@@ -1008,11 +1026,6 @@ select {
     font-size: 14px;
     min-width: calc(50% - 5px);
     flex: 0 0 calc(50% - 5px);
-  }
-
-  .app-user-chip {
-    padding: 10px 12px;
-    font-size: 13px;
   }
 
   .app-logout {

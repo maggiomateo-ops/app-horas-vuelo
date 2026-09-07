@@ -3,6 +3,7 @@ import "./App.css";
 import DashboardPanel from "./components/DashboardPanel";
 import HistorialesPanel from "./components/HistorialesPanel";
 import SettingsPanel from "./components/SettingsPanel";
+import { fetchAircrafts } from "./services/aircraftService";
 import { DEFAULT_SETTINGS, fetchSettings, saveSettings } from "./services/settingsService";
 
 const AUTH_STATUS = {
@@ -134,7 +135,7 @@ function PropietarioSelect({ value, onChange, disabled }) {
 
 function App() {
   const [authStatus, setAuthStatus] = useState(AUTH_STATUS.loading);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [, setCurrentUser] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [themeMode, setThemeMode] = useState(() => {
@@ -157,6 +158,10 @@ function App() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState("");
+  const [aircrafts, setAircrafts] = useState([]);
+  const [selectedAircraftId, setSelectedAircraftId] = useState("");
+  const [aircraftsLoading, setAircraftsLoading] = useState(true);
+  const [aircraftsError, setAircraftsError] = useState("");
   const [activeMainTab, setActiveMainTab] = useState("registro");
   const [fecha, setFecha] = useState("");
   const [desde, setDesde] = useState("");
@@ -217,6 +222,66 @@ function App() {
 
   useEffect(() => {
     if (authStatus !== AUTH_STATUS.authenticated) {
+      setAircrafts([]);
+      setSelectedAircraftId("");
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    let ignore = false;
+
+    async function loadAircrafts() {
+      try {
+        setAircraftsLoading(true);
+        setAircraftsError("");
+        const nextAircrafts = await fetchAircrafts(controller.signal);
+
+        if (!ignore) {
+          setAircrafts(nextAircrafts);
+          setSelectedAircraftId(nextAircrafts[0]?.aircraft_id ?? "");
+        }
+      } catch (error) {
+        if (error.name === "AbortError") {
+          return;
+        }
+
+        if (error.message === "UNAUTHORIZED") {
+          setCurrentUser(null);
+          setAuthStatus(AUTH_STATUS.unauthenticated);
+          return;
+        }
+
+        if (!ignore) {
+          setAircrafts([]);
+          setSelectedAircraftId("");
+          setAircraftsError(error.message || "No se pudieron cargar las aeronaves.");
+        }
+      } finally {
+        if (!ignore) {
+          setAircraftsLoading(false);
+        }
+      }
+    }
+
+    loadAircrafts();
+
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [authStatus]);
+
+  const selectedAircraft =
+    aircrafts.find((aircraft) => aircraft.aircraft_id === selectedAircraftId) ?? null;
+
+  useEffect(() => {
+    if (authStatus !== AUTH_STATUS.authenticated) {
+      return undefined;
+    }
+
+    if (!selectedAircraftId) {
+      setSettings(DEFAULT_SETTINGS);
+      setSettingsError("");
       return undefined;
     }
 
@@ -227,7 +292,7 @@ function App() {
       try {
         setSettingsLoading(true);
         setSettingsError("");
-        const nextSettings = await fetchSettings(controller.signal);
+        const nextSettings = await fetchSettings(selectedAircraftId, controller.signal);
 
         if (!ignore) {
           setSettings(nextSettings);
@@ -259,7 +324,7 @@ function App() {
       ignore = true;
       controller.abort();
     };
-  }, [authStatus]);
+  }, [authStatus, selectedAircraftId]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -408,7 +473,7 @@ function App() {
   };
 
   const handleDeleteUltimoVuelo = async () => {
-    if (!ultimoInput?.id || loading) {
+    if (!ultimoInput?.id || loading || !selectedAircraft) {
       return;
     }
 
@@ -433,6 +498,7 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          aircraft_id: selectedAircraft.aircraft_id,
           modo: "delete",
           id: ultimoInput.id,
         }),
@@ -465,6 +531,11 @@ function App() {
     setMensajeExito("");
     setMensajeError("");
 
+    if (!selectedAircraft) {
+      setMensajeError("Selecciona una aeronave antes de guardar el vuelo.");
+      return;
+    }
+
     if (
       !fecha ||
       !desde.trim() ||
@@ -481,6 +552,7 @@ function App() {
     const [anio, mes, dia] = fecha.split("-");
 
     const payload = {
+      aircraft_id: selectedAircraft.aircraft_id,
       modo: editingId ? "update" : "create",
       id: editingId || String(Date.now()),
       dia,
@@ -585,6 +657,9 @@ function App() {
       setLoginError("");
       setMensajeError("");
       setMensajeExito("");
+      setAircrafts([]);
+      setSelectedAircraftId("");
+      setAircraftsError("");
     }
   };
 
@@ -603,10 +678,28 @@ function App() {
   };
 
   const handleSaveSettings = async (nextSettings) => {
+    if (!selectedAircraft) {
+      throw new Error("Selecciona una aeronave antes de guardar los settings.");
+    }
+
     setSettingsError("");
-    const savedSettings = await saveSettings(nextSettings);
+    const savedSettings = await saveSettings(selectedAircraft.aircraft_id, nextSettings);
     setSettings(savedSettings);
     return savedSettings;
+  };
+
+  const handleAircraftChange = (event) => {
+    const nextAircraftId = event.target.value;
+
+    if (nextAircraftId === selectedAircraftId) {
+      return;
+    }
+
+    limpiarFormulario();
+    setUltimoInput(null);
+    setMensajeError("");
+    setMensajeExito("");
+    setSelectedAircraftId(nextAircraftId);
   };
 
   const formStyle = {
@@ -739,6 +832,35 @@ function App() {
     );
   }
 
+  if (aircraftsLoading) {
+    return (
+      <main className="app-shell app-auth-shell">
+        <section className="login-card">
+          <p className="login-eyebrow">Aeronaves</p>
+          <h1 className="login-title">App Horas de Vuelo</h1>
+          <p className="login-copy">Cargando aeronaves habilitadas...</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (aircraftsError || !selectedAircraft) {
+    return (
+      <main className="app-shell app-auth-shell">
+        <section className="login-card">
+          <p className="login-eyebrow">Aeronaves</p>
+          <h1 className="login-title">App Horas de Vuelo</h1>
+          <p className={aircraftsError ? "login-error" : "login-copy"}>
+            {aircraftsError || "No tenés aeronaves habilitadas."}
+          </p>
+          <button type="button" className="login-button" onClick={handleLogout}>
+            Cerrar sesion
+          </button>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <style>
@@ -751,10 +873,7 @@ function App() {
       </style>
 
       <div className="app-toolbar">
-        <div className="app-session-bar">
-          <div className="app-user-chip">
-            Sesion activa: <strong>{currentUser?.username ?? "usuario"}</strong>
-          </div>
+        <div className="app-toolbar-actions">
           <button
             type="button"
             className="app-theme-toggle"
@@ -764,11 +883,27 @@ function App() {
           >
             <span aria-hidden="true">{themeIcon}</span>
           </button>
+          <button type="button" className="app-logout" onClick={handleLogout}>
+            Cerrar sesion
+          </button>
         </div>
-        <button type="button" className="app-logout" onClick={handleLogout}>
-          Cerrar sesion
-        </button>
       </div>
+
+      <label className="aircraft-selector" htmlFor="aircraft-selector">
+        <span className="aircraft-selector-label">Aeronave</span>
+        <select
+          id="aircraft-selector"
+          value={selectedAircraft.aircraft_id}
+          onChange={handleAircraftChange}
+          disabled={aircrafts.length === 1}
+        >
+          {aircrafts.map((aircraft) => (
+            <option key={aircraft.aircraft_id} value={aircraft.aircraft_id}>
+              {aircraft.matricula} — {[aircraft.fabricante, aircraft.modelo].filter(Boolean).join(" ")}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <div className="app-tabs" role="tablist" aria-label="Secciones principales">
         <button
@@ -825,7 +960,9 @@ function App() {
               }}
             >
               <span>Registro de Vuelo</span>
-              <span style={{ fontSize: "0.8em", letterSpacing: "0.06em" }}>LV-MHZ</span>
+              <span style={{ fontSize: "0.8em", letterSpacing: "0.06em" }}>
+                {selectedAircraft.matricula}
+              </span>
             </h1>
 
             <div style={fieldStyle}>
@@ -1119,9 +1256,14 @@ function App() {
           )}
         </>
       ) : activeMainTab === "historiales" ? (
-        <HistorialesPanel onUnauthorized={() => setAuthStatus(AUTH_STATUS.unauthenticated)} />
+        <HistorialesPanel
+          aircraftId={selectedAircraft.aircraft_id}
+          aircraftRegistration={selectedAircraft.matricula}
+          onUnauthorized={() => setAuthStatus(AUTH_STATUS.unauthenticated)}
+        />
       ) : activeMainTab === "dashboards" ? (
         <DashboardPanel
+          aircraftId={selectedAircraft.aircraft_id}
           settings={settings}
           settingsLoading={settingsLoading}
           settingsError={settingsError}
