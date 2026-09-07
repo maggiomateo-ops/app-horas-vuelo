@@ -186,8 +186,26 @@ function doGet(e) {
 }
 
 function handleFlightPost(data) {
+  const userId = String(data.userId || "").trim();
+  const aircraftId = String(data.aircraftId || "").trim();
+
+  if (!userId) {
+    throw new Error("Falta userId.");
+  }
+
+  if (!aircraftId) {
+    throw new Error("Falta aircraftId.");
+  }
+
+  const access = validateUserAircraftAccess(userId, aircraftId);
+  const role = String(access.permission.rol || "").trim().toUpperCase();
+
+  if (role !== "OWNER" && role !== "ADMIN") {
+    throw new Error("El usuario no tiene permiso para modificar vuelos.");
+  }
+
   const sheetName = "Computacion Horas";
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getAircraftSpreadsheetById(aircraftId);
   const sheet = ss.getSheetByName(sheetName);
 
   if (!sheet) {
