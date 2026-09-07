@@ -132,7 +132,24 @@ function doGet(e) {
         });
       }
     if (action === "historiales") {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const userId = e && e.parameter
+        ? String(e.parameter.userId || "").trim()
+        : "";
+      const aircraftId = e && e.parameter
+        ? String(e.parameter.aircraftId || "").trim()
+        : "";
+
+      if (!userId) {
+        throw new Error("Falta userId.");
+      }
+
+      if (!aircraftId) {
+        throw new Error("Falta aircraftId.");
+      }
+
+      validateUserAircraftAccess(userId, aircraftId);
+
+      const ss = getAircraftSpreadsheetById(aircraftId);
 
       const computacionHoras = leerComputacionHoras(ss, "Computacion Horas");
       const historialAeronave = leerHistorialAeronave(ss, "Historial Aeronave");
@@ -717,4 +734,3 @@ function getAircraftsForUser(userId) {
       return aircraft !== null;
     });
 }
-

@@ -1,6 +1,6 @@
 import { requireAuth } from "./_auth.js";
 
-function buildHistorialesUrl() {
+function buildHistorialesUrl(userId, aircraftId) {
   const appsScriptUrl = String(process.env.APPS_SCRIPT_URL || "").trim();
 
   if (!appsScriptUrl) {
@@ -9,6 +9,8 @@ function buildHistorialesUrl() {
 
   const url = new URL(appsScriptUrl);
   url.searchParams.set("action", "historiales");
+  url.searchParams.set("userId", userId);
+  url.searchParams.set("aircraftId", aircraftId);
 
   if (process.env.APPS_SCRIPT_SECRET) {
     url.searchParams.set("appSecret", String(process.env.APPS_SCRIPT_SECRET).trim());
@@ -28,7 +30,27 @@ export default async function handler(req, res) {
     return undefined;
   }
 
-  const historialesUrl = buildHistorialesUrl();
+  const userId = String(process.env.LEGACY_USER_ID || "").trim();
+  const requestedAircraftId = Array.isArray(req.query?.aircraft_id)
+    ? req.query.aircraft_id[0]
+    : req.query?.aircraft_id;
+  const aircraftId = String(
+    requestedAircraftId || process.env.LEGACY_AIRCRAFT_ID || ""
+  ).trim();
+
+  if (!userId) {
+    return res
+      .status(500)
+      .json({ ok: false, error: "Falta LEGACY_USER_ID en variables de entorno." });
+  }
+
+  if (!aircraftId) {
+    return res
+      .status(500)
+      .json({ ok: false, error: "Falta aircraft_id o LEGACY_AIRCRAFT_ID." });
+  }
+
+  const historialesUrl = buildHistorialesUrl(userId, aircraftId);
 
   if (!historialesUrl) {
     return res
