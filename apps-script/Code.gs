@@ -91,8 +91,9 @@ function doPost(e) {
     }
 
     if (data.action === "settings" || data.mode === "saveSettings") {
-      const settings = normalizeSettings(data.settings || {});
-      saveSettings(settings);
+      const userId = String(data.userId || "").trim();
+      const aircraftId = String(data.aircraftId || "").trim();
+      const settings = saveAircraftSettings(userId, aircraftId, data.settings || {});
 
       return jsonOutput({
         ok: true,
@@ -166,9 +167,24 @@ function doGet(e) {
     }
 
     if (action === "settings") {
+      const userId = e && e.parameter
+        ? String(e.parameter.userId || "").trim()
+        : "";
+      const aircraftId = e && e.parameter
+        ? String(e.parameter.aircraftId || "").trim()
+        : "";
+
+      if (!userId) {
+        throw new Error("Falta userId.");
+      }
+
+      if (!aircraftId) {
+        throw new Error("Falta aircraftId.");
+      }
+
       return jsonOutput({
         ok: true,
-        settings: getStoredSettings()
+        settings: getAircraftSettings(userId, aircraftId)
       });
     }
 
@@ -476,6 +492,98 @@ function saveSettings(settings) {
   PropertiesService
     .getDocumentProperties()
     .setProperty(SETTINGS_PROPERTY_KEY, JSON.stringify(normalized));
+}
+
+function getAircraftConfigurationSheet(ss) {
+  const sheet = ss.getSheetByName("CONFIGURACION");
+
+  if (!sheet) {
+    throw new Error("No se encontró la hoja CONFIGURACION.");
+  }
+
+  return sheet;
+}
+
+function getAircraftConfigurationValue(sheet, key) {
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    return null;
+  }
+
+  const values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  const row = values.find(function(currentRow) {
+    return String(currentRow[0]).trim() === key;
+  });
+
+  return row ? row[1] : null;
+}
+
+function setAircraftConfigurationValue(sheet, key, value) {
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow >= 2) {
+    const keys = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+    const index = keys.findIndex(function(currentKey) {
+      return String(currentKey).trim() === key;
+    });
+
+    if (index !== -1) {
+      sheet.getRange(index + 2, 2).setValue(value);
+      return;
+    }
+  }
+
+  sheet.appendRow([key, value]);
+}
+
+function getAircraftSettings(userId, aircraftId) {
+  validateUserAircraftAccess(userId, aircraftId);
+
+  const ss = getAircraftSpreadsheetById(aircraftId);
+  const sheet = getAircraftConfigurationSheet(ss);
+  const rawValue = getAircraftConfigurationValue(sheet, SETTINGS_PROPERTY_KEY);
+
+  if (rawValue === null) {
+    return aircraftId === "A001"
+      ? getStoredSettings()
+      : cloneObject(DEFAULT_SETTINGS);
+  }
+
+  try {
+    return normalizeSettings(JSON.parse(String(rawValue)));
+  } catch (error) {
+    throw new Error("El valor APP_HORAS_SETTINGS de CONFIGURACION no contiene JSON válido.");
+  }
+}
+
+function saveAircraftSettings(userId, aircraftId, settings) {
+  if (!userId) {
+    throw new Error("Falta userId.");
+  }
+
+  if (!aircraftId) {
+    throw new Error("Falta aircraftId.");
+  }
+
+  const access = validateUserAircraftAccess(userId, aircraftId);
+  const role = String(access.permission.rol || "").trim().toUpperCase();
+
+  if (role !== "OWNER" && role !== "ADMIN") {
+    throw new Error("El usuario no tiene permiso para modificar settings.");
+  }
+
+  const normalized = normalizeSettings(settings);
+  const ss = getAircraftSpreadsheetById(aircraftId);
+  const sheet = getAircraftConfigurationSheet(ss);
+
+  setAircraftConfigurationValue(
+    sheet,
+    SETTINGS_PROPERTY_KEY,
+    JSON.stringify(normalized)
+  );
+
+  return normalized;
 }
 
 function normalizeSettings(input) {
