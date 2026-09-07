@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 const SETTINGS_TABS = [
   { id: "app", label: "App" },
+  { id: "operation", label: "Operacion" },
   { id: "inspections", label: "Inspecciones" },
   { id: "oil", label: "Aceite" },
   { id: "thresholds", label: "Umbrales" },
@@ -30,6 +31,35 @@ function SettingsField({ label, type = "text", value, onChange, step, placeholde
         step={step}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
+function OwnerOptionsField({ value, onChange }) {
+  const [inputValue, setInputValue] = useState(value.join(", "));
+
+  useEffect(() => {
+    setInputValue(value.join(", "));
+  }, [value]);
+
+  const commitValue = () => {
+    onChange(
+      inputValue
+        .split(",")
+        .map((option) => option.trim().toUpperCase())
+        .filter(Boolean)
+    );
+  };
+
+  return (
+    <label className="settings-field">
+      <span>Propietarios (separados por coma)</span>
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(event) => setInputValue(event.target.value)}
+        onBlur={commitValue}
       />
     </label>
   );
@@ -123,6 +153,47 @@ function SettingsPanel({ settings, loading, error, onSave }) {
               label="Moneda"
               value={draft.appConfig.currency}
               onChange={handleChange(["appConfig", "currency"])}
+            />
+          </div>
+        ) : null}
+
+        {activeTab === "operation" ? (
+          <div className="settings-grid">
+            <OwnerOptionsField
+              value={draft.operationalConfig.ownerOptions}
+              onChange={handleChange(["operationalConfig", "ownerOptions"])}
+            />
+            <SettingsField
+              label="Origen predeterminado"
+              value={draft.operationalConfig.defaultOrigin}
+              onChange={handleChange(["operationalConfig", "defaultOrigin"])}
+            />
+            <SettingsField
+              label="Destino predeterminado"
+              value={draft.operationalConfig.defaultDestination}
+              onChange={handleChange(["operationalConfig", "defaultDestination"])}
+            />
+            <SettingsField
+              label="Tiempo de vuelo JPI predeterminado"
+              type="number"
+              step="0.1"
+              value={draft.operationalConfig.defaultFlightTimeJPI}
+              onChange={(value) =>
+                handleChange(["operationalConfig", "defaultFlightTimeJPI"])(
+                  value === "" ? "" : Number(value)
+                )
+              }
+            />
+            <SettingsField
+              label="Tiempo en servicio Garmin predeterminado"
+              type="number"
+              step="0.1"
+              value={draft.operationalConfig.defaultServiceTimeGarmin}
+              onChange={(value) =>
+                handleChange(["operationalConfig", "defaultServiceTimeGarmin"])(
+                  value === "" ? "" : Number(value)
+                )
+              }
             />
           </div>
         ) : null}

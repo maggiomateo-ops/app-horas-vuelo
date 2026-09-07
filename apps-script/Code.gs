@@ -19,6 +19,13 @@ const DEFAULT_SETTINGS = {
     oilUnitLabel: "Qrt",
     currency: "USD"
   },
+  operationalConfig: {
+    ownerOptions: ["ALEGRE", "MAGGIO"],
+    defaultOrigin: "AGR",
+    defaultDestination: "AGR",
+    defaultFlightTimeJPI: 0.5,
+    defaultServiceTimeGarmin: 0.4
+  },
   kpiParams: {
     annualInspection: {
       nextDueDate: ""

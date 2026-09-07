@@ -80,13 +80,12 @@ function LoginScreen({ loginLoading, loginError, onLoginSubmit }) {
   );
 }
 
-function PropietarioSelect({ value, onChange, disabled }) {
+function PropietarioSelect({ value, options: ownerOptions, onChange, disabled }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const options = [
     { value: "", label: "Seleccionar..." },
-    { value: "ALEGRE", label: "ALEGRE" },
-    { value: "MAGGIO", label: "MAGGIO" },
+    ...ownerOptions.map((option) => ({ value: option, label: option })),
   ];
 
   const selectedOption =
@@ -364,7 +363,7 @@ function App() {
 
   const normalizarPropietarioSelect = (valor) => {
     const u = String(valor ?? "").trim().toUpperCase();
-    return u === "ALEGRE" || u === "MAGGIO" ? u : "";
+    return settings.operationalConfig.ownerOptions.includes(u) ? u : "";
   };
 
   const limpiarFormulario = () => {
@@ -384,12 +383,15 @@ function App() {
 
   const rellenadoRapido = () => {
     const hoy = new Date().toISOString().split("T")[0];
+    const operationalConfig = settings.operationalConfig;
 
     if (!fecha) setFecha(hoy);
-    if (!desde) setDesde("AGR");
-    if (!hasta) setHasta("AGR");
-    if (!tiempoVueloJPI) setTiempoVueloJPI("0.5");
-    if (!tiempoEnServicioGarmin) setTiempoEnServicioGarmin("0.4");
+    if (!desde) setDesde(String(operationalConfig.defaultOrigin));
+    if (!hasta) setHasta(String(operationalConfig.defaultDestination));
+    if (!tiempoVueloJPI) setTiempoVueloJPI(String(operationalConfig.defaultFlightTimeJPI));
+    if (!tiempoEnServicioGarmin) {
+      setTiempoEnServicioGarmin(String(operationalConfig.defaultServiceTimeGarmin));
+    }
   };
 
   const cargarUltimoInputParaEditar = () => {
@@ -983,7 +985,7 @@ function App() {
                 type="text"
                 value={desde}
                 onChange={(e) => setDesde(e.target.value)}
-                placeholder="Ej: AGR"
+                placeholder={`Ej: ${settings.operationalConfig.defaultOrigin}`}
                 className={placeholderClassName}
                 style={inputStyle}
               />
@@ -1057,6 +1059,7 @@ function App() {
               <FieldLabel htmlFor="propietario" title="Propietario" required />
               <PropietarioSelect
                 value={propietario}
+                options={settings.operationalConfig.ownerOptions}
                 onChange={setPropietario}
                 disabled={loading}
               />
