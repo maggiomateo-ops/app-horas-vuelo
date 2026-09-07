@@ -1,16 +1,16 @@
 export const DEFAULT_SETTINGS = {
   appConfig: {
     aircraftName: "App Horas de Vuelo",
-    aircraftRegistration: "LV-MHZ",
+    aircraftRegistration: "",
     oilUnitLabel: "Qrt",
     currency: "USD",
   },
   operationalConfig: {
-    ownerOptions: ["ALEGRE", "MAGGIO"],
-    defaultOrigin: "AGR",
-    defaultDestination: "AGR",
-    defaultFlightTimeJPI: 0.5,
-    defaultServiceTimeGarmin: 0.4,
+    ownerOptions: [],
+    defaultOrigin: "",
+    defaultDestination: "",
+    defaultFlightTimeJPI: "",
+    defaultServiceTimeGarmin: "",
   },
   kpiParams: {
     annualInspection: {
