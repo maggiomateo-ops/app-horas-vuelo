@@ -1,4 +1,4 @@
-import { requireAuth } from "./_auth.js";
+import { getSessionUserId, requireAuth } from "./_auth.js";
 
 function buildHistorialesUrl(userId, aircraftId) {
   const appsScriptUrl = String(process.env.APPS_SCRIPT_URL || "").trim();
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     return undefined;
   }
 
-  const userId = String(process.env.LEGACY_USER_ID || "").trim();
+  const userId = getSessionUserId(session);
   const requestedAircraftId = Array.isArray(req.query?.aircraft_id)
     ? req.query.aircraft_id[0]
     : req.query?.aircraft_id;
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   if (!userId) {
     return res
       .status(500)
-      .json({ ok: false, error: "Falta LEGACY_USER_ID en variables de entorno." });
+      .json({ ok: false, error: "La sesion no contiene un userId valido." });
   }
 
   if (!aircraftId) {

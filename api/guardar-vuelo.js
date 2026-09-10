@@ -1,4 +1,4 @@
-import { requireAuth } from "./_auth.js";
+import { getSessionUserId, requireAuth } from "./_auth.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   try {
     const appsScriptUrl = String(process.env.APPS_SCRIPT_URL || "").trim();
-    const userId = String(process.env.LEGACY_USER_ID || "").trim();
+    const userId = getSessionUserId(session);
     const payload = req.body && typeof req.body === "object" ? { ...req.body } : {};
     const aircraftId = String(
       payload.aircraft_id || process.env.LEGACY_AIRCRAFT_ID || ""
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     if (!userId) {
       return res
         .status(500)
-        .json({ ok: false, error: "Falta LEGACY_USER_ID en variables de entorno." });
+        .json({ ok: false, error: "La sesion no contiene un userId valido." });
     }
 
     if (!aircraftId) {

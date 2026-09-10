@@ -18,10 +18,24 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, error: "Credenciales invalidas." });
   }
 
-  res.setHeader("Set-Cookie", createSessionCookie(username));
+  const userId = String(process.env.LEGACY_USER_ID || "").trim();
+
+  if (!userId) {
+    return res
+      .status(500)
+      .json({ ok: false, error: "Falta LEGACY_USER_ID en variables de entorno." });
+  }
+
+  const user = {
+    userId,
+    email: "",
+    name: username,
+  };
+
+  res.setHeader("Set-Cookie", createSessionCookie(user));
 
   return res.status(200).json({
     ok: true,
-    user: { username },
+    user,
   });
 }

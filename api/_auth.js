@@ -58,17 +58,23 @@ function getSessionSecret() {
   return String(process.env.SESSION_SECRET || "").trim();
 }
 
-function buildSessionValue(username, expiresAt) {
+function buildStructuredSessionValue(session) {
   const secret = getSessionSecret();
-  const payload = `${username}.${expiresAt}`;
+  const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
   const signature = createSignature(payload, secret);
 
   return `${payload}.${signature}`;
 }
 
-export function createSessionCookie(username) {
+export function createSessionCookie(user) {
   const expiresAt = Date.now() + SESSION_DURATION_MS;
-  const sessionValue = buildSessionValue(username, expiresAt);
+  const sessionValue = buildStructuredSessionValue({
+    version: 2,
+    userId: String(user?.userId || "").trim(),
+    email: String(user?.email || "").trim().toLowerCase(),
+    name: String(user?.name || "").trim(),
+    expiresAt,
+  });
 
   return serializeCookie(
     SESSION_COOKIE_NAME,
@@ -81,20 +87,46 @@ export function clearSessionCookie() {
   return serializeCookie(SESSION_COOKIE_NAME, "", 0);
 }
 
-export function getSession(req) {
-  const secret = getSessionSecret();
+function parseStructuredSession(rawValue, secret) {
+  const segments = rawValue.split(".");
 
-  if (!secret) {
+  if (segments.length !== 2) {
     return null;
   }
 
-  const cookies = parseCookies(req.headers.cookie);
-  const rawValue = cookies[SESSION_COOKIE_NAME];
+  const [payload, signature] = segments;
+  const expectedSignature = createSignature(payload, secret);
 
-  if (!rawValue) {
+  if (!safeCompare(signature, expectedSignature)) {
     return null;
   }
 
+  try {
+    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    const expiresAt = Number(session?.expiresAt);
+    const userId = String(session?.userId || "").trim();
+
+    if (session?.version !== 2 || !userId || !Number.isFinite(expiresAt)) {
+      return null;
+    }
+
+    if (expiresAt <= Date.now()) {
+      return null;
+    }
+
+    return {
+      version: 2,
+      userId,
+      email: String(session.email || "").trim().toLowerCase(),
+      name: String(session.name || "").trim(),
+      expiresAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseLegacySession(rawValue, secret) {
   const segments = rawValue.split(".");
 
   if (segments.length < 3) {
@@ -116,7 +148,24 @@ export function getSession(req) {
     return null;
   }
 
-  return { username, expiresAt };
+  return { version: 1, username, expiresAt };
+}
+
+export function getSession(req) {
+  const secret = getSessionSecret();
+
+  if (!secret) {
+    return null;
+  }
+
+  const cookies = parseCookies(req.headers.cookie);
+  const rawValue = cookies[SESSION_COOKIE_NAME];
+
+  if (!rawValue) {
+    return null;
+  }
+
+  return parseStructuredSession(rawValue, secret) || parseLegacySession(rawValue, secret);
 }
 
 export function requireAuth(req, res) {
@@ -128,6 +177,18 @@ export function requireAuth(req, res) {
   }
 
   return session;
+}
+
+export function getSessionUserId(session) {
+  if (session?.version === 2) {
+    return String(session.userId || "").trim();
+  }
+
+  if (session?.version === 1) {
+    return String(process.env.LEGACY_USER_ID || "").trim();
+  }
+
+  return "";
 }
 
 export function validateCredentials(username, password) {

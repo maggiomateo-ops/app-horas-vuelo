@@ -11,6 +11,18 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, authenticated: false });
   }
 
+  if (session.version === 2) {
+    return res.status(200).json({
+      ok: true,
+      authenticated: true,
+      user: {
+        userId: session.userId,
+        email: session.email,
+        name: session.name,
+      },
+    });
+  }
+
   return res.status(200).json({
     ok: true,
     authenticated: true,
