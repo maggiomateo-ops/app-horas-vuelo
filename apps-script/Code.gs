@@ -125,6 +125,21 @@ function doGet(e) {
     }
 
     const action = e && e.parameter ? String(e.parameter.action || "").trim() : "";
+    if (action === "resolveUser") {
+      const email = e && e.parameter
+        ? String(e.parameter.email || "").trim()
+        : "";
+
+      if (!email) {
+        throw new Error("Falta email.");
+      }
+
+      return jsonOutput({
+        ok: true,
+        user: getUserByEmail(email)
+      });
+    }
+
     if (action === "aircrafts") {
       const userId = e && e.parameter
       ? String(e.parameter.userId || "").trim()
@@ -726,6 +741,61 @@ function getUserById(userId) {
   });
 
   return result;
+}
+
+function getUserByEmail(email) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    throw new Error("Falta email.");
+  }
+
+  const ss = getAdminSpreadsheet();
+  const sheet = ss.getSheetByName("USUARIOS");
+
+  if (!sheet) {
+    throw new Error("No se encontró la hoja USUARIOS.");
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(function(value) {
+    return String(value).trim();
+  });
+
+  const userIdIndex = headers.indexOf("user_id");
+  const emailIndex = headers.indexOf("email");
+  const nameIndex = headers.indexOf("nombre");
+  const statusIndex = headers.indexOf("estado");
+
+  if (
+    userIdIndex === -1 ||
+    emailIndex === -1 ||
+    nameIndex === -1 ||
+    statusIndex === -1
+  ) {
+    throw new Error("Faltan columnas requeridas en USUARIOS.");
+  }
+
+  const row = values.slice(1).find(function(currentRow) {
+    return String(currentRow[emailIndex]).trim().toLowerCase() === normalizedEmail;
+  });
+
+  if (!row) {
+    throw new Error("No se encontró un usuario con ese email.");
+  }
+
+  const status = String(row[statusIndex]).trim();
+
+  if (status.toUpperCase() !== "ACTIVO") {
+    throw new Error("El usuario no está activo.");
+  }
+
+  return {
+    user_id: String(row[userIdIndex]).trim(),
+    email: String(row[emailIndex]).trim(),
+    nombre: String(row[nameIndex]).trim(),
+    estado: status
+  };
 }
 
 function getUserPermissionForAircraft(userId, aircraftId) {
