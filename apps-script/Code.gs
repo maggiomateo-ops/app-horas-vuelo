@@ -170,9 +170,8 @@ function doGet(e) {
         throw new Error("Falta aircraftId.");
       }
 
-      validateUserAircraftAccess(userId, aircraftId);
-
-      const ss = getAircraftSpreadsheetById(aircraftId);
+      const access = getValidatedAccessContext(userId, aircraftId);
+      const ss = getAircraftSpreadsheet(access.aircraft, aircraftId);
 
       const computacionHoras = leerComputacionHoras(ss, "Computacion Horas");
       const historialAeronave = leerHistorialAeronave(ss, "Historial Aeronave");
@@ -235,7 +234,7 @@ function handleFlightPost(data) {
     throw new Error("Falta aircraftId.");
   }
 
-  const access = validateUserAircraftAccess(userId, aircraftId);
+  const access = getValidatedAccessContext(userId, aircraftId);
   const role = String(access.permission.rol || "").trim().toUpperCase();
 
   if (role !== "OWNER" && role !== "ADMIN") {
@@ -243,7 +242,7 @@ function handleFlightPost(data) {
   }
 
   const sheetName = "Computacion Horas";
-  const ss = getAircraftSpreadsheetById(aircraftId);
+  const ss = getAircraftSpreadsheet(access.aircraft, aircraftId);
   const sheet = ss.getSheetByName(sheetName);
 
   if (!sheet) {
@@ -560,9 +559,8 @@ function setAircraftConfigurationValue(sheet, key, value) {
 }
 
 function getAircraftSettings(userId, aircraftId) {
-  validateUserAircraftAccess(userId, aircraftId);
-
-  const ss = getAircraftSpreadsheetById(aircraftId);
+  const access = getValidatedAccessContext(userId, aircraftId);
+  const ss = getAircraftSpreadsheet(access.aircraft, aircraftId);
   const sheet = getAircraftConfigurationSheet(ss);
   const rawValue = getAircraftConfigurationValue(sheet, SETTINGS_PROPERTY_KEY);
 
@@ -588,7 +586,7 @@ function saveAircraftSettings(userId, aircraftId, settings) {
     throw new Error("Falta aircraftId.");
   }
 
-  const access = validateUserAircraftAccess(userId, aircraftId);
+  const access = getValidatedAccessContext(userId, aircraftId);
   const role = String(access.permission.rol || "").trim().toUpperCase();
 
   if (role !== "OWNER" && role !== "ADMIN") {
@@ -596,7 +594,7 @@ function saveAircraftSettings(userId, aircraftId, settings) {
   }
 
   const normalized = normalizeSettings(settings);
-  const ss = getAircraftSpreadsheetById(aircraftId);
+  const ss = getAircraftSpreadsheet(access.aircraft, aircraftId);
   const sheet = getAircraftConfigurationSheet(ss);
 
   setAircraftConfigurationValue(
@@ -651,8 +649,8 @@ function getAdminSpreadsheet() {
   return SpreadsheetApp.openById(adminSpreadsheetId);
 }
 
-function getAircraftById(aircraftId) {
-  const ss = getAdminSpreadsheet();
+function getAircraftById(aircraftId, adminSs) {
+  const ss = adminSs || getAdminSpreadsheet();
   const sheet = ss.getSheetByName("AERONAVES");
 
   if (!sheet) {
@@ -694,6 +692,10 @@ function getAircraftById(aircraftId) {
 function getAircraftSpreadsheetById(aircraftId) {
   const aircraft = getAircraftById(aircraftId);
 
+  return getAircraftSpreadsheet(aircraft, aircraftId);
+}
+
+function getAircraftSpreadsheet(aircraft, aircraftId) {
   if (String(aircraft.estado).trim().toUpperCase() !== "ACTIVA") {
     throw new Error("La aeronave " + aircraftId + " no está activa.");
   }
@@ -707,8 +709,8 @@ function getAircraftSpreadsheetById(aircraftId) {
   return SpreadsheetApp.openById(spreadsheetId);
 }
 
-function getUserById(userId) {
-  const ss = getAdminSpreadsheet();
+function getUserById(userId, adminSs) {
+  const ss = adminSs || getAdminSpreadsheet();
   const sheet = ss.getSheetByName("USUARIOS");
 
   if (!sheet) {
@@ -798,8 +800,8 @@ function getUserByEmail(email) {
   };
 }
 
-function getUserPermissionForAircraft(userId, aircraftId) {
-  const ss = getAdminSpreadsheet();
+function getUserPermissionForAircraft(userId, aircraftId, adminSs) {
+  const ss = adminSs || getAdminSpreadsheet();
   const sheet = ss.getSheetByName("PERMISOS");
 
   if (!sheet) {
@@ -839,9 +841,14 @@ function getUserPermissionForAircraft(userId, aircraftId) {
 }
 
 function validateUserAircraftAccess(userId, aircraftId) {
-  const user = getUserById(userId);
-  const permission = getUserPermissionForAircraft(userId, aircraftId);
-  const aircraft = getAircraftById(aircraftId);
+  return getValidatedAccessContext(userId, aircraftId);
+}
+
+function getValidatedAccessContext(userId, aircraftId) {
+  const adminSs = getAdminSpreadsheet();
+  const user = getUserById(userId, adminSs);
+  const permission = getUserPermissionForAircraft(userId, aircraftId, adminSs);
+  const aircraft = getAircraftById(aircraftId, adminSs);
 
   if (String(user.estado).trim().toUpperCase() !== "ACTIVO") {
     throw new Error("El usuario " + userId + " no está activo.");
@@ -862,13 +869,12 @@ function validateUserAircraftAccess(userId, aircraftId) {
   };
 }
 function getAircraftsForUser(userId) {
-  const user = getUserById(userId);
+  const adminSs = getAdminSpreadsheet();
+  const user = getUserById(userId, adminSs);
 
   if (String(user.estado).trim().toUpperCase() !== "ACTIVO") {
     throw new Error("El usuario " + userId + " no está activo.");
   }
-
-  const adminSs = getAdminSpreadsheet();
 
   const permissionsSheet = adminSs.getSheetByName("PERMISOS");
   const aircraftSheet = adminSs.getSheetByName("AERONAVES");
