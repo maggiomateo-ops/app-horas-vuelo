@@ -1,4 +1,4 @@
-import { resolveAircraftAccess } from "./_adminRepository.js";
+import { getValidatedAircraftAccess } from "./_adminRepository.js";
 import { batchGetSpreadsheetValues } from "./_googleSheets.js";
 
 const RANGE_DEFINITIONS = {
@@ -91,7 +91,7 @@ function transformRows(values, definition) {
 }
 
 export async function getHistorialesFromSheets({ userId, aircraftId, mode }) {
-  const { spreadsheetId } = await resolveAircraftAccess(userId, aircraftId);
+  const { spreadsheetId } = await getValidatedAircraftAccess(userId, aircraftId);
   const keys = mode === "historiales"
     ? ["historialAeronave", "historialMotor", "historialHelice"]
     : [

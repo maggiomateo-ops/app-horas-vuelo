@@ -1,5 +1,12 @@
 import { requireAuth } from "./_auth.js";
+import { getSettingsFromSheets } from "./_settingsRepository.js";
 import { DEFAULT_SETTINGS, normalizeSettings } from "../src/services/settingsService.js";
+
+function getSettingsDataSource() {
+  return process.env.SETTINGS_DATA_SOURCE === "sheets-api"
+    ? "sheets-api"
+    : "apps-script";
+}
 
 function buildSettingsUrl(userId, aircraftId) {
   const appsScriptUrl = String(process.env.APPS_SCRIPT_URL || "").trim();
@@ -60,15 +67,29 @@ export default async function handler(req, res) {
       .json({ ok: false, error: "Falta aircraft_id o LEGACY_AIRCRAFT_ID." });
   }
 
-  const settingsUrl = buildSettingsUrl(userId, aircraftId);
-
-  if (!settingsUrl) {
-    return res
-      .status(500)
-      .json({ ok: false, error: "Falta APPS_SCRIPT_URL en variables de entorno." });
-  }
-
   if (req.method === "GET") {
+    if (getSettingsDataSource() === "sheets-api") {
+      try {
+        const settings = await getSettingsFromSheets({ userId, aircraftId });
+        return res.status(200).json({ ok: true, settings });
+      } catch (error) {
+        return res.status(502).json({
+          ok: false,
+          error: error.code === "INVALID_SETTINGS_JSON"
+            ? error.message
+            : "No se pudieron cargar los settings.",
+        });
+      }
+    }
+
+    const settingsUrl = buildSettingsUrl(userId, aircraftId);
+
+    if (!settingsUrl) {
+      return res
+        .status(500)
+        .json({ ok: false, error: "Falta APPS_SCRIPT_URL en variables de entorno." });
+    }
+
     try {
       const response = await fetch(settingsUrl, { method: "GET" });
       const data = await readResponseData(response);
@@ -97,6 +118,14 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
+    const settingsUrl = buildSettingsUrl(userId, aircraftId);
+
+    if (!settingsUrl) {
+      return res
+        .status(500)
+        .json({ ok: false, error: "Falta APPS_SCRIPT_URL en variables de entorno." });
+    }
+
     try {
       const response = await fetch(settingsUrl, {
         method: "POST",

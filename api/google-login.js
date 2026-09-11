@@ -1,9 +1,16 @@
 import { OAuth2Client } from "google-auth-library";
 import { createSessionCookie } from "./_auth.js";
+import { getActiveUserByEmail } from "./_adminRepository.js";
 
 const googleClient = new OAuth2Client();
 
-async function resolveActiveUser(email) {
+function getUserResolutionSource() {
+  return process.env.GOOGLE_USER_RESOLUTION_SOURCE === "sheets-api"
+    ? "sheets-api"
+    : "apps-script";
+}
+
+async function resolveActiveUserFromAppsScript(email) {
   const appsScriptUrl = String(process.env.APPS_SCRIPT_URL || "").trim();
   const appSecret = String(process.env.APPS_SCRIPT_SECRET || "").trim();
 
@@ -45,6 +52,37 @@ async function resolveActiveUser(email) {
   }
 
   return { userId, email: userEmail, name };
+}
+
+async function resolveActiveUserFromSheets(email) {
+  let user;
+
+  try {
+    user = await getActiveUserByEmail(email);
+  } catch (error) {
+    if (error.code === "USER_NOT_AUTHORIZED") {
+      throw new Error("USER_NOT_AUTHORIZED");
+    }
+
+    throw new Error("USER_SERVICE_UNAVAILABLE");
+  }
+
+  const userId = String(user?.user_id || "").trim();
+  const userEmail = String(user?.email || "").trim().toLowerCase();
+  const name = String(user?.nombre || "").trim();
+  const status = String(user?.estado || "").trim().toUpperCase();
+
+  if (!userId || !userEmail || !name || status !== "ACTIVO" || userEmail !== email) {
+    throw new Error("INVALID_USER_RESPONSE");
+  }
+
+  return { userId, email: userEmail, name };
+}
+
+function resolveActiveUser(email) {
+  return getUserResolutionSource() === "sheets-api"
+    ? resolveActiveUserFromSheets(email)
+    : resolveActiveUserFromAppsScript(email);
 }
 
 export default async function handler(req, res) {
