@@ -24,7 +24,94 @@ const THEME_LABELS = {
   dark: "Tema: Noche",
 };
 
-function LoginScreen({ loginLoading, loginError, onLoginSubmit }) {
+const GOOGLE_AUTH_ENABLED = import.meta.env.VITE_GOOGLE_AUTH_ENABLED === "true";
+const GOOGLE_CLIENT_ID = String(import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim();
+
+function GoogleSignInButton({ clientId, disabled, onCredential, onError }) {
+  useEffect(() => {
+    if (!clientId) {
+      onError("Google Sign-In no esta configurado.");
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const renderButton = () => {
+      const buttonContainer = document.getElementById("google-sign-in-button");
+
+      if (cancelled || !buttonContainer || !window.google?.accounts?.id) {
+        return;
+      }
+
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response) => {
+          if (response?.credential) {
+            onCredential(response.credential);
+          } else {
+            onError("Google no devolvio una credencial valida.");
+          }
+        },
+      });
+
+      buttonContainer.replaceChildren();
+      window.google.accounts.id.renderButton(buttonContainer, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "pill",
+        width: 320,
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      renderButton();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+
+    if (!script) {
+      script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    const handleScriptError = () => onError("No se pudo cargar Google Sign-In.");
+
+    script.addEventListener("load", renderButton);
+    script.addEventListener("error", handleScriptError);
+
+    return () => {
+      cancelled = true;
+      script.removeEventListener("load", renderButton);
+      script.removeEventListener("error", handleScriptError);
+    };
+  }, [clientId, onCredential, onError]);
+
+  return (
+    <div className={`google-login-control ${disabled ? "is-disabled" : ""}`}>
+      <div id="google-sign-in-button" className="google-login-button" />
+      {disabled ? <p className="google-login-status">Ingresando con Google...</p> : null}
+    </div>
+  );
+}
+
+function LoginScreen({
+  googleEnabled,
+  googleClientId,
+  googleLoading,
+  loginLoading,
+  loginError,
+  onGoogleCredential,
+  onGoogleError,
+  onLoginSubmit,
+}) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -42,6 +129,20 @@ function LoginScreen({ loginLoading, loginError, onLoginSubmit }) {
           Ingresa tus credenciales para cargar vuelos y revisar historiales.
         </p>
 
+        {googleEnabled ? (
+          <>
+            <GoogleSignInButton
+              clientId={googleClientId}
+              disabled={googleLoading}
+              onCredential={onGoogleCredential}
+              onError={onGoogleError}
+            />
+            <div className="login-separator" aria-hidden="true">
+              <span>o ingresa con tu usuario actual</span>
+            </div>
+          </>
+        ) : null}
+
         <form className="login-form" onSubmit={handleSubmit}>
           <label className="login-label" htmlFor="login-username">
             Usuario
@@ -53,7 +154,7 @@ function LoginScreen({ loginLoading, loginError, onLoginSubmit }) {
             value={username}
             onChange={(event) => setUsername(event.target.value)}
             autoComplete="username"
-            disabled={loginLoading}
+            disabled={loginLoading || googleLoading}
           />
 
           <label className="login-label" htmlFor="login-password">
@@ -66,10 +167,14 @@ function LoginScreen({ loginLoading, loginError, onLoginSubmit }) {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
-            disabled={loginLoading}
+            disabled={loginLoading || googleLoading}
           />
 
-          <button className="login-button" type="submit" disabled={loginLoading}>
+          <button
+            className="login-button"
+            type="submit"
+            disabled={loginLoading || googleLoading}
+          >
             {loginLoading ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
@@ -136,6 +241,7 @@ function App() {
   const [authStatus, setAuthStatus] = useState(AUTH_STATUS.loading);
   const [, setCurrentUser] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [googleLoginLoading, setGoogleLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === "undefined") {
@@ -647,6 +753,51 @@ function App() {
     }
   };
 
+  const handleGoogleCredential = async (credential) => {
+    if (googleLoginLoading) {
+      return;
+    }
+
+    setGoogleLoginLoading(true);
+    setLoginError("");
+
+    try {
+      const loginResponse = await fetch("/api/google-login", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ credential }),
+      });
+
+      const loginResult = await loginResponse.json().catch(() => null);
+
+      if (!loginResponse.ok || !loginResult?.ok) {
+        throw new Error(loginResult?.error || "No se pudo ingresar con Google.");
+      }
+
+      const sessionResponse = await fetch("/api/session", {
+        method: "GET",
+        credentials: "include",
+      });
+      const sessionResult = await sessionResponse.json().catch(() => null);
+
+      if (!sessionResponse.ok || !sessionResult?.authenticated) {
+        throw new Error("No se pudo confirmar la sesion iniciada con Google.");
+      }
+
+      setCurrentUser(sessionResult.user ?? null);
+      setAuthStatus(AUTH_STATUS.authenticated);
+    } catch (error) {
+      setCurrentUser(null);
+      setAuthStatus(AUTH_STATUS.unauthenticated);
+      setLoginError(error.message || "No se pudo ingresar con Google.");
+    } finally {
+      setGoogleLoginLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await fetch("/api/logout", {
@@ -827,8 +978,13 @@ function App() {
   if (authStatus !== AUTH_STATUS.authenticated) {
     return (
       <LoginScreen
+        googleEnabled={GOOGLE_AUTH_ENABLED}
+        googleClientId={GOOGLE_CLIENT_ID}
+        googleLoading={googleLoginLoading}
         loginLoading={loginLoading}
         loginError={loginError}
+        onGoogleCredential={handleGoogleCredential}
+        onGoogleError={setLoginError}
         onLoginSubmit={handleLoginSubmit}
       />
     );
