@@ -47,6 +47,7 @@
   min-height: 100vh;
   box-sizing: border-box;
   color: var(--app-text);
+  text-transform: uppercase;
 }
 
 .app-auth-shell {
@@ -444,9 +445,357 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-weight: 700;
 }
 
+.form-action-button.is-danger {
+  border-color: var(--app-danger-border);
+  background: var(--app-surface-soft);
+  color: var(--app-danger);
+}
+
 .form-action-button:disabled {
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+.flight-form,
+.last-flight-card,
+.last-flight-empty {
+  width: min(100%, 960px);
+  margin-right: auto;
+  margin-left: auto;
+  box-sizing: border-box;
+}
+
+.flight-form {
+  margin-bottom: 22px;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 22px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.flight-form-header {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 26px 28px 22px;
+  text-align: center;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--app-primary-soft) 78%, transparent), transparent 70%);
+}
+
+.flight-form-title {
+  width: 100%;
+}
+
+.flight-form-header h1,
+.last-flight-heading h2 {
+  margin: 2px 0 4px;
+  color: var(--app-text);
+  line-height: 1.15;
+}
+
+.flight-form-header h1 {
+  font-size: clamp(25px, 3vw, 34px);
+}
+
+.flight-form-header p,
+.last-flight-empty p {
+  margin: 0;
+  color: var(--app-text-muted);
+}
+
+.flight-editing-status {
+  position: absolute;
+  top: 26px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--app-primary) 30%, var(--app-border));
+  border-radius: 999px;
+  background: var(--app-primary-soft);
+  color: var(--app-primary-strong);
+  font-size: 13px;
+}
+
+.flight-editing-status span {
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+
+.flight-form-section {
+  padding: 24px 28px;
+  border-top: 1px solid var(--app-border);
+}
+
+.flight-section-heading {
+  position: relative;
+  display: grid;
+  min-height: 30px;
+  margin-bottom: 20px;
+  place-items: center;
+  text-align: center;
+}
+
+.flight-section-heading > span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--app-primary-soft);
+  color: var(--app-primary-strong);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.flight-section-heading h2 {
+  margin: 0;
+  padding: 0 42px;
+  box-sizing: border-box;
+  color: var(--app-primary-strong);
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.25;
+}
+
+.flight-field-grid {
+  display: grid;
+  align-items: start;
+  gap: 16px;
+}
+
+.flight-field-grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.flight-field-grid-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.flight-field {
+  min-width: 0;
+}
+
+.flight-field label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.flight-field .flight-field-required {
+  margin-left: 3px;
+  color: var(--app-danger);
+}
+
+.flight-field input,
+.flight-field textarea,
+.flight-field select {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 13px;
+  box-sizing: border-box;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 11px;
+  outline: none;
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.flight-field textarea {
+  min-height: 94px;
+  resize: vertical;
+}
+
+.flight-field input:focus,
+.flight-field textarea:focus,
+.flight-field select:focus {
+  border-color: var(--app-primary);
+  background: var(--app-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-primary) 15%, transparent);
+}
+
+.flight-field input[aria-invalid="true"],
+.flight-field textarea[aria-invalid="true"],
+.flight-field select[aria-invalid="true"],
+.flight-field.has-error input,
+.flight-field.has-error textarea,
+.flight-field.has-error select,
+.flight-field.has-error .custom-select-trigger {
+  border-color: var(--app-danger);
+}
+
+.flight-field input::placeholder,
+.flight-field textarea::placeholder {
+  text-transform: uppercase;
+}
+
+#observaciones::placeholder {
+  text-transform: none;
+}
+
+.flight-field-error {
+  margin: 6px 0 0;
+  color: var(--app-danger);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.flight-form-notes .flight-field {
+  width: 100%;
+}
+
+.flight-form-actions {
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  align-items: stretch;
+  padding: 22px 28px;
+}
+
+.flight-form-actions > .is-primary {
+  min-height: 48px;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--app-primary) 22%, transparent);
+}
+
+.flight-secondary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.flight-secondary-actions .form-action-button {
+  min-height: 40px;
+  background: transparent;
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.flight-form-message {
+  margin: 14px 28px 22px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.flight-form-message.is-success {
+  background: color-mix(in srgb, var(--app-success) 12%, var(--app-surface));
+  color: var(--app-success);
+}
+
+.flight-form-message.is-error {
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+}
+
+.last-flight-card,
+.last-flight-empty {
+  margin-bottom: 32px;
+  padding: 20px 22px;
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.last-flight-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.last-flight-heading h2 {
+  font-size: 19px;
+}
+
+.last-flight-date {
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.last-flight-summary {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.8fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 24px;
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--app-surface-muted);
+}
+
+.last-flight-route {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--app-primary-strong);
+  font-size: 20px;
+}
+
+.last-flight-summary dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.last-flight-summary dl div {
+  min-width: 0;
+}
+
+.last-flight-summary dt {
+  margin-bottom: 4px;
+  color: var(--app-text-soft);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.last-flight-summary dd {
+  overflow: hidden;
+  margin: 0;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.last-flight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.last-flight-actions .form-action-button {
+  min-height: 40px;
+}
+
+.last-flight-empty {
+  text-align: center;
+}
+
+.last-flight-empty p {
+  margin-top: 5px;
+  font-size: 13px;
 }
 
 .custom-select {
@@ -1230,6 +1579,30 @@ select {
   .login-card {
     padding: 24px;
   }
+
+  .flight-form-header,
+  .flight-form-section {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .flight-form-section {
+    display: block;
+  }
+
+  .flight-form-actions {
+    padding: 22px 20px;
+  }
+
+  .flight-form-message {
+    margin-right: 20px;
+    margin-left: 20px;
+  }
+
+  .last-flight-summary {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
 }
 
 @media (max-width: 560px) {
@@ -1287,15 +1660,16 @@ select {
   }
 
   .history-toolbar-group {
+    display: grid;
+    grid-template-columns: 1fr;
     width: 100%;
-    justify-content: space-between;
-    align-items: flex-end;
-    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 12px;
   }
 
   .history-print-actions {
+    width: 100%;
     gap: 8px;
-    flex: 1;
   }
 
   .history-print-button {
@@ -1305,7 +1679,12 @@ select {
   }
 
   .history-filter {
-    min-width: 136px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .history-filter span {
+    white-space: nowrap;
   }
 
   .history-filter select {
@@ -1321,6 +1700,65 @@ select {
   .form-action-button {
     padding: 11px 10px;
     font-size: 13px;
+  }
+
+  .flight-form {
+    border-radius: 17px;
+  }
+
+  .flight-form-header {
+    padding: 21px 16px 18px;
+  }
+
+.flight-editing-status {
+    position: static;
+    width: 100%;
+    margin-top: 13px;
+    box-sizing: border-box;
+    justify-content: center;
+    border-radius: 10px;
+  }
+
+  .flight-form-section {
+    padding: 20px 16px;
+  }
+
+  .flight-field-grid-two,
+  .flight-field-grid-three {
+    grid-template-columns: 1fr;
+  }
+
+  .flight-form-actions {
+    grid-template-columns: 1fr;
+    padding: 18px 16px;
+  }
+
+  .flight-form-message {
+    margin-right: 16px;
+    margin-left: 16px;
+  }
+
+  .last-flight-card,
+  .last-flight-empty {
+    padding: 18px 16px;
+  }
+
+  .last-flight-heading {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .last-flight-summary dl {
+    grid-template-columns: 1fr;
+  }
+
+  .last-flight-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .last-flight-actions .is-danger {
+    grid-column: 1 / -1;
   }
 
   .settings-actions {

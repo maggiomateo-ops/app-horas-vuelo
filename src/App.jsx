@@ -12,6 +12,14 @@ const AUTH_STATUS = {
   unauthenticated: "unauthenticated",
 };
 
+function getTodayInputValue() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 const THEME_MODE = {
   auto: "auto",
   light: "light",
@@ -268,7 +276,7 @@ function App() {
   const [aircraftsLoading, setAircraftsLoading] = useState(true);
   const [aircraftsError, setAircraftsError] = useState("");
   const [activeMainTab, setActiveMainTab] = useState("registro");
-  const [fecha, setFecha] = useState("");
+  const [fecha, setFecha] = useState(getTodayInputValue);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [tiempoVueloJPI, setTiempoVueloJPI] = useState("");
@@ -283,6 +291,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [mensajeExito, setMensajeExito] = useState("");
   const [mensajeError, setMensajeError] = useState("");
+  const [formErrors, setFormErrors] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [ultimoInput, setUltimoInput] = useState(null);
 
@@ -404,6 +413,22 @@ function App() {
 
         if (!ignore) {
           setSettings(nextSettings);
+          const operationalConfig = nextSettings.operationalConfig;
+          setFecha(getTodayInputValue());
+          setDesde(String(operationalConfig.defaultOrigin ?? ""));
+          setHasta(String(operationalConfig.defaultDestination ?? ""));
+          setTiempoVueloJPI(String(operationalConfig.defaultFlightTimeJPI ?? ""));
+          setTiempoEnServicioGarmin(
+            String(operationalConfig.defaultServiceTimeGarmin ?? "")
+          );
+          setPiloto("");
+          setPropietario("");
+          setAceiteAgregado("");
+          setCombustibleTanqueIzquierdo("");
+          setCombustibleTanqueDerecho("");
+          setObservaciones("");
+          setEditingId(null);
+          setFormErrors({});
         }
       } catch (error) {
         if (error.name === "AbortError") {
@@ -476,11 +501,12 @@ function App() {
   };
 
   const limpiarFormulario = () => {
-    setFecha("");
-    setDesde("");
-    setHasta("");
-    setTiempoVueloJPI("");
-    setTiempoEnServicioGarmin("");
+    const operationalConfig = settings.operationalConfig;
+    setFecha(getTodayInputValue());
+    setDesde(String(operationalConfig.defaultOrigin ?? ""));
+    setHasta(String(operationalConfig.defaultDestination ?? ""));
+    setTiempoVueloJPI(String(operationalConfig.defaultFlightTimeJPI ?? ""));
+    setTiempoEnServicioGarmin(String(operationalConfig.defaultServiceTimeGarmin ?? ""));
     setPiloto("");
     setPropietario("");
     setAceiteAgregado("");
@@ -488,10 +514,11 @@ function App() {
     setCombustibleTanqueDerecho("");
     setObservaciones("");
     setEditingId(null);
+    setFormErrors({});
   };
 
   const rellenadoRapido = () => {
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = getTodayInputValue();
     const operationalConfig = settings.operationalConfig;
 
     if (!fecha) setFecha(hoy);
@@ -501,6 +528,8 @@ function App() {
     if (!tiempoEnServicioGarmin) {
       setTiempoEnServicioGarmin(String(operationalConfig.defaultServiceTimeGarmin));
     }
+    setFormErrors({});
+    setMensajeError("");
   };
 
   const cargarUltimoInputParaEditar = () => {
@@ -542,12 +571,15 @@ function App() {
     );
     setObservaciones(ultimoInput.observaciones ?? "");
     setEditingId(ultimoInput.id);
+    setFormErrors({});
+    setMensajeExito("");
+    setMensajeError("");
   };
 
   const replicarUltimoInput = () => {
     if (!ultimoInput) return;
 
-    setFecha("");
+    setFecha(getTodayInputValue());
     setDesde(ultimoInput.desde ?? "");
     setHasta(ultimoInput.hasta ?? "");
     setTiempoVueloJPI(
@@ -581,6 +613,9 @@ function App() {
     );
     setObservaciones(ultimoInput.observaciones ?? "");
     setEditingId(null);
+    setFormErrors({});
+    setMensajeExito("");
+    setMensajeError("");
   };
 
   const handleDeleteUltimoVuelo = async () => {
@@ -639,26 +674,62 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) {
+      return;
+    }
+
     setMensajeExito("");
     setMensajeError("");
+    const nextErrors = {};
 
     if (!selectedAircraft) {
       setMensajeError("Selecciona una aeronave antes de guardar el vuelo.");
       return;
     }
 
+    const dateParts = fecha.split("-");
+    const parsedDate = new Date(`${fecha}T00:00:00`);
+    const validDate = /^\d{4}-\d{2}-\d{2}$/.test(fecha) &&
+      !Number.isNaN(parsedDate.getTime()) &&
+      parsedDate.getFullYear() === Number(dateParts[0]) &&
+      parsedDate.getMonth() + 1 === Number(dateParts[1]) &&
+      parsedDate.getDate() === Number(dateParts[2]);
+
+    if (!validDate) nextErrors.fecha = "Ingresá una fecha válida.";
+    if (!desde.trim()) nextErrors.desde = "Ingresá el origen.";
+    if (!hasta.trim()) nextErrors.hasta = "Ingresá el destino.";
+    if (tiempoVueloJPI === "" || !Number.isFinite(Number(tiempoVueloJPI)) || Number(tiempoVueloJPI) < 0) {
+      nextErrors.tiempoVueloJPI = "Ingresá un tiempo válido.";
+    }
     if (
-      !fecha ||
-      !desde.trim() ||
-      !hasta.trim() ||
-      !tiempoVueloJPI ||
-      !tiempoEnServicioGarmin ||
-      !piloto.trim() ||
-      !propietario.trim()
+      tiempoEnServicioGarmin === "" ||
+      !Number.isFinite(Number(tiempoEnServicioGarmin)) ||
+      Number(tiempoEnServicioGarmin) < 0
     ) {
-      setMensajeError("Completa todos los campos obligatorios.");
+      nextErrors.tiempoEnServicioGarmin = "Ingresá un tiempo válido.";
+    }
+    if (!piloto.trim()) nextErrors.piloto = "Ingresá el piloto.";
+    if (!propietario.trim()) nextErrors.propietario = "Seleccioná el propietario.";
+
+    const optionalNumericFields = [
+      ["aceiteAgregado", aceiteAgregado],
+      ["combustibleTanqueIzquierdo", combustibleTanqueIzquierdo],
+      ["combustibleTanqueDerecho", combustibleTanqueDerecho],
+    ];
+    optionalNumericFields.forEach(([field, value]) => {
+      if (value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+        nextErrors[field] = "Ingresá un valor válido.";
+      }
+    });
+
+    if (Object.keys(nextErrors).length) {
+      setFormErrors(nextErrors);
+      setMensajeError("Revisá los campos marcados antes de guardar.");
       return;
     }
+
+    setFormErrors({});
 
     const [anio, mes, dia] = fecha.split("-");
 
@@ -862,86 +933,6 @@ function App() {
     setSelectedAircraftId(nextAircraftId);
   };
 
-  const formStyle = {
-    maxWidth: "760px",
-    margin: "24px auto 32px",
-    padding: "clamp(20px, 4vw, 34px)",
-    border: "1px solid var(--app-border)",
-    borderRadius: "24px",
-    background:
-      "linear-gradient(180deg, var(--app-surface) 0%, color-mix(in srgb, var(--app-surface) 92%, var(--app-surface-muted) 8%) 100%)",
-    color: "var(--app-text)",
-    fontFamily: "Arial, sans-serif",
-    boxShadow: "var(--app-shadow)",
-  };
-
-  const fieldStyle = {
-    display: "flex",
-    flexDirection: "column",
-    marginBottom: "16px",
-    gap: "8px",
-    alignItems: "stretch",
-  };
-
-  const labelBlockStyle = {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "0px",
-    width: "100%",
-    textAlign: "center",
-  };
-
-  const labelTitleRowStyle = {
-    display: "flex",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "center",
-    columnGap: "6px",
-    rowGap: "0px",
-    width: "100%",
-  };
-
-  const labelTextStyle = {
-    textTransform: "uppercase",
-    fontSize: "13px",
-    fontWeight: 600,
-    letterSpacing: "0.04em",
-    color: "var(--app-text)",
-    lineHeight: 1.2,
-    textAlign: "center",
-  };
-
-  const labelRequiredStyle = {
-    color: "var(--app-danger)",
-    fontWeight: 700,
-    fontSize: "15px",
-    lineHeight: 1,
-    transform: "translateY(1px)",
-  };
-
-  const labelSubTechnicalStyle = {
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "var(--app-text-soft)",
-    textTransform: "uppercase",
-    letterSpacing: "0.04em",
-    lineHeight: 1.2,
-    textAlign: "center",
-  };
-
-  const inputStyle = {
-    boxSizing: "border-box",
-    width: "100%",
-    padding: "13px 14px",
-    border: "1px solid var(--app-border-strong)",
-    borderRadius: "12px",
-    fontSize: "14px",
-    color: "var(--app-text)",
-    backgroundColor: "var(--app-surface-muted)",
-  };
-
   const resolvedTheme = themeMode === THEME_MODE.auto
     ? (systemPrefersDark ? THEME_MODE.dark : THEME_MODE.light)
     : themeMode;
@@ -953,20 +944,33 @@ function App() {
       : `Tema ${resolvedTheme === THEME_MODE.dark ? "noche" : "claro"}`;
 
   const FieldLabel = ({ htmlFor, title, required, subTechnical }) => (
-    <label htmlFor={htmlFor} style={labelBlockStyle}>
-      <div style={labelTitleRowStyle}>
-        <span style={labelTextStyle}>{title}</span>
+    <label htmlFor={htmlFor} className="flight-field-label">
+      <span className="flight-field-label-row">
+        <span>{title}</span>
         {subTechnical ? (
-          <span style={labelSubTechnicalStyle}>{subTechnical}</span>
+          <span className="flight-field-technical">{subTechnical}</span>
         ) : null}
         {required ? (
-          <span style={labelRequiredStyle} aria-hidden="true">
+          <span className="flight-field-required" aria-hidden="true">
             *
           </span>
         ) : null}
-      </div>
+      </span>
     </label>
   );
+
+  const FieldError = ({ name }) => formErrors[name] ? (
+    <span className="flight-field-error" id={`${name}-error`}>
+      {formErrors[name]}
+    </span>
+  ) : null;
+
+  const clearFieldError = (name) => {
+    setFormErrors((current) => {
+      if (!current[name]) return current;
+      return { ...current, [name]: "" };
+    });
+  };
 
   const placeholderClassName = "flight-form-placeholder";
 
@@ -1123,181 +1127,118 @@ function App() {
       <div className="app-content">
       {activeMainTab === "registro" ? canEditAircraft ? (
         <>
-          <form onSubmit={handleSubmit} style={formStyle}>
-            <h1
-              style={{
-                marginTop: 0,
-                marginBottom: "20px",
-                textAlign: "center",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "20px",
-                color: "var(--app-text)",
-              }}
-            >
-              <span>Registro de Vuelo</span>
-              <span style={{ fontSize: "0.8em", letterSpacing: "0.06em" }}>
-                {selectedAircraft.matricula}
-              </span>
-            </h1>
+          <form onSubmit={handleSubmit} className="flight-form" noValidate>
+            <header className="flight-form-header">
+              <div className="flight-form-title">
+                <h1>Registro de Vuelo</h1>
+                <p>{selectedAircraft.matricula}</p>
+              </div>
+              {editingId ? (
+                <div className="flight-editing-status" role="status">
+                  <strong>Editando vuelo</strong>
+                  <span>ID {editingId}</span>
+                </div>
+              ) : null}
+            </header>
 
-            <div style={fieldStyle}>
-              <FieldLabel htmlFor="fecha" title="Fecha" required />
-              <input
-                id="fecha"
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
+            <section className="flight-form-section">
+              <div className="flight-section-heading">
+                <span>01</span>
+                <h2>Fecha y ruta</h2>
+              </div>
+              <div className="flight-field-grid flight-field-grid-three">
+                <div className={`flight-field ${formErrors.fecha ? "has-error" : ""}`}>
+                  <FieldLabel htmlFor="fecha" title="Fecha" required />
+                  <input id="fecha" type="date" value={fecha} aria-describedby={formErrors.fecha ? "fecha-error" : undefined} onChange={(e) => { setFecha(e.target.value); clearFieldError("fecha"); }} />
+                  <FieldError name="fecha" />
+                </div>
+                <div className={`flight-field ${formErrors.desde ? "has-error" : ""}`}>
+                  <FieldLabel htmlFor="desde" title="Desde" required />
+                  <input id="desde" type="text" value={desde} onChange={(e) => { setDesde(e.target.value.toUpperCase()); clearFieldError("desde"); }} placeholder={settings.operationalConfig.defaultOrigin ? `Ej: ${settings.operationalConfig.defaultOrigin}` : "Código de origen"} className={placeholderClassName} />
+                  <FieldError name="desde" />
+                </div>
+                <div className={`flight-field ${formErrors.hasta ? "has-error" : ""}`}>
+                  <FieldLabel htmlFor="hasta" title="Hasta" required />
+                  <input id="hasta" type="text" value={hasta} onChange={(e) => { setHasta(e.target.value.toUpperCase()); clearFieldError("hasta"); }} placeholder={settings.operationalConfig.defaultDestination ? `Ej: ${settings.operationalConfig.defaultDestination}` : "Código de destino"} className={placeholderClassName} />
+                  <FieldError name="hasta" />
+                </div>
+              </div>
+            </section>
 
-            <div style={fieldStyle}>
-              <FieldLabel htmlFor="desde" title="Desde" required />
-              <input
-                id="desde"
-                type="text"
-                value={desde}
-                onChange={(e) => setDesde(e.target.value)}
-                placeholder={`Ej: ${settings.operationalConfig.defaultOrigin}`}
-                className={placeholderClassName}
-                style={inputStyle}
-              />
-            </div>
+            <section className="flight-form-section">
+              <div className="flight-section-heading">
+                <span>02</span>
+                <h2>Tiempos</h2>
+              </div>
+              <div className="flight-field-grid flight-field-grid-two">
+                <div className={`flight-field ${formErrors.tiempoVueloJPI ? "has-error" : ""}`}>
+                  <FieldLabel htmlFor="tiempoVueloJPI" title="Tiempo de vuelo" required subTechnical="JPI" />
+                  <input id="tiempoVueloJPI" type="number" inputMode="decimal" min="0" step="0.1" value={tiempoVueloJPI} onChange={(e) => { setTiempoVueloJPI(e.target.value); clearFieldError("tiempoVueloJPI"); }} placeholder="0.0" className={placeholderClassName} />
+                  <FieldError name="tiempoVueloJPI" />
+                </div>
+                <div className={`flight-field ${formErrors.tiempoEnServicioGarmin ? "has-error" : ""}`}>
+                  <FieldLabel htmlFor="tiempoEnServicioGarmin" title="Tiempo en servicio" required subTechnical="Garmin" />
+                  <input id="tiempoEnServicioGarmin" type="number" inputMode="decimal" min="0" step="0.1" value={tiempoEnServicioGarmin} onChange={(e) => { setTiempoEnServicioGarmin(e.target.value); clearFieldError("tiempoEnServicioGarmin"); }} placeholder="0.0" className={placeholderClassName} />
+                  <FieldError name="tiempoEnServicioGarmin" />
+                </div>
+              </div>
+            </section>
 
-            <div style={fieldStyle}>
-              <FieldLabel htmlFor="hasta" title="Hasta" required />
-              <input
-                id="hasta"
-                type="text"
-                value={hasta}
-                onChange={(e) => setHasta(e.target.value)}
-                placeholder="Ej: SACO"
-                className={placeholderClassName}
-                style={inputStyle}
-              />
-            </div>
+            <section className="flight-form-section">
+              <div className="flight-section-heading">
+                <span>03</span>
+                <h2>Tripulación</h2>
+              </div>
+              <div className="flight-field-grid flight-field-grid-two">
+                <div className={`flight-field ${formErrors.piloto ? "has-error" : ""}`}>
+                  <FieldLabel htmlFor="piloto" title="Piloto" required />
+                  <input id="piloto" type="text" value={piloto} onChange={(e) => { setPiloto(e.target.value); clearFieldError("piloto"); }} placeholder="Nombre y apellido" className={placeholderClassName} />
+                  <FieldError name="piloto" />
+                </div>
+                <div className={`flight-field ${formErrors.propietario ? "has-error" : ""}`}>
+                  <FieldLabel htmlFor="propietario" title="Propietario" required />
+                  <PropietarioSelect value={propietario} options={settings.operationalConfig.ownerOptions} onChange={(value) => { setPropietario(value); clearFieldError("propietario"); }} disabled={loading} />
+                  <FieldError name="propietario" />
+                </div>
+              </div>
+            </section>
 
-            <div style={fieldStyle}>
-              <FieldLabel
-                htmlFor="tiempoVueloJPI"
-                title="Tiempo vuelo"
-                required
-                subTechnical="(jpi)"
-              />
-              <input
-                id="tiempoVueloJPI"
-                type="number"
-                step="0.1"
-                value={tiempoVueloJPI}
-                onChange={(e) => setTiempoVueloJPI(e.target.value)}
-                placeholder="Ej: 1.0"
-                className={placeholderClassName}
-                style={inputStyle}
-              />
-            </div>
+            <section className="flight-form-section">
+              <div className="flight-section-heading">
+                <span>04</span>
+                <h2>Consumibles</h2>
+              </div>
+              <div className="flight-field-grid flight-field-grid-three">
+                <div className={`flight-field ${formErrors.aceiteAgregado ? "has-error" : ""}`}>
+                  <FieldLabel htmlFor="aceiteAgregado" title="Aceite agregado" />
+                  <input id="aceiteAgregado" type="number" inputMode="decimal" min="0" step="any" value={aceiteAgregado} onChange={(e) => { setAceiteAgregado(e.target.value); clearFieldError("aceiteAgregado"); }} placeholder="0" className={placeholderClassName} />
+                  <FieldError name="aceiteAgregado" />
+                </div>
+                <div className={`flight-field ${formErrors.combustibleTanqueIzquierdo ? "has-error" : ""}`}>
+                  <FieldLabel htmlFor="combustibleTanqueIzquierdo" title="Combustible izquierdo" />
+                  <input id="combustibleTanqueIzquierdo" type="number" inputMode="decimal" min="0" step="any" value={combustibleTanqueIzquierdo} onChange={(e) => { setCombustibleTanqueIzquierdo(e.target.value); clearFieldError("combustibleTanqueIzquierdo"); }} placeholder="0" className={placeholderClassName} />
+                  <FieldError name="combustibleTanqueIzquierdo" />
+                </div>
+                <div className={`flight-field ${formErrors.combustibleTanqueDerecho ? "has-error" : ""}`}>
+                  <FieldLabel htmlFor="combustibleTanqueDerecho" title="Combustible derecho" />
+                  <input id="combustibleTanqueDerecho" type="number" inputMode="decimal" min="0" step="any" value={combustibleTanqueDerecho} onChange={(e) => { setCombustibleTanqueDerecho(e.target.value); clearFieldError("combustibleTanqueDerecho"); }} placeholder="0" className={placeholderClassName} />
+                  <FieldError name="combustibleTanqueDerecho" />
+                </div>
+              </div>
+            </section>
 
-            <div style={fieldStyle}>
-              <FieldLabel
-                htmlFor="tiempoEnServicioGarmin"
-                title="Tiempo en servicio"
-                required
-                subTechnical="(garmin)"
-              />
-              <input
-                id="tiempoEnServicioGarmin"
-                type="number"
-                step="0.1"
-                value={tiempoEnServicioGarmin}
-                onChange={(e) => setTiempoEnServicioGarmin(e.target.value)}
-                placeholder="Ej: 0.8"
-                className={placeholderClassName}
-                style={inputStyle}
-              />
-            </div>
+            <section className="flight-form-section flight-form-notes">
+              <div className="flight-section-heading">
+                <span>05</span>
+                <h2>Observaciones</h2>
+              </div>
+              <div className="flight-field">
+                <FieldLabel htmlFor="observaciones" title="Detalle" />
+                <textarea id="observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Escriba aquí..." className={placeholderClassName} />
+              </div>
+            </section>
 
-            <div style={fieldStyle}>
-              <FieldLabel htmlFor="piloto" title="Piloto" required />
-              <input
-                id="piloto"
-                type="text"
-                value={piloto}
-                onChange={(e) => setPiloto(e.target.value)}
-                placeholder="Nombre y apellido"
-                className={placeholderClassName}
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={fieldStyle}>
-              <FieldLabel htmlFor="propietario" title="Propietario" required />
-              <PropietarioSelect
-                value={propietario}
-                options={settings.operationalConfig.ownerOptions}
-                onChange={setPropietario}
-                disabled={loading}
-              />
-            </div>
-
-            <div style={fieldStyle}>
-              <FieldLabel htmlFor="aceiteAgregado" title="Aceite agregado" />
-              <input
-                id="aceiteAgregado"
-                type="number"
-                value={aceiteAgregado}
-                onChange={(e) => setAceiteAgregado(e.target.value)}
-                placeholder="Ej: 0.5"
-                className={placeholderClassName}
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={fieldStyle}>
-              <FieldLabel
-                htmlFor="combustibleTanqueIzquierdo"
-                title="Combustible tanque izquierdo"
-              />
-              <input
-                id="combustibleTanqueIzquierdo"
-                type="number"
-                value={combustibleTanqueIzquierdo}
-                onChange={(e) => setCombustibleTanqueIzquierdo(e.target.value)}
-                placeholder="Ej: 50"
-                className={placeholderClassName}
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={fieldStyle}>
-              <FieldLabel
-                htmlFor="combustibleTanqueDerecho"
-                title="Combustible tanque derecho"
-              />
-              <input
-                id="combustibleTanqueDerecho"
-                type="number"
-                value={combustibleTanqueDerecho}
-                onChange={(e) => setCombustibleTanqueDerecho(e.target.value)}
-                placeholder="Ej: 70"
-                className={placeholderClassName}
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={fieldStyle}>
-              <FieldLabel htmlFor="observaciones" title="Observaciones" />
-              <textarea
-                id="observaciones"
-                value={observaciones}
-                onChange={(e) => setObservaciones(e.target.value)}
-                placeholder="Escribe aqui tus observaciones..."
-                className={placeholderClassName}
-                style={{ ...inputStyle, minHeight: "90px", resize: "vertical" }}
-              />
-            </div>
-
-            <div className="form-actions">
+            <div className="form-actions flight-form-actions">
               <button
                 type="submit"
                 className="form-action-button is-primary"
@@ -1306,131 +1247,82 @@ function App() {
                 {loading
                   ? "Guardando..."
                   : editingId
-                    ? "Actualizar vuelo"
-                    : "Save Flight"}
+                    ? "Guardar cambios"
+                    : "Guardar vuelo"}
               </button>
-              <button
-                type="button"
-                className="form-action-button"
-                onClick={rellenadoRapido}
-                disabled={loading}
-              >
-                Quick Flight
-              </button>
-              <button
-                type="button"
-                className="form-action-button"
-                onClick={limpiarFormulario}
-                disabled={loading}
-              >
-                Clear All
-              </button>
+              <div className="flight-secondary-actions">
+                <button
+                  type="button"
+                  className="form-action-button"
+                  onClick={rellenadoRapido}
+                  disabled={loading}
+                  title="Completa solamente los campos vacíos con la fecha, ruta y tiempos configurados. No guarda automáticamente."
+                  aria-label="Quick Flight: completar campos vacíos sin guardar"
+                >
+                  Quick Flight
+                </button>
+                <button
+                  type="button"
+                  className="form-action-button"
+                  onClick={limpiarFormulario}
+                  disabled={loading}
+                >
+                  {editingId ? "Cancelar edición" : "Limpiar formulario"}
+                </button>
+              </div>
             </div>
 
             {mensajeExito ? (
-              <p style={{ color: "var(--app-success)", marginTop: "12px" }}>{mensajeExito}</p>
+              <p className="flight-form-message is-success" role="status">{mensajeExito}</p>
             ) : null}
 
             {mensajeError ? (
-              <p style={{ color: "var(--app-danger)", marginTop: "12px" }}>{mensajeError}</p>
+              <p className="flight-form-message is-error" role="alert">{mensajeError}</p>
             ) : null}
           </form>
 
           {ultimoInput ? (
-            <section
-              style={{
-                maxWidth: "720px",
-                margin: "0 auto 32px",
-                padding: "16px",
-                border: "1px solid var(--app-border)",
-                borderRadius: "18px",
-                background:
-                  "linear-gradient(180deg, var(--app-surface) 0%, color-mix(in srgb, var(--app-surface) 92%, var(--app-surface-muted) 8%) 100%)",
-                color: "var(--app-text)",
-                fontFamily: "Arial, sans-serif",
-                boxShadow: "var(--app-shadow)",
-              }}
-            >
-              <h2 style={{ marginTop: 0, marginBottom: "12px" }}>Ultimo input</h2>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Fecha:</strong> {`${ultimoInput.dia}-${ultimoInput.mes}-${ultimoInput.anio}`}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Desde:</strong> {ultimoInput.desde}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Hasta:</strong> {ultimoInput.hasta}
-              </p>
-              <p style={{ margin: "4px 0" }}>
-                <strong>Piloto:</strong> {ultimoInput.piloto}
-              </p>
-              <p style={{ margin: "4px 0 12px" }}>
-                <strong>Propietario:</strong> {ultimoInput.propietario}
-              </p>
+            <section className="last-flight-card">
+              <div className="last-flight-heading">
+                <div>
+                  <p className="flight-form-eyebrow">Actividad reciente</p>
+                  <h2>Último vuelo registrado</h2>
+                </div>
+                <span className="last-flight-date">
+                  {`${String(ultimoInput.dia).padStart(2, "0")}/${String(ultimoInput.mes).padStart(2, "0")}/${ultimoInput.anio}`}
+                </span>
+              </div>
 
-              <button
-                type="button"
-                onClick={cargarUltimoInputParaEditar}
-                disabled={loading}
-                style={{
-                  padding: "8px 12px",
-                  border: "none",
-                  borderRadius: "10px",
-                  backgroundColor: loading ? "#94a3b8" : "var(--app-primary-strong)",
-                  color: "#ffffff",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  fontSize: "14px",
-                }}
-              >
-                Modificar ultimo input
-              </button>
-              <button
-                type="button"
-                onClick={replicarUltimoInput}
-                disabled={loading}
-                style={{
-                  marginLeft: "10px",
-                  padding: "8px 12px",
-                  border: "1px solid var(--app-border-strong)",
-                  borderRadius: "10px",
-                  backgroundColor: "var(--app-surface-muted)",
-                  color: loading ? "var(--app-text-soft)" : "var(--app-text)",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  fontSize: "14px",
-                }}
-              >
-                Replicar ultimo input
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteUltimoVuelo}
-                disabled={loading}
-                style={{
-                  marginLeft: "10px",
-                  padding: "8px 12px",
-                  border: "1px solid var(--app-danger-border)",
-                  borderRadius: "10px",
-                  backgroundColor: loading ? "var(--app-danger-soft)" : "var(--app-surface-soft)",
-                  color: loading ? "var(--app-text-soft)" : "var(--app-danger)",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                }}
-              >
-                Borrar ultimo vuelo
-              </button>
+              <div className="last-flight-summary">
+                <div className="last-flight-route">
+                  <strong>{ultimoInput.desde || "—"}</strong>
+                  <span aria-hidden="true">→</span>
+                  <strong>{ultimoInput.hasta || "—"}</strong>
+                </div>
+                <dl>
+                  <div><dt>Tiempo JPI</dt><dd>{ultimoInput.tiempoVueloJPI ?? "—"} h</dd></div>
+                  <div><dt>Piloto</dt><dd>{ultimoInput.piloto || "—"}</dd></div>
+                  <div><dt>Propietario</dt><dd>{ultimoInput.propietario || "—"}</dd></div>
+                </dl>
+              </div>
+
+              <div className="last-flight-actions">
+                <button type="button" onClick={cargarUltimoInputParaEditar} disabled={loading} className="form-action-button is-primary">
+                  Editar vuelo
+                </button>
+                <button type="button" onClick={replicarUltimoInput} disabled={loading} className="form-action-button">
+                  Replicar
+                </button>
+                <button type="button" onClick={handleDeleteUltimoVuelo} disabled={loading} className="form-action-button is-danger">
+                  Borrar vuelo
+                </button>
+              </div>
             </section>
           ) : (
-            <p
-              style={{
-                maxWidth: "720px",
-                margin: "0 auto 32px",
-                fontFamily: "Arial, sans-serif",
-                color: "var(--app-text-muted)",
-              }}
-            >
-              No se han registrado vuelos hoy
-            </p>
+            <section className="last-flight-empty">
+              <strong>Sin vuelos registrados hoy</strong>
+              <p>El último vuelo guardado durante esta sesión aparecerá acá.</p>
+            </section>
           )}
         </>
       ) : (
