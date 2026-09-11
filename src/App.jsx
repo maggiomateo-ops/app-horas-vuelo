@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import DashboardPanel from "./components/DashboardPanel";
 import HistorialesPanel from "./components/HistorialesPanel";
@@ -819,6 +819,10 @@ function App() {
     }
   };
 
+  const handleUnauthorized = useCallback(() => {
+    setAuthStatus(AUTH_STATUS.unauthenticated);
+  }, []);
+
   const handleToggleTheme = () => {
     setThemeMode((currentThemeMode) => {
       if (currentThemeMode === THEME_MODE.auto) {
@@ -1442,7 +1446,7 @@ function App() {
         <HistorialesPanel
           aircraftId={selectedAircraft.aircraft_id}
           aircraftRegistration={selectedAircraft.matricula}
-          onUnauthorized={() => setAuthStatus(AUTH_STATUS.unauthenticated)}
+          onUnauthorized={handleUnauthorized}
         />
       ) : activeMainTab === "dashboards" ? (
         <DashboardPanel
@@ -1450,7 +1454,7 @@ function App() {
           settings={settings}
           settingsLoading={settingsLoading}
           settingsError={settingsError}
-          onUnauthorized={() => setAuthStatus(AUTH_STATUS.unauthenticated)}
+          onUnauthorized={handleUnauthorized}
         />
       ) : (
         <SettingsPanel
