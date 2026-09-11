@@ -1,4 +1,5 @@
 import { requireAuth } from "./_auth.js";
+import { getHistorialesFromSheets } from "./_historialesRepository.js";
 
 const ALLOWED_MODES = new Set(["historiales", "dashboard"]);
 
@@ -23,6 +24,48 @@ function buildHistorialesUrl(userId, aircraftId, mode) {
   }
 
   return url.toString();
+}
+
+function getHistorialesDataSource() {
+  return process.env.HISTORIALES_DATA_SOURCE === "sheets-api"
+    ? "sheets-api"
+    : "apps-script";
+}
+
+async function getHistorialesFromSheetsApi(userId, aircraftId, mode) {
+  try {
+    return await getHistorialesFromSheets({ userId, aircraftId, mode });
+  } catch {
+    const error = new Error("No se pudieron cargar los historiales desde Google Sheets.");
+    error.statusCode = 502;
+    throw error;
+  }
+}
+
+async function getHistorialesFromAppsScript(userId, aircraftId, mode) {
+  const historialesUrl = buildHistorialesUrl(userId, aircraftId, mode);
+
+  if (!historialesUrl) {
+    throw new Error("Falta APPS_SCRIPT_URL en variables de entorno.");
+  }
+
+  const response = await fetch(historialesUrl, { method: "GET" });
+  const text = await response.text();
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { ok: false, error: "Respuesta invalida de Apps Script." };
+  }
+
+  if (!response.ok || !data?.ok) {
+    const error = new Error(data?.error || "No se pudieron cargar los historiales.");
+    error.statusCode = response.ok ? 502 : response.status;
+    throw error;
+  }
+
+  return data;
 }
 
 export default async function handler(req, res) {
@@ -62,37 +105,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: "Modo de historiales no valido." });
   }
 
-  const historialesUrl = buildHistorialesUrl(userId, aircraftId, mode);
-
-  if (!historialesUrl) {
-    return res
-      .status(500)
-      .json({ ok: false, error: "Falta APPS_SCRIPT_URL en variables de entorno." });
-  }
-
   try {
-    const response = await fetch(historialesUrl, {
-      method: "GET",
-    });
-
-    const text = await response.text();
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { ok: false, error: "Respuesta invalida de Apps Script.", raw: text };
-    }
-
-    if (!response.ok || !data?.ok) {
-      return res
-        .status(response.ok ? 502 : response.status)
-        .json({ ok: false, error: data?.error || "No se pudieron cargar los historiales." });
-    }
+    const dataSource = getHistorialesDataSource();
+    const data = dataSource === "sheets-api"
+      ? await getHistorialesFromSheetsApi(userId, aircraftId, mode)
+      : await getHistorialesFromAppsScript(userId, aircraftId, mode);
 
     return res.status(200).json(data);
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       ok: false,
       error: error.message || "Error interno del servidor.",
     });
