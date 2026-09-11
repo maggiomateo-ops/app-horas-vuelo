@@ -65,7 +65,7 @@ function OwnerOptionsField({ value, onChange }) {
   );
 }
 
-function SettingsPanel({ settings, loading, error, onSave }) {
+function SettingsPanel({ canEdit, settings, loading, error, onSave }) {
   const [activeTab, setActiveTab] = useState("app");
   const [draft, setDraft] = useState(settings);
   const [saveMessage, setSaveMessage] = useState("");
@@ -84,6 +84,10 @@ function SettingsPanel({ settings, loading, error, onSave }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (!canEdit) {
+      return;
+    }
 
     try {
       setIsSaving(true);
@@ -105,7 +109,9 @@ function SettingsPanel({ settings, loading, error, onSave }) {
           <p className="dashboard-eyebrow">Parametros editables</p>
           <h2 className="dashboard-title">Settings</h2>
         </div>
-        <p className="dashboard-meta">Editable por cualquier usuario autenticado.</p>
+        <p className="dashboard-meta">
+          {canEdit ? "Editable para OWNER y ADMIN." : "Acceso de solo lectura."}
+        </p>
       </div>
 
       <p className="dashboard-inline-note">
@@ -115,6 +121,9 @@ function SettingsPanel({ settings, loading, error, onSave }) {
 
       {loading ? <p className="dashboard-status">Cargando settings...</p> : null}
       {error ? <p className="dashboard-status dashboard-status-error">{error}</p> : null}
+      {!canEdit ? (
+        <p className="dashboard-inline-note">Podés consultar estos valores, pero no modificarlos.</p>
+      ) : null}
 
       <div className="settings-tabs" role="tablist" aria-label="Tabs de settings">
         {SETTINGS_TABS.map((tab) => (
@@ -132,6 +141,7 @@ function SettingsPanel({ settings, loading, error, onSave }) {
       </div>
 
       <form className="settings-form" onSubmit={handleSubmit}>
+        <fieldset className="settings-readonly-fieldset" disabled={!canEdit}>
         {activeTab === "app" ? (
           <div className="settings-grid">
             <SettingsField
@@ -357,13 +367,19 @@ function SettingsPanel({ settings, loading, error, onSave }) {
           </div>
         ) : null}
 
-        <div className="settings-actions">
-          <button type="submit" className="settings-save-button" disabled={loading || isSaving}>
-            {isSaving ? "Guardando..." : "Guardar settings"}
-          </button>
-          {saveMessage ? <p className="settings-save-message">{saveMessage}</p> : null}
-          {saveError ? <p className="dashboard-status dashboard-status-error">{saveError}</p> : null}
-        </div>
+        </fieldset>
+
+        {canEdit ? (
+          <div className="settings-actions">
+            <button type="submit" className="settings-save-button" disabled={loading || isSaving}>
+              {isSaving ? "Guardando..." : "Guardar settings"}
+            </button>
+            {saveMessage ? <p className="settings-save-message">{saveMessage}</p> : null}
+            {saveError ? (
+              <p className="dashboard-status dashboard-status-error">{saveError}</p>
+            ) : null}
+          </div>
+        ) : null}
       </form>
     </section>
   );

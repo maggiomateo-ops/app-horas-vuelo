@@ -378,6 +378,9 @@ function App() {
 
   const selectedAircraft =
     aircrafts.find((aircraft) => aircraft.aircraft_id === selectedAircraftId) ?? null;
+  const selectedAircraftRole = String(selectedAircraft?.rol || "").trim().toUpperCase();
+  const canEditAircraft =
+    selectedAircraftRole === "OWNER" || selectedAircraftRole === "ADMIN";
 
   useEffect(() => {
     if (authStatus !== AUTH_STATUS.authenticated) {
@@ -1102,7 +1105,7 @@ function App() {
         </button>
       </div>
 
-      {activeMainTab === "registro" ? (
+      {activeMainTab === "registro" ? canEditAircraft ? (
         <>
           <form onSubmit={handleSubmit} style={formStyle}>
             <h1
@@ -1414,6 +1417,15 @@ function App() {
             </p>
           )}
         </>
+      ) : (
+        <section className="read-only-access" role="status">
+          <p className="dashboard-eyebrow">{selectedAircraftRole || "Sin rol"}</p>
+          <h2>Acceso de solo lectura</h2>
+          <p>
+            Podés consultar los historiales, dashboards y settings de esta aeronave, pero no
+            modificar sus datos.
+          </p>
+        </section>
       ) : activeMainTab === "historiales" ? (
         <HistorialesPanel
           aircraftId={selectedAircraft.aircraft_id}
@@ -1430,6 +1442,7 @@ function App() {
         />
       ) : (
         <SettingsPanel
+          canEdit={canEditAircraft}
           settings={settings}
           loading={settingsLoading}
           error={settingsError}
