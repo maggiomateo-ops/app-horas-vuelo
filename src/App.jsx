@@ -859,11 +859,11 @@ function App() {
   };
 
   const formStyle = {
-    maxWidth: "720px",
-    margin: "32px auto",
-    padding: "24px",
+    maxWidth: "760px",
+    margin: "24px auto 32px",
+    padding: "clamp(20px, 4vw, 34px)",
     border: "1px solid var(--app-border)",
-    borderRadius: "18px",
+    borderRadius: "24px",
     background:
       "linear-gradient(180deg, var(--app-surface) 0%, color-mix(in srgb, var(--app-surface) 92%, var(--app-surface-muted) 8%) 100%)",
     color: "var(--app-text)",
@@ -1033,7 +1033,34 @@ function App() {
         `}
       </style>
 
-      <div className="app-toolbar">
+      <header className="app-header">
+        <div className="app-brand">
+          <span className="app-brand-mark" aria-hidden="true">✦</span>
+          <div>
+            <p className="app-brand-eyebrow">Flight operations</p>
+            <p className="app-brand-title">App Horas de Vuelo</p>
+          </div>
+        </div>
+
+        <label className="aircraft-selector" htmlFor="aircraft-selector">
+          <span className="aircraft-selector-label">Aeronave activa</span>
+          <span className="aircraft-selector-control">
+            <select
+              id="aircraft-selector"
+              value={selectedAircraft.aircraft_id}
+              onChange={handleAircraftChange}
+              disabled={aircrafts.length === 1}
+            >
+              {aircrafts.map((aircraft) => (
+                <option key={aircraft.aircraft_id} value={aircraft.aircraft_id}>
+                  {aircraft.matricula} · {aircraft.modelo}
+                </option>
+              ))}
+            </select>
+            <span className="aircraft-role">{selectedAircraftRole}</span>
+          </span>
+        </label>
+
         <div className="app-toolbar-actions">
           <button
             type="button"
@@ -1048,25 +1075,9 @@ function App() {
             Cerrar sesion
           </button>
         </div>
-      </div>
+      </header>
 
-      <label className="aircraft-selector" htmlFor="aircraft-selector">
-        <span className="aircraft-selector-label">Aeronave</span>
-        <select
-          id="aircraft-selector"
-          value={selectedAircraft.aircraft_id}
-          onChange={handleAircraftChange}
-          disabled={aircrafts.length === 1}
-        >
-          {aircrafts.map((aircraft) => (
-            <option key={aircraft.aircraft_id} value={aircraft.aircraft_id}>
-              {aircraft.matricula} — {[aircraft.fabricante, aircraft.modelo].filter(Boolean).join(" ")}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className="app-tabs" role="tablist" aria-label="Secciones principales">
+      <nav className="app-tabs" role="tablist" aria-label="Secciones principales">
         <button
           type="button"
           role="tab"
@@ -1103,8 +1114,9 @@ function App() {
         >
           Settings
         </button>
-      </div>
+      </nav>
 
+      <div className="app-content">
       {activeMainTab === "registro" ? canEditAircraft ? (
         <>
           <form onSubmit={handleSubmit} style={formStyle}>
@@ -1449,6 +1461,7 @@ function App() {
           onSave={handleSaveSettings}
         />
       )}
+      </div>
     </main>
   );
 }
