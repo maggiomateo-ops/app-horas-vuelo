@@ -1,6 +1,8 @@
 import { requireAuth } from "./_auth.js";
 
-function buildHistorialesUrl(userId, aircraftId) {
+const ALLOWED_MODES = new Set(["historiales", "dashboard"]);
+
+function buildHistorialesUrl(userId, aircraftId, mode) {
   const appsScriptUrl = String(process.env.APPS_SCRIPT_URL || "").trim();
 
   if (!appsScriptUrl) {
@@ -11,6 +13,10 @@ function buildHistorialesUrl(userId, aircraftId) {
   url.searchParams.set("action", "historiales");
   url.searchParams.set("userId", userId);
   url.searchParams.set("aircraftId", aircraftId);
+
+  if (mode) {
+    url.searchParams.set("mode", mode);
+  }
 
   if (process.env.APPS_SCRIPT_SECRET) {
     url.searchParams.set("appSecret", String(process.env.APPS_SCRIPT_SECRET).trim());
@@ -37,6 +43,8 @@ export default async function handler(req, res) {
   const aircraftId = String(
     requestedAircraftId || process.env.LEGACY_AIRCRAFT_ID || ""
   ).trim();
+  const requestedMode = Array.isArray(req.query?.mode) ? req.query.mode[0] : req.query?.mode;
+  const mode = String(requestedMode || "").trim().toLowerCase();
 
   if (!userId) {
     return res
@@ -50,7 +58,11 @@ export default async function handler(req, res) {
       .json({ ok: false, error: "Falta aircraft_id o LEGACY_AIRCRAFT_ID." });
   }
 
-  const historialesUrl = buildHistorialesUrl(userId, aircraftId);
+  if (mode && !ALLOWED_MODES.has(mode)) {
+    return res.status(400).json({ ok: false, error: "Modo de historiales no valido." });
+  }
+
+  const historialesUrl = buildHistorialesUrl(userId, aircraftId, mode);
 
   if (!historialesUrl) {
     return res

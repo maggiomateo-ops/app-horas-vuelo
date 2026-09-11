@@ -71,7 +71,7 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
       try {
         setLoading(true);
         setError("");
-        const response = await fetchHistoriales(aircraftId, controller.signal);
+        const response = await fetchHistoriales(aircraftId, "dashboard", controller.signal);
 
         setHistoriales({
           computacionHoras: Array.isArray(response.computacionHoras)

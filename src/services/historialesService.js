@@ -1,5 +1,9 @@
-export async function fetchHistoriales(aircraftId, signal) {
+export async function fetchHistoriales(aircraftId, mode, signal) {
   const searchParams = new URLSearchParams({ aircraft_id: aircraftId });
+
+  if (mode) {
+    searchParams.set("mode", mode);
+  }
   const response = await fetch(`/api/historiales?${searchParams}`, {
     method: "GET",
     signal,

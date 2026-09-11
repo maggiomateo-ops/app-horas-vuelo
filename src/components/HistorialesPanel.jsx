@@ -63,7 +63,7 @@ function HistorialesPanel({ aircraftId, aircraftRegistration, onUnauthorized }) 
         setLoading(true);
         setError("");
 
-        const data = await fetchHistoriales(aircraftId, controller.signal);
+        const data = await fetchHistoriales(aircraftId, "historiales", controller.signal);
 
         setHistoriales({
           historialAeronave: Array.isArray(data.historialAeronave)
