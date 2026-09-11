@@ -1,4 +1,4 @@
-import { getSessionUserId, requireAuth } from "./_auth.js";
+import { requireAuth } from "./_auth.js";
 
 function buildHistorialesUrl(userId, aircraftId) {
   const appsScriptUrl = String(process.env.APPS_SCRIPT_URL || "").trim();
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     return undefined;
   }
 
-  const userId = getSessionUserId(session);
+  const userId = String(session.userId || "").trim();
   const requestedAircraftId = Array.isArray(req.query?.aircraft_id)
     ? req.query.aircraft_id[0]
     : req.query?.aircraft_id;
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
 
   if (!userId) {
     return res
-      .status(500)
+      .status(401)
       .json({ ok: false, error: "La sesion no contiene un userId valido." });
   }
 

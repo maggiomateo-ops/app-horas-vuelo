@@ -1,4 +1,4 @@
-import { getSessionUserId, requireAuth } from "./_auth.js";
+import { requireAuth } from "./_auth.js";
 import { DEFAULT_SETTINGS, normalizeSettings } from "../src/services/settingsService.js";
 
 function buildSettingsUrl(userId, aircraftId) {
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     return undefined;
   }
 
-  const userId = getSessionUserId(session);
+  const userId = String(session.userId || "").trim();
   const body = req.body && typeof req.body === "object" ? req.body : {};
   const requestedAircraftId = req.method === "GET"
     ? (Array.isArray(req.query?.aircraft_id)
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
 
   if (!userId) {
     return res
-      .status(500)
+      .status(401)
       .json({ ok: false, error: "La sesion no contiene un userId valido." });
   }
 

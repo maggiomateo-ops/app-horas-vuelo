@@ -1,4 +1,4 @@
-import { getSessionUserId, requireAuth } from "./_auth.js";
+import { requireAuth } from "./_auth.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   try {
     const appsScriptUrl = String(process.env.APPS_SCRIPT_URL || "").trim();
-    const userId = getSessionUserId(session);
+    const userId = String(session.userId || "").trim();
     const payload = req.body && typeof req.body === "object" ? { ...req.body } : {};
     const aircraftId = String(
       payload.aircraft_id || process.env.LEGACY_AIRCRAFT_ID || ""
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
     if (!appsScriptUrl) {
       return res
-        .status(500)
+        .status(401)
         .json({ ok: false, error: "Falta APPS_SCRIPT_URL en variables de entorno." });
     }
 
