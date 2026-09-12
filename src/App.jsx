@@ -5,6 +5,11 @@ import HistorialesPanel from "./components/HistorialesPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import { fetchAircrafts } from "./services/aircraftService";
 import { DEFAULT_SETTINGS, fetchSettings, saveSettings } from "./services/settingsService";
+import {
+  getAllowedMainTabIds,
+  getPreferredMainTab,
+  MAIN_TABS,
+} from "./utils/rolePermissions";
 
 const AUTH_STATUS = {
   loading: "loading",
@@ -247,7 +252,7 @@ function PropietarioSelect({ value, options: ownerOptions, onChange, disabled })
 
 function App() {
   const [authStatus, setAuthStatus] = useState(AUTH_STATUS.loading);
-  const [, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const [googleLoginLoading, setGoogleLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
@@ -388,8 +393,26 @@ function App() {
   const selectedAircraft =
     aircrafts.find((aircraft) => aircraft.aircraft_id === selectedAircraftId) ?? null;
   const selectedAircraftRole = String(selectedAircraft?.rol || "").trim().toUpperCase();
+  const isGlobalAdmin = currentUser?.isAdmin === true;
+  const allowedMainTabIds = getAllowedMainTabIds({
+    isAdmin: isGlobalAdmin,
+    aircraftRole: selectedAircraftRole,
+  });
+  const preferredMainTab = getPreferredMainTab({
+    isAdmin: isGlobalAdmin,
+    aircraftRole: selectedAircraftRole,
+  });
+  const effectiveActiveMainTab = allowedMainTabIds.includes(activeMainTab)
+    ? activeMainTab
+    : preferredMainTab;
   const canEditAircraft =
-    selectedAircraftRole === "OWNER" || selectedAircraftRole === "ADMIN";
+    isGlobalAdmin || selectedAircraftRole === "OWNER" || selectedAircraftRole === "ADMIN";
+
+  useEffect(() => {
+    if (selectedAircraft && !allowedMainTabIds.includes(activeMainTab)) {
+      setActiveMainTab(preferredMainTab);
+    }
+  }, [activeMainTab, allowedMainTabIds, preferredMainTab, selectedAircraft]);
 
   useEffect(() => {
     if (authStatus !== AUTH_STATUS.authenticated) {
@@ -1086,46 +1109,22 @@ function App() {
       </header>
 
       <nav className="app-tabs" role="tablist" aria-label="Secciones principales">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeMainTab === "registro"}
-          className={`app-tab ${activeMainTab === "registro" ? "is-active" : ""}`}
-          onClick={() => setActiveMainTab("registro")}
-        >
-          Registro
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeMainTab === "historiales"}
-          className={`app-tab ${activeMainTab === "historiales" ? "is-active" : ""}`}
-          onClick={() => setActiveMainTab("historiales")}
-        >
-          Historiales
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeMainTab === "dashboards"}
-          className={`app-tab ${activeMainTab === "dashboards" ? "is-active" : ""}`}
-          onClick={() => setActiveMainTab("dashboards")}
-        >
-          Dashboards
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeMainTab === "settings"}
-          className={`app-tab ${activeMainTab === "settings" ? "is-active" : ""}`}
-          onClick={() => setActiveMainTab("settings")}
-        >
-          Settings
-        </button>
+        {MAIN_TABS.filter((tab) => allowedMainTabIds.includes(tab.id)).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={effectiveActiveMainTab === tab.id}
+            className={`app-tab ${effectiveActiveMainTab === tab.id ? "is-active" : ""}`}
+            onClick={() => setActiveMainTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
       </nav>
 
       <div className="app-content">
-      {activeMainTab === "registro" ? canEditAircraft ? (
+      {effectiveActiveMainTab === "registro" ? canEditAircraft ? (
         <>
           <form onSubmit={handleSubmit} className="flight-form" noValidate>
             <header className="flight-form-header">
@@ -1327,20 +1326,19 @@ function App() {
         </>
       ) : (
         <section className="read-only-access" role="status">
-          <p className="dashboard-eyebrow">{selectedAircraftRole || "Sin rol"}</p>
-          <h2>Acceso de solo lectura</h2>
+          <p className="dashboard-eyebrow">PILOT</p>
+          <h2>Carga de vuelos pendiente</h2>
           <p>
-            Podés consultar los historiales, dashboards y settings de esta aeronave, pero no
-            modificar sus datos.
+            La carga de vuelos con validación del Owner se habilitará en la etapa correspondiente.
           </p>
         </section>
-      ) : activeMainTab === "historiales" ? (
+      ) : effectiveActiveMainTab === "historiales" ? (
         <HistorialesPanel
           aircraftId={selectedAircraft.aircraft_id}
           aircraftRegistration={selectedAircraft.matricula}
           onUnauthorized={handleUnauthorized}
         />
-      ) : activeMainTab === "dashboards" ? (
+      ) : effectiveActiveMainTab === "dashboards" ? (
         <DashboardPanel
           aircraftId={selectedAircraft.aircraft_id}
           settings={settings}
