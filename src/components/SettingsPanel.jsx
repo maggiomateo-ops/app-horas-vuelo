@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import SettingsUsersPanel from "./SettingsUsersPanel";
 
 const SETTINGS_TABS = [
   { id: "app", label: "App" },
@@ -65,7 +66,19 @@ function OwnerOptionsField({ value, onChange }) {
   );
 }
 
-function SettingsPanel({ canEdit, settings, loading, error, onSave }) {
+function SettingsPanel({
+  aircraftId,
+  aircraftRegistration,
+  aircraftRole,
+  canEdit,
+  isGlobalAdmin,
+  settings,
+  loading,
+  error,
+  onSave,
+  onUnauthorized,
+}) {
+  const [activeSection, setActiveSection] = useState("aircraft");
   const [activeTab, setActiveTab] = useState("app");
   const [draft, setDraft] = useState(settings);
   const [saveMessage, setSaveMessage] = useState("");
@@ -75,6 +88,15 @@ function SettingsPanel({ canEdit, settings, loading, error, onSave }) {
   useEffect(() => {
     setDraft(settings);
   }, [settings]);
+
+  const canViewUsers =
+    isGlobalAdmin || String(aircraftRole || "").trim().toUpperCase() === "OWNER";
+
+  useEffect(() => {
+    if (!canViewUsers && activeSection === "users") {
+      setActiveSection("aircraft");
+    }
+  }, [activeSection, canViewUsers]);
 
   const handleChange = (path) => (value) => {
     setSaveMessage("");
@@ -114,33 +136,58 @@ function SettingsPanel({ canEdit, settings, loading, error, onSave }) {
         </p>
       </div>
 
-      <p className="dashboard-inline-note">
-        Estos parametros alimentan los calculos del dashboard y deben quedar persistidos para
-        todos los ingresos futuros.
-      </p>
-
-      {loading ? <p className="dashboard-status">Cargando settings...</p> : null}
-      {error ? <p className="dashboard-status dashboard-status-error">{error}</p> : null}
-      {!canEdit ? (
-        <p className="dashboard-inline-note">Podés consultar estos valores, pero no modificarlos.</p>
-      ) : null}
-
-      <div className="settings-tabs" role="tablist" aria-label="Tabs de settings">
-        {SETTINGS_TABS.map((tab) => (
+      <div className="settings-section-tabs" role="tablist" aria-label="Secciones de Settings">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeSection === "aircraft"}
+          className={`settings-section-tab ${activeSection === "aircraft" ? "is-active" : ""}`}
+          onClick={() => setActiveSection("aircraft")}
+        >
+          Aeronave
+        </button>
+        {canViewUsers ? (
           <button
-            key={tab.id}
             type="button"
             role="tab"
-            className={`settings-tab ${activeTab === tab.id ? "is-active" : ""}`}
-            aria-selected={activeTab === tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            aria-selected={activeSection === "users"}
+            className={`settings-section-tab ${activeSection === "users" ? "is-active" : ""}`}
+            onClick={() => setActiveSection("users")}
           >
-            {tab.label}
+            Usuarios
           </button>
-        ))}
+        ) : null}
       </div>
 
-      <form className="settings-form" onSubmit={handleSubmit}>
+      {activeSection === "aircraft" ? (
+        <>
+          <p className="dashboard-inline-note">
+            Estos parametros alimentan los calculos del dashboard y deben quedar persistidos para
+            todos los ingresos futuros.
+          </p>
+
+          {loading ? <p className="dashboard-status">Cargando settings...</p> : null}
+          {error ? <p className="dashboard-status dashboard-status-error">{error}</p> : null}
+          {!canEdit ? (
+            <p className="dashboard-inline-note">Podés consultar estos valores, pero no modificarlos.</p>
+          ) : null}
+
+          <div className="settings-tabs" role="tablist" aria-label="Tabs de settings">
+            {SETTINGS_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                className={`settings-tab ${activeTab === tab.id ? "is-active" : ""}`}
+                aria-selected={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <form className="settings-form" onSubmit={handleSubmit}>
         <fieldset className="settings-readonly-fieldset" disabled={!canEdit}>
         {activeTab === "app" ? (
           <div className="settings-grid">
@@ -380,7 +427,16 @@ function SettingsPanel({ canEdit, settings, loading, error, onSave }) {
             ) : null}
           </div>
         ) : null}
-      </form>
+          </form>
+        </>
+      ) : (
+        <SettingsUsersPanel
+          aircraftId={aircraftId}
+          aircraftRegistration={aircraftRegistration}
+          isGlobalAdmin={isGlobalAdmin}
+          onUnauthorized={onUnauthorized}
+        />
+      )}
     </section>
   );
 }

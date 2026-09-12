@@ -1348,11 +1348,16 @@ function App() {
         />
       ) : (
         <SettingsPanel
+          aircraftId={selectedAircraft.aircraft_id}
+          aircraftRegistration={selectedAircraft.matricula}
+          aircraftRole={selectedAircraftRole}
           canEdit={canEditAircraft}
+          isGlobalAdmin={isGlobalAdmin}
           settings={settings}
           loading={settingsLoading}
           error={settingsError}
           onSave={handleSaveSettings}
+          onUnauthorized={handleUnauthorized}
         />
       )}
       </div>
