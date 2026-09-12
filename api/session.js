@@ -19,6 +19,7 @@ export default async function handler(req, res) {
         userId: session.userId,
         email: session.email,
         name: session.name,
+        isAdmin: session.isAdmin === true,
       },
     });
   }
