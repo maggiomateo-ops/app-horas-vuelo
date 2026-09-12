@@ -1,6 +1,6 @@
 import { OAuth2Client } from "google-auth-library";
 import { createSessionCookie } from "./_auth.js";
-import { getActiveUserByEmail } from "./_adminRepository.js";
+import { getActiveUserByEmail, resolveGoogleUser } from "./_adminRepository.js";
 
 const googleClient = new OAuth2Client();
 
@@ -51,17 +51,23 @@ async function resolveActiveUserFromAppsScript(email) {
     throw new Error("INVALID_USER_RESPONSE");
   }
 
-  return { userId, email: userEmail, name };
+  return { userId, email: userEmail, name, isAdmin: false };
 }
 
-async function resolveActiveUserFromSheets(email) {
+async function resolveActiveUserFromSheets(email, googleSub) {
   let user;
 
   try {
-    user = await getActiveUserByEmail(email);
+    user = googleSub
+      ? await resolveGoogleUser({ email, googleSub })
+      : await getActiveUserByEmail(email);
   } catch (error) {
     if (error.code === "USER_NOT_AUTHORIZED") {
       throw new Error("USER_NOT_AUTHORIZED");
+    }
+
+    if (error.code === "GOOGLE_IDENTITY_MISMATCH") {
+      throw new Error("GOOGLE_IDENTITY_MISMATCH");
     }
 
     throw new Error("USER_SERVICE_UNAVAILABLE");
@@ -71,17 +77,18 @@ async function resolveActiveUserFromSheets(email) {
   const userEmail = String(user?.email || "").trim().toLowerCase();
   const name = String(user?.nombre || "").trim();
   const status = String(user?.estado || "").trim().toUpperCase();
+  const isAdmin = user?.is_admin === true;
 
   if (!userId || !userEmail || !name || status !== "ACTIVO" || userEmail !== email) {
     throw new Error("INVALID_USER_RESPONSE");
   }
 
-  return { userId, email: userEmail, name };
+  return { userId, email: userEmail, name, isAdmin };
 }
 
-function resolveActiveUser(email) {
+function resolveActiveUser(email, googleSub) {
   return getUserResolutionSource() === "sheets-api"
-    ? resolveActiveUserFromSheets(email)
+    ? resolveActiveUserFromSheets(email, googleSub)
     : resolveActiveUserFromAppsScript(email);
 }
 
@@ -119,9 +126,14 @@ export default async function handler(req, res) {
   }
 
   const email = String(payload?.email || "").trim().toLowerCase();
+  const googleSub = String(payload?.sub || "").trim();
 
   if (!email) {
     return res.status(401).json({ ok: false, error: "La cuenta de Google no informa un email." });
+  }
+
+  if (!googleSub) {
+    return res.status(401).json({ ok: false, error: "La cuenta de Google no informa una identidad valida." });
   }
 
   if (payload?.email_verified !== true) {
@@ -129,7 +141,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const user = await resolveActiveUser(email);
+    const user = await resolveActiveUser(email, googleSub);
 
     res.setHeader("Set-Cookie", createSessionCookie(user));
 
@@ -137,6 +149,13 @@ export default async function handler(req, res) {
   } catch (error) {
     if (error.message === "USER_NOT_AUTHORIZED") {
       return res.status(403).json({ ok: false, error: "Usuario no habilitado." });
+    }
+
+    if (error.message === "GOOGLE_IDENTITY_MISMATCH") {
+      return res.status(403).json({
+        ok: false,
+        error: "La cuenta de Google no coincide con la identidad autorizada.",
+      });
     }
 
     if (error.message === "AUTH_CONFIGURATION_ERROR") {
