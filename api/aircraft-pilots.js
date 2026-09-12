@@ -1,4 +1,4 @@
-import { requireAuth } from "./_auth.js";
+import { getSessionUserId, requireAuth } from "./_auth.js";
 import { getAircraftPilotsForManager } from "./_adminRepository.js";
 
 function getErrorStatus(error) {
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     return undefined;
   }
 
-  const userId = String(session.userId || "").trim();
+  const userId = getSessionUserId(session);
   const aircraftId = String(req.query?.aircraft_id || "").trim();
 
   if (!userId) {

@@ -128,11 +128,15 @@ function SettingsPanel({
     <section className="settings-panel">
       <div className="dashboard-section-header">
         <div>
-          <p className="dashboard-eyebrow">Parametros editables</p>
+          <p className="dashboard-eyebrow">
+            {activeSection === "aircraft" ? "Parametros editables" : "Gestion de accesos"}
+          </p>
           <h2 className="dashboard-title">Settings</h2>
         </div>
         <p className="dashboard-meta">
-          {canEdit ? "Editable para OWNER y ADMIN." : "Acceso de solo lectura."}
+          {activeSection === "aircraft"
+            ? (canEdit ? "Editable para OWNER y ADMIN." : "Acceso de solo lectura.")
+            : "Usuarios en modo solo lectura."}
         </p>
       </div>
 

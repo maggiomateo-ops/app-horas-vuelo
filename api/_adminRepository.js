@@ -345,8 +345,7 @@ export async function getPlatformUsersForAdmin(requestingUserId) {
 export async function getAircraftPilotsForManager(requestingUserId, aircraftId) {
   const adminData = await getAdminData();
   const requestingUser = findActiveUserById(adminData.users, requestingUserId);
-  const aircraft = findActiveAircraftById(adminData.aircrafts, aircraftId);
-  const normalizedAircraftId = String(aircraft.aircraft_id).trim();
+  const normalizedAircraftId = String(aircraftId || "").trim();
   const isGlobalAdmin = normalizeBoolean(requestingUser.is_admin);
 
   if (!isGlobalAdmin) {
@@ -366,6 +365,8 @@ export async function getAircraftPilotsForManager(requestingUserId, aircraftId) 
       );
     }
   }
+
+  const aircraft = findActiveAircraftById(adminData.aircrafts, normalizedAircraftId);
 
   const pilots = adminData.permissions
     .filter(

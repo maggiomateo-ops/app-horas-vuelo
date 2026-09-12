@@ -1,4 +1,4 @@
-import { requireAuth } from "./_auth.js";
+import { getSessionUserId, requireAuth } from "./_auth.js";
 import { getPlatformUsersForAdmin } from "./_adminRepository.js";
 
 function getErrorStatus(error) {
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     return undefined;
   }
 
-  const userId = String(session.userId || "").trim();
+  const userId = getSessionUserId(session);
 
   if (!userId) {
     return res.status(401).json({ ok: false, error: "Sesion no valida." });
