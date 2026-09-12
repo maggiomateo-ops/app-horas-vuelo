@@ -1373,6 +1373,199 @@ select {
   margin-bottom: 18px;
 }
 
+.settings-section-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 180px));
+  gap: 8px;
+  margin: 20px 0 24px;
+  padding: 5px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface-muted);
+}
+
+.settings-section-tab,
+.settings-user-tab {
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.settings-section-tab.is-active {
+  border-color: var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-primary-strong);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.settings-users-panel {
+  min-width: 0;
+}
+
+.settings-user-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.settings-user-tab {
+  border-color: var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface-muted);
+}
+
+.settings-user-tab.is-active {
+  border-color: var(--app-primary);
+  background: var(--app-primary);
+  color: #ffffff;
+}
+
+.settings-users-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.settings-users-heading h3 {
+  margin: 4px 0 0;
+  color: var(--app-text);
+  font-size: 20px;
+}
+
+.settings-readonly-badge,
+.settings-admin-badge,
+.settings-user-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.settings-readonly-badge {
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+}
+
+.settings-admin-badge {
+  margin-top: 7px;
+  background: var(--app-primary-soft);
+  color: var(--app-primary-strong);
+}
+
+.settings-user-status.is-active {
+  background: color-mix(in srgb, var(--app-success) 13%, var(--app-surface));
+  color: var(--app-success);
+}
+
+.settings-user-status.is-inactive {
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+}
+
+.settings-users-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+}
+
+.settings-users-table {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font-size: 12px;
+}
+
+.settings-pilots-table {
+  min-width: 680px;
+}
+
+.settings-users-table th,
+.settings-users-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--app-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.settings-users-table th {
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.settings-users-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.settings-users-table td > strong,
+.settings-users-table td > span,
+.settings-users-table td > small {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.settings-users-table td > small,
+.settings-users-muted {
+  color: var(--app-text-soft);
+}
+
+.settings-access-list,
+.settings-pilot-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.settings-access-item {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface-muted);
+}
+
+.settings-pilot-statuses {
+  align-items: center;
+}
+
+.settings-pilot-statuses > span:not(.settings-user-status) {
+  color: var(--app-text-soft);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.settings-users-empty {
+  padding: 30px 20px;
+  border: 1px dashed var(--app-border-strong);
+  border-radius: 14px;
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .settings-tab {
   padding: 10px 14px;
   border: 1px solid var(--app-border);
@@ -1764,6 +1957,19 @@ select {
   .settings-actions {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .settings-section-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-user-tabs {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .settings-users-heading {
+    flex-direction: column;
   }
 }
 

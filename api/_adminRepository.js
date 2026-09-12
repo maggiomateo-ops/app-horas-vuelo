@@ -50,7 +50,17 @@ async function getAdminData() {
   return {
     users: rowsToRecords(
       userValues,
-      ["user_id", "email", "nombre", "estado", "google_sub", "is_admin"],
+      [
+        "user_id",
+        "email",
+        "nombre",
+        "estado",
+        "google_sub",
+        "is_admin",
+        "telefono",
+        "dni",
+        "licencia",
+      ],
       "USUARIOS"
     ),
     permissions: rowsToRecords(
@@ -72,9 +82,11 @@ function findActiveUserById(users, userId) {
     (currentUser) => String(currentUser.user_id).trim() === normalizedUserId
   );
 
-  if (!user) throw new Error("El usuario no existe.");
+  if (!user) {
+    throw createRepositoryError("El usuario no existe.", "USER_NOT_AUTHORIZED");
+  }
   if (String(user.estado).trim().toUpperCase() !== "ACTIVO") {
-    throw new Error("El usuario no esta activo.");
+    throw createRepositoryError("El usuario no esta activo.", "USER_NOT_AUTHORIZED");
   }
 
   return user;
@@ -82,6 +94,24 @@ function findActiveUserById(users, userId) {
 
 function normalizeBoolean(value) {
   return value === true || String(value ?? "").trim().toUpperCase() === "TRUE";
+}
+
+function findActiveAircraftById(aircrafts, aircraftId) {
+  const normalizedAircraftId = String(aircraftId || "").trim();
+  const aircraft = aircrafts.find(
+    (currentAircraft) =>
+      String(currentAircraft.aircraft_id).trim() === normalizedAircraftId
+  );
+
+  if (!aircraft) {
+    throw createRepositoryError("La aeronave no existe.", "AIRCRAFT_NOT_FOUND");
+  }
+
+  if (String(aircraft.estado).trim().toUpperCase() !== "ACTIVA") {
+    throw createRepositoryError("La aeronave no esta activa.", "AIRCRAFT_NOT_ACTIVE");
+  }
+
+  return aircraft;
 }
 
 function sanitizeUser(user) {
@@ -262,6 +292,117 @@ export async function getAircraftsForUser(userId) {
       };
     })
     .filter((aircraft) => aircraft !== null);
+}
+
+export async function getPlatformUsersForAdmin(requestingUserId) {
+  const adminData = await getAdminData();
+  const requestingUser = findActiveUserById(adminData.users, requestingUserId);
+
+  if (!normalizeBoolean(requestingUser.is_admin)) {
+    throw createRepositoryError("Se requiere privilegio de Admin.", "FORBIDDEN");
+  }
+
+  return adminData.users.map((user) => {
+    const normalizedUserId = String(user.user_id || "").trim();
+    const permissions = adminData.permissions
+      .filter(
+        (permission) => String(permission.user_id || "").trim() === normalizedUserId
+      )
+      .map((permission) => {
+        const aircraftId = String(permission.aircraft_id || "").trim();
+        const aircraft = adminData.aircrafts.find(
+          (currentAircraft) =>
+            String(currentAircraft.aircraft_id || "").trim() === aircraftId
+        );
+
+        if (!aircraft) {
+          return null;
+        }
+
+        return {
+          aircraft_id: aircraftId,
+          matricula: String(aircraft.matricula || "").trim(),
+          rol: String(permission.rol || "").trim(),
+          estado: String(permission.estado || "").trim(),
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      user_id: normalizedUserId,
+      nombre: String(user.nombre || "").trim(),
+      email: String(user.email || "").trim().toLowerCase(),
+      estado: String(user.estado || "").trim(),
+      telefono: String(user.telefono || "").trim(),
+      dni: String(user.dni || "").trim(),
+      licencia: String(user.licencia || "").trim(),
+      is_admin: normalizeBoolean(user.is_admin),
+      permisos: permissions,
+    };
+  });
+}
+
+export async function getAircraftPilotsForManager(requestingUserId, aircraftId) {
+  const adminData = await getAdminData();
+  const requestingUser = findActiveUserById(adminData.users, requestingUserId);
+  const normalizedAircraftId = String(aircraftId || "").trim();
+  const isGlobalAdmin = normalizeBoolean(requestingUser.is_admin);
+
+  if (!isGlobalAdmin) {
+    const ownerPermission = adminData.permissions.find(
+      (permission) =>
+        String(permission.user_id || "").trim() ===
+          String(requestingUser.user_id).trim() &&
+        String(permission.aircraft_id || "").trim() === normalizedAircraftId &&
+        String(permission.rol || "").trim().toUpperCase() === "OWNER" &&
+        String(permission.estado || "").trim().toUpperCase() === "ACTIVO"
+    );
+
+    if (!ownerPermission) {
+      throw createRepositoryError(
+        "Se requiere ser Owner activo de la aeronave.",
+        "FORBIDDEN"
+      );
+    }
+  }
+
+  const aircraft = findActiveAircraftById(adminData.aircrafts, normalizedAircraftId);
+
+  const pilots = adminData.permissions
+    .filter(
+      (permission) =>
+        String(permission.aircraft_id || "").trim() === normalizedAircraftId &&
+        String(permission.rol || "").trim().toUpperCase() === "PILOT"
+    )
+    .map((permission) => {
+      const permissionUserId = String(permission.user_id || "").trim();
+      const user = adminData.users.find(
+        (currentUser) => String(currentUser.user_id || "").trim() === permissionUserId
+      );
+
+      if (!user) {
+        return null;
+      }
+
+      return {
+        user_id: permissionUserId,
+        nombre: String(user.nombre || "").trim(),
+        email: String(user.email || "").trim().toLowerCase(),
+        telefono: String(user.telefono || "").trim(),
+        licencia: String(user.licencia || "").trim(),
+        estado: String(user.estado || "").trim(),
+        permiso_estado: String(permission.estado || "").trim(),
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    aircraft: {
+      aircraft_id: normalizedAircraftId,
+      matricula: String(aircraft.matricula || "").trim(),
+    },
+    pilots,
+  };
 }
 
 export async function getValidatedAircraftAccess(userId, aircraftId) {
