@@ -73,6 +73,7 @@ export function createSessionCookie(user) {
     userId: String(user?.userId || "").trim(),
     email: String(user?.email || "").trim().toLowerCase(),
     name: String(user?.name || "").trim(),
+    isAdmin: user?.isAdmin === true,
     expiresAt,
   });
 
@@ -119,6 +120,7 @@ function parseStructuredSession(rawValue, secret) {
       userId,
       email: String(session.email || "").trim().toLowerCase(),
       name: String(session.name || "").trim(),
+      isAdmin: session?.isAdmin === true,
       expiresAt,
     };
   } catch {
