@@ -172,16 +172,29 @@ export async function resolveGoogleUser({ email, googleSub }) {
   }
 
   if (!existingSub) {
-    const rowNumber = Number(userByEmail.__rowNumber);
-
-    if (!Number.isInteger(rowNumber) || rowNumber < 2) {
-      throw new Error("No se pudo determinar la fila del usuario en USUARIOS.");
-    }
-
-    const latestUser = (await getAdminData()).users.find(
+    const latestAdminData = await getAdminData();
+    const latestUser = latestAdminData.users.find(
       (user) => String(user.user_id).trim() === String(userByEmail.user_id).trim()
     );
-    const latestSub = String(latestUser?.google_sub || "").trim();
+
+    if (!latestUser || String(latestUser.estado).trim().toUpperCase() !== "ACTIVO") {
+      throw createRepositoryError("Usuario no habilitado.", "USER_NOT_AUTHORIZED");
+    }
+
+    const conflictingUser = latestAdminData.users.find(
+      (user) =>
+        String(user.user_id).trim() !== String(userByEmail.user_id).trim() &&
+        String(user.google_sub || "").trim() === normalizedGoogleSub
+    );
+
+    if (conflictingUser) {
+      throw createRepositoryError(
+        "La identidad de Google ya esta vinculada a otro usuario.",
+        "GOOGLE_IDENTITY_MISMATCH"
+      );
+    }
+
+    const latestSub = String(latestUser.google_sub || "").trim();
 
     if (latestSub && latestSub !== normalizedGoogleSub) {
       throw createRepositoryError(
@@ -191,6 +204,12 @@ export async function resolveGoogleUser({ email, googleSub }) {
     }
 
     if (!latestSub) {
+      const rowNumber = Number(latestUser.__rowNumber);
+
+      if (!Number.isInteger(rowNumber) || rowNumber < 2) {
+        throw new Error("No se pudo determinar la fila del usuario en USUARIOS.");
+      }
+
       await batchUpdateSpreadsheetValues(adminSpreadsheetId, [
         {
           range: `USUARIOS!E${rowNumber}`,
