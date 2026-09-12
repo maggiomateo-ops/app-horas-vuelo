@@ -181,7 +181,7 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
   return (
     <section className="dashboard-panel">
       <div className="dashboard-section-header">
-        <h2 className="dashboard-title">Dashboards</h2>
+        <h2 className="dashboard-title">Dashboard</h2>
       </div>
 
       {!metrics.meta.hasComputacionHoras ? (
