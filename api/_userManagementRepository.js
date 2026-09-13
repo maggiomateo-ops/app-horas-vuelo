@@ -766,9 +766,6 @@ function prepareAircraftPilotMutation(data, actorUserId, input) {
   const existingUser = findUserByEmail(data.users, input.email);
 
   if (!existingUser) {
-    if (!normalize(input.nombre)) {
-      throw repositoryError("Falta nombre para crear el usuario.", "VALIDATION_ERROR");
-    }
     return { ...manager, aircraftId, kind: "NEW_USER", user: null, permission: null };
   }
 
@@ -791,19 +788,29 @@ function prepareAircraftPilotMutation(data, actorUserId, input) {
     );
   }
 
+  const completedFields = ["nombre", "telefono", "dni", "licencia"].filter(
+    (field) => !normalize(existingUser[field]) && normalize(input[field])
+  );
+  const permissionActive = permission && normalizeUpper(permission.estado) === "ACTIVO";
+
   return {
     ...manager,
     aircraftId,
-    kind:
-      permission && normalizeUpper(permission.estado) === "ACTIVO"
-        ? "IDEMPOTENT"
-        : "PERMISSION",
+    kind: permissionActive && completedFields.length === 0 ? "IDEMPOTENT" : "EXISTING_USER",
     user: existingUser,
     permission,
+    completedFields,
   };
 }
 
 export async function addAircraftPilot(actorUserId, input) {
+  if (!normalize(input.nombre) || !normalize(input.dni) || !normalize(input.licencia)) {
+    throw repositoryError(
+      "Nombre, DNI y licencia son obligatorios para autorizar un piloto.",
+      "VALIDATION_ERROR"
+    );
+  }
+
   const initialData = await readManagementData();
   const initialDecision = prepareAircraftPilotMutation(initialData, actorUserId, input);
   if (initialDecision.kind === "IDEMPOTENT") {
@@ -819,7 +826,7 @@ export async function addAircraftPilot(actorUserId, input) {
   const data = await readManagementData();
   const decision = prepareAircraftPilotMutation(data, actorUserId, input);
   if (
-    initialDecision.kind === "PERMISSION" &&
+    initialDecision.kind === "EXISTING_USER" &&
     (decision.kind === "NEW_USER" ||
       normalize(decision.user?.user_id) !== normalize(initialDecision.user?.user_id) ||
       JSON.stringify(permissionSnapshot(decision.permission)) !==
@@ -841,18 +848,46 @@ export async function addAircraftPilot(actorUserId, input) {
   const now = new Date().toISOString();
   const source = isAdmin ? "ADMIN" : "OWNER";
 
-  if (decision.kind === "PERMISSION") {
+  if (decision.kind === "EXISTING_USER") {
     const userId = normalize(decision.user.user_id);
-    const expectedPermission = {
+    const permissionActive = permission && normalizeUpper(permission.estado) === "ACTIVO";
+    const expectedPermission = permissionActive
+      ? {
+          user_id: userId,
+          aircraft_id: aircraftId,
+          rol: "PILOT",
+          estado: "ACTIVO",
+          granted_by: normalize(permission.granted_by),
+          granted_at: normalize(permission.granted_at),
+          revoked_by: normalize(permission.revoked_by),
+          revoked_at: normalize(permission.revoked_at),
+        }
+      : {
+          user_id: userId,
+          aircraft_id: aircraftId,
+          rol: "PILOT",
+          estado: "ACTIVO",
+          granted_by: normalize(actor.user_id),
+          granted_at: now,
+          revoked_by: "",
+          revoked_at: "",
+        };
+    const expectedUser = {
       user_id: userId,
-      aircraft_id: aircraftId,
-      rol: "PILOT",
-      estado: "ACTIVO",
-      granted_by: normalize(actor.user_id),
-      granted_at: now,
-      revoked_by: "",
-      revoked_at: "",
+      email: normalizeEmail(decision.user.email),
+      nombre: normalize(decision.user.nombre),
+      estado: assertValidUserRecord(decision.user),
+      google_sub: normalize(decision.user.google_sub),
+      telefono: normalize(decision.user.telefono),
+      dni: normalize(decision.user.dni),
+      licencia: normalize(decision.user.licencia),
+      is_admin: normalizeBoolean(decision.user.is_admin),
+      created_at: normalize(decision.user.created_at),
+      updated_at: decision.completedFields.length ? now : normalize(decision.user.updated_at),
     };
+    decision.completedFields.forEach((field) => {
+      expectedUser[field] = normalize(input[field]);
+    });
     const auditRow = createAuditRow({
       actorUserId: actor.user_id,
       action: "AIRCRAFT_ACCESS_GRANTED",
@@ -860,16 +895,23 @@ export async function addAircraftPilot(actorUserId, input) {
       entityId: `${userId}:${aircraftId}`,
       aircraftId,
       details: {
-        changeType: permission ? "REACTIVATED" : "CREATED",
+        changeType: permissionActive
+          ? "PROFILE_COMPLETED"
+          : permission
+            ? "REACTIVATED"
+            : "CREATED",
         previousRole: permission ? "PILOT" : "",
         newRole: "PILOT",
         previousEstado: permission ? normalizeUpper(permission.estado) : "",
         newEstado: "ACTIVO",
         source,
+        completedFields: decision.completedFields,
       },
       createdAt: now,
     });
-    const permissionUpdate = permission
+    const permissionUpdate = permissionActive
+      ? null
+      : permission
       ? {
           range: `PERMISOS!C${permission.__rowNumber}:H${permission.__rowNumber}`,
           values: [["PILOT", "ACTIVO", normalize(actor.user_id), now, "", ""]],
@@ -879,15 +921,30 @@ export async function addAircraftPilot(actorUserId, input) {
           values: [[userId, aircraftId, "PILOT", "ACTIVO", normalize(actor.user_id), now, "", ""]],
         };
 
+    const userColumns = { nombre: "C", telefono: "F", dni: "G", licencia: "H" };
+    const profileUpdates = decision.completedFields.map((field) => ({
+      range: `USUARIOS!${userColumns[field]}${decision.user.__rowNumber}`,
+      values: [[normalize(input[field])]],
+    }));
+    if (decision.completedFields.length) {
+      profileUpdates.push({
+        range: `USUARIOS!K${decision.user.__rowNumber}`,
+        values: [[now]],
+      });
+    }
+
     await batchUpdateSpreadsheetValues(data.spreadsheetId, [
-      permissionUpdate,
+      ...profileUpdates,
+      ...(permissionUpdate ? [permissionUpdate] : []),
       { range: `AUDIT_LOG!A${getNextRow(data.audits)}:H${getNextRow(data.audits)}`, values: [auditRow] },
     ]);
     await verifyBusinessAndAudits((verification) => {
+      const writtenUser = findUserById(verification.users, userId);
       const writtenPermission = getSinglePermission(verification.permissions, userId, aircraftId);
-      if (!writtenPermission) {
-        throw repositoryError("No se pudo verificar el permiso.", "WRITE_VERIFICATION_FAILED");
+      if (!writtenUser || !writtenPermission) {
+        throw repositoryError("No se pudo verificar el piloto.", "WRITE_VERIFICATION_FAILED");
       }
+      assertUserMatches(writtenUser, expectedUser);
       assertPermissionMatches(writtenPermission, expectedPermission);
     }, [auditRow]);
     return publicMutationResult({ userId, aircraftId, role: "PILOT", state: "ACTIVO", changed: true });
@@ -901,7 +958,7 @@ export async function addAircraftPilot(actorUserId, input) {
     estado: "ACTIVO",
     google_sub: "",
     telefono: normalize(input.telefono),
-    dni: "",
+    dni: normalize(input.dni),
     licencia: normalize(input.licencia),
     is_admin: false,
     created_at: now,

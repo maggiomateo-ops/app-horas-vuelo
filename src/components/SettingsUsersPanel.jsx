@@ -11,7 +11,7 @@ import {
 } from "../services/usersService";
 
 const EMPTY_USER_FORM = { nombre: "", email: "", telefono: "", dni: "", licencia: "", is_admin: false };
-const EMPTY_PILOT_FORM = { email: "", nombre: "", telefono: "", licencia: "" };
+const EMPTY_PILOT_FORM = { email: "", nombre: "", telefono: "", dni: "", licencia: "" };
 
 function StatusBadge({ children }) {
   const status = String(children || "").trim().toUpperCase();
@@ -19,9 +19,20 @@ function StatusBadge({ children }) {
   return <span className={`settings-user-status ${active ? "is-active" : "is-inactive"}`}>{status || "SIN ESTADO"}</span>;
 }
 
-function ManagementForm({ kind, aircraftId, disabled, submitting, onCancel, onSubmit }) {
+function ManagementForm({ kind, aircraftId, disabled, initialValues, submitting, onCancel, onSubmit }) {
   const isUser = kind === "user";
-  const [form, setForm] = useState(isUser ? EMPTY_USER_FORM : EMPTY_PILOT_FORM);
+  const isPilotReauthorization = !isUser && Boolean(initialValues?.user_id);
+  const [form, setForm] = useState(
+    isUser
+      ? EMPTY_USER_FORM
+      : {
+          email: initialValues?.email || "",
+          nombre: initialValues?.nombre || "",
+          telefono: initialValues?.telefono || "",
+          dni: initialValues?.dni || "",
+          licencia: initialValues?.licencia || "",
+        }
+  );
   const update = (field) => (event) => {
     const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
     setForm((current) => ({ ...current, [field]: value }));
@@ -34,11 +45,11 @@ function ManagementForm({ kind, aircraftId, disabled, submitting, onCancel, onSu
     }}>
       <div className="settings-management-grid">
         {isUser ? <label><span>Nombre *</span><input required value={form.nombre} onChange={update("nombre")} /></label> : null}
-        <label><span>Email *</span><input required type="email" value={form.email} onChange={update("email")} /></label>
-        {!isUser ? <label><span>Nombre</span><input value={form.nombre} onChange={update("nombre")} /></label> : null}
-        <label><span>Telefono</span><input value={form.telefono} onChange={update("telefono")} /></label>
-        {isUser ? <label><span>DNI</span><input value={form.dni} onChange={update("dni")} /></label> : null}
-        <label><span>Licencia</span><input value={form.licencia} onChange={update("licencia")} /></label>
+        <label><span>Email *</span><input required readOnly={isPilotReauthorization} type="email" value={form.email} onChange={update("email")} /></label>
+        {!isUser ? <label><span>Nombre y apellido *</span><input required readOnly={isPilotReauthorization && Boolean(initialValues?.nombre)} value={form.nombre} onChange={update("nombre")} /></label> : null}
+        <label><span>Telefono</span><input readOnly={isPilotReauthorization && Boolean(initialValues?.telefono)} value={form.telefono} onChange={update("telefono")} /></label>
+        <label><span>DNI{isUser ? "" : " *"}</span><input required={!isUser} readOnly={isPilotReauthorization && Boolean(initialValues?.dni)} value={form.dni} onChange={update("dni")} /></label>
+        <label><span>{isUser ? "Licencia" : "N.º de licencia *"}</span><input required={!isUser} readOnly={isPilotReauthorization && Boolean(initialValues?.licencia)} value={form.licencia} onChange={update("licencia")} /></label>
         {isUser ? (
           <label className="settings-management-checkbox">
             <input type="checkbox" checked={form.is_admin} onChange={update("is_admin")} />
@@ -46,10 +57,10 @@ function ManagementForm({ kind, aircraftId, disabled, submitting, onCancel, onSu
           </label>
         ) : null}
       </div>
-      {!isUser ? <p className="settings-users-muted">El nombre es obligatorio solamente si el email todavía no existe.</p> : null}
+      {isPilotReauthorization ? <p className="settings-users-muted settings-reauthorization-note">Los datos ya registrados no se modifican desde esta pantalla.</p> : null}
       <div className="settings-management-actions">
         <button type="submit" className="settings-save-button" disabled={disabled || submitting}>
-          {submitting ? "Guardando..." : (isUser ? "Crear usuario" : "Autorizar piloto")}
+          {submitting ? "Guardando..." : (isUser ? "Crear usuario" : isPilotReauthorization ? "Reautorizar piloto" : "Autorizar piloto")}
         </button>
         <button type="button" className="settings-secondary-button" disabled={submitting} onClick={onCancel}>Cancelar</button>
       </div>
@@ -57,7 +68,7 @@ function ManagementForm({ kind, aircraftId, disabled, submitting, onCancel, onSu
   );
 }
 
-function PlatformUsersTable({ aircraftId, busy, currentUserId, users, writesEnabled, onMutation }) {
+function PlatformUsersTable({ aircraftId, aircraftRegistration, busy, currentUserId, users, writesEnabled, onMutation }) {
   const [roleDrafts, setRoleDrafts] = useState({});
 
   return (
@@ -87,21 +98,32 @@ function PlatformUsersTable({ aircraftId, busy, currentUserId, users, writesEnab
               </td>
               <td><span>Tel: {user.telefono || "—"}</span><span>DNI: {user.dni || "—"}</span><span>Licencia: {user.licencia || "—"}</span></td>
               <td>
-                {user.permisos.length ? <div className="settings-access-list">{user.permisos.map((item, index) => (
-                  <span key={`${item.aircraft_id}-${item.rol}-${index}`} className="settings-access-item"><strong>{item.matricula || item.aircraft_id}</strong>{item.rol} · {item.estado}</span>
-                ))}</div> : <span className="settings-users-muted">Sin accesos asignados</span>}
+                <div className="settings-current-accesses">
+                  <span className="settings-access-label">Accesos actuales</span>
+                  {user.permisos.length ? <div className="settings-access-list">{user.permisos.map((item, index) => (
+                    <span key={`${item.aircraft_id}-${item.rol}-${index}`} className="settings-access-item">
+                      <strong>{item.matricula || item.aircraft_id}</strong>
+                      <span><b>{item.rol}</b><StatusBadge>{item.estado}</StatusBadge></span>
+                    </span>
+                  ))}</div> : <span className="settings-users-muted">Sin accesos asignados</span>}
+                </div>
                 <div className="settings-permission-editor">
-                  <select aria-label={`Rol de ${user.nombre || user.email} en la aeronave seleccionada`} value={role} disabled={!writesEnabled || busy || !active} onChange={(event) => setRoleDrafts((current) => ({ ...current, [roleDraftKey]: event.target.value }))}>
-                    <option value="OWNER">OWNER</option><option value="PILOT">PILOT</option><option value="VIEWER">VIEWER</option>
-                  </select>
-                  <button type="button" className="settings-row-action" disabled={!writesEnabled || busy || !active} onClick={() => onMutation(() => grantAircraftPermission(user.user_id, aircraftId, role), "Acceso actualizado.")}>Asignar / actualizar</button>
+                  <span className="settings-access-label">Gestionar {aircraftRegistration}</span>
+                  {isCurrentUser ? <span className="settings-users-self">Tu usuario</span> : null}
+                  <div className="settings-permission-actions">
+                    <span className="settings-role-select">
+                      <select aria-label={`Rol de ${user.nombre || user.email} en la aeronave seleccionada`} value={role} disabled={!writesEnabled || busy || !active} onChange={(event) => setRoleDrafts((current) => ({ ...current, [roleDraftKey]: event.target.value }))}>
+                        <option value="OWNER">OWNER</option><option value="PILOT">PILOT</option><option value="VIEWER">VIEWER</option>
+                      </select>
+                    </span>
+                    <button type="button" className="settings-row-action" disabled={!writesEnabled || busy || !active} onClick={() => onMutation(() => grantAircraftPermission(user.user_id, aircraftId, role), "Acceso actualizado.")}>Guardar acceso</button>
                   {!active ? <span className="settings-users-muted settings-access-help">Reactivá el usuario para asignar o modificar accesos.</span> : null}
                   {permission?.estado?.toUpperCase() === "ACTIVO" && !isCurrentUser ? <button type="button" className="settings-row-action is-danger" disabled={!writesEnabled || busy} onClick={() => {
                     if (window.confirm(`¿Revocar el acceso de ${user.nombre || user.email} a esta aeronave?`)) {
                       onMutation(() => revokeAircraftPermission(user.user_id, aircraftId), "Acceso revocado.");
                     }
                   }}>Revocar acceso</button> : null}
-                  {permission?.estado?.toUpperCase() === "ACTIVO" && isCurrentUser ? <span className="settings-users-self">Tu usuario</span> : null}
+                  </div>
                 </div>
               </td>
             </tr>
@@ -112,11 +134,11 @@ function PlatformUsersTable({ aircraftId, busy, currentUserId, users, writesEnab
   );
 }
 
-function AircraftPilotsTable({ aircraftId, busy, currentUserId, pilots, writesEnabled, onMutation }) {
+function AircraftPilotsTable({ aircraftId, busy, currentUserId, pilots, writesEnabled, onMutation, onPreparePilot }) {
   return (
     <div className="settings-users-table-wrapper">
       <table className="settings-users-table settings-pilots-table">
-        <thead><tr><th>Piloto</th><th>Telefono</th><th>Licencia</th><th>Estado y acciones</th></tr></thead>
+        <thead><tr><th>Piloto</th><th>Telefono</th><th>DNI</th><th>Licencia</th><th>Estado y acciones</th></tr></thead>
         <tbody>{pilots.map((pilot) => {
           const userActive = String(pilot.estado).toUpperCase() === "ACTIVO";
           const permissionActive = String(pilot.permiso_estado).toUpperCase() === "ACTIVO";
@@ -124,17 +146,19 @@ function AircraftPilotsTable({ aircraftId, busy, currentUserId, pilots, writesEn
           return (
             <tr key={pilot.user_id}>
               <td><strong>{pilot.nombre || "Sin nombre"}</strong><span>{pilot.email || "Sin email"}</span></td>
-              <td>{pilot.telefono || "—"}</td><td>{pilot.licencia || "—"}</td>
+              <td>{pilot.telefono || "—"}</td><td>{pilot.dni || "—"}</td><td>{pilot.licencia || "—"}</td>
               <td>
-                <div className="settings-pilot-statuses"><span>Usuario</span><StatusBadge>{pilot.estado}</StatusBadge><span>Permiso</span><StatusBadge>{pilot.permiso_estado}</StatusBadge></div>
-                {permissionActive && !isCurrentUser ? <button type="button" className="settings-row-action is-danger" disabled={!writesEnabled || busy} onClick={() => {
+                <div className="settings-pilot-status-box">
+                  <span>Usuario</span><StatusBadge>{pilot.estado}</StatusBadge>
+                  <span>Permiso</span><StatusBadge>{pilot.permiso_estado}</StatusBadge>
+                </div>
+                <div className="settings-pilot-actions">
+                  {permissionActive && !isCurrentUser ? <button type="button" className="settings-row-action is-danger" disabled={!writesEnabled || busy} onClick={() => {
                   if (window.confirm(`¿Revocar a ${pilot.nombre || pilot.email} como piloto?`)) {
                     onMutation(() => revokeAircraftPilot(pilot.user_id, aircraftId), "Piloto revocado.");
                   }
-                }}>Revocar</button> : permissionActive && isCurrentUser ? <span className="settings-users-self">Tu usuario</span> : userActive ? <button type="button" className="settings-row-action" disabled={!writesEnabled || busy} onClick={() => onMutation(
-                  () => authorizeAircraftPilot({ aircraft_id: aircraftId, email: pilot.email, nombre: "", telefono: "", licencia: "" }),
-                  "Piloto reautorizado."
-                )}>Reautorizar</button> : <span className="settings-users-warning">Requiere Admin</span>}
+                  }}>Revocar</button> : permissionActive && isCurrentUser ? <span className="settings-users-self">Tu usuario</span> : userActive ? <button type="button" className="settings-row-action" disabled={!writesEnabled || busy} onClick={() => onPreparePilot(pilot)}>Reautorizar</button> : <span className="settings-users-warning">Requiere Admin</span>}
+                </div>
               </td>
             </tr>
           );
@@ -153,6 +177,7 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
   const [message, setMessage] = useState("");
   const [mutating, setMutating] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [pilotInitialValues, setPilotInitialValues] = useState(null);
 
   useEffect(() => { if (!isGlobalAdmin && activeTab !== "pilots") setActiveTab("pilots"); }, [activeTab, isGlobalAdmin]);
 
@@ -167,7 +192,7 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
   useEffect(() => {
     const controller = new AbortController();
     let ignore = false;
-    setLoading(true); setError(""); setMessage(""); setShowForm(false);
+    setData([]); setLoading(true); setError(""); setMessage(""); setShowForm(false); setPilotInitialValues(null);
     fetchData(controller.signal).then((result) => {
       if (!ignore) {
         setData(result.records);
@@ -189,7 +214,7 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
       const result = await fetchData();
       setData(result.records);
       setWritesEnabled(result.writesEnabled);
-      setShowForm(false); setMessage(successMessage);
+      setShowForm(false); setPilotInitialValues(null); setMessage(successMessage);
     } catch (mutationError) {
       if (mutationError.message === "UNAUTHORIZED") onUnauthorized();
       else setError(mutationError.message || "No se pudo completar la accion.");
@@ -199,25 +224,29 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
   return (
     <div className="settings-users-panel">
       <div className="settings-user-tabs" role="tablist" aria-label="Usuarios de Settings">
-        {isGlobalAdmin ? <button type="button" role="tab" aria-selected={activeTab === "users"} className={`settings-user-tab ${activeTab === "users" ? "is-active" : ""}`} onClick={() => setActiveTab("users")}>Usuarios autorizados</button> : null}
-        <button type="button" role="tab" aria-selected={activeTab === "pilots"} className={`settings-user-tab ${activeTab === "pilots" ? "is-active" : ""}`} onClick={() => setActiveTab("pilots")}>Pilotos autorizados</button>
+        {isGlobalAdmin ? <button type="button" role="tab" aria-selected={activeTab === "users"} className={`settings-user-tab ${activeTab === "users" ? "is-active" : ""}`} onClick={() => setActiveTab("users")}>Usuarios</button> : null}
+        <button type="button" role="tab" aria-selected={activeTab === "pilots"} className={`settings-user-tab ${activeTab === "pilots" ? "is-active" : ""}`} onClick={() => setActiveTab("pilots")}>Pilotos</button>
       </div>
       <div className="settings-users-heading">
         <div><p className="dashboard-eyebrow">{activeTab === "users" ? "Administracion de plataforma" : "Aeronave seleccionada"}</p><h3>{activeTab === "users" ? "Usuarios autorizados" : `Pilotos autorizados · ${aircraftRegistration}`}</h3></div>
-        <button type="button" className="settings-save-button" disabled={!writesEnabled || mutating || loading} onClick={() => setShowForm((visible) => !visible)}>{activeTab === "users" ? "Nuevo usuario" : "Autorizar piloto"}</button>
+        <button type="button" className="settings-save-button" disabled={!writesEnabled || mutating || loading} onClick={() => { setPilotInitialValues(null); setShowForm((visible) => !visible); }}>{activeTab === "users" ? "Nuevo usuario" : "Autorizar piloto"}</button>
       </div>
       {!writesEnabled && !loading ? <p className="settings-management-disabled">Gestión de usuarios temporalmente deshabilitada.</p> : null}
-      {showForm ? <ManagementForm key={activeTab} kind={activeTab === "users" ? "user" : "pilot"} aircraftId={aircraftId} disabled={!writesEnabled} submitting={mutating} onCancel={() => setShowForm(false)} onSubmit={(form) => runMutation(
+      {message ? <div className="settings-inline-alert is-success" role="status" aria-live="polite">{message}</div> : null}
+      {error ? <div className="settings-inline-alert is-error" role="alert" aria-live="assertive">{error}</div> : null}
+      {showForm ? <ManagementForm key={`${activeTab}-${pilotInitialValues?.user_id || "new"}`} kind={activeTab === "users" ? "user" : "pilot"} aircraftId={aircraftId} disabled={!writesEnabled} initialValues={pilotInitialValues} submitting={mutating} onCancel={() => { setShowForm(false); setPilotInitialValues(null); }} onSubmit={(form) => runMutation(
         () => activeTab === "users" ? createPlatformUser(form) : authorizeAircraftPilot(form),
-        activeTab === "users" ? "Usuario creado correctamente." : "Piloto autorizado correctamente."
+        activeTab === "users"
+          ? "Usuario creado correctamente."
+          : pilotInitialValues
+            ? "Piloto reautorizado correctamente."
+            : "Piloto autorizado correctamente."
       )} /> : null}
-      {message ? <p className="settings-save-message">{message}</p> : null}
       {loading ? <p className="dashboard-status">Cargando datos...</p> : null}
-      {error ? <p className="dashboard-status dashboard-status-error">{error}</p> : null}
       {!loading && !error && data.length === 0 ? <div className="settings-users-empty">{activeTab === "pilots" ? "No hay pilotos autorizados para esta aeronave." : "No hay usuarios disponibles."}</div> : null}
-      {!loading && !error && data.length > 0 ? (activeTab === "users"
-        ? <PlatformUsersTable aircraftId={aircraftId} busy={mutating} currentUserId={currentUserId} users={data} writesEnabled={writesEnabled} onMutation={runMutation} />
-        : <AircraftPilotsTable aircraftId={aircraftId} busy={mutating} currentUserId={currentUserId} pilots={data} writesEnabled={writesEnabled} onMutation={runMutation} />
+      {!loading && data.length > 0 ? (activeTab === "users"
+        ? <PlatformUsersTable aircraftId={aircraftId} aircraftRegistration={aircraftRegistration} busy={mutating} currentUserId={currentUserId} users={data} writesEnabled={writesEnabled} onMutation={runMutation} />
+        : <AircraftPilotsTable aircraftId={aircraftId} busy={mutating} currentUserId={currentUserId} pilots={data} writesEnabled={writesEnabled} onMutation={runMutation} onPreparePilot={(pilot) => { setError(""); setMessage(""); setPilotInitialValues(pilot); setShowForm(true); }} />
       ) : null}
     </div>
   );

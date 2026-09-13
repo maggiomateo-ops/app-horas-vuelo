@@ -88,14 +88,16 @@ export default async function handler(req, res) {
         "email",
         "nombre",
         "telefono",
+        "dni",
         "licencia",
       ]);
       const result = await addAircraftPilot(userId, {
         aircraft_id: requiredString(body.aircraft_id, "aircraft_id", 80),
         email: requiredEmail(body.email),
-        nombre: optionalString(body.nombre, "nombre"),
+        nombre: requiredString(body.nombre, "nombre"),
         telefono: optionalString(body.telefono, "telefono", 80),
-        licencia: optionalString(body.licencia, "licencia", 80),
+        dni: requiredString(body.dni, "dni", 80),
+        licencia: requiredString(body.licencia, "licencia", 80),
       });
       return res.status(200).json({ ok: true, pilot: result });
     }
