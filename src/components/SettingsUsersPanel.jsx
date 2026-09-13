@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   authorizeAircraftPilot,
   changePlatformUserState,
@@ -22,6 +22,11 @@ function StatusBadge({ children }) {
 function ManagementForm({ kind, aircraftId, disabled, initialValues, submitting, onCancel, onSubmit }) {
   const isUser = kind === "user";
   const isPilotReauthorization = !isUser && Boolean(initialValues?.user_id);
+  const formTitle = isUser
+    ? "NUEVO USUARIO"
+    : isPilotReauthorization
+      ? `REAUTORIZAR PILOTO · ${initialValues?.nombre || "SIN NOMBRE"}`
+      : "AUTORIZAR PILOTO";
   const [form, setForm] = useState(
     isUser
       ? EMPTY_USER_FORM
@@ -43,6 +48,7 @@ function ManagementForm({ kind, aircraftId, disabled, initialValues, submitting,
       event.preventDefault();
       onSubmit(isUser ? form : { aircraft_id: aircraftId, ...form });
     }}>
+      <h4 className="settings-management-form-title">{formTitle}</h4>
       <div className="settings-management-grid">
         {isUser ? <label><span>Nombre *</span><input required value={form.nombre} onChange={update("nombre")} /></label> : null}
         <label><span>Email *</span><input required readOnly={isPilotReauthorization} type="email" value={form.email} onChange={update("email")} /></label>
@@ -178,6 +184,13 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
   const [mutating, setMutating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [pilotInitialValues, setPilotInitialValues] = useState(null);
+  const formRef = useRef(null);
+
+  useEffect(() => {
+    if (showForm) {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [showForm]);
 
   const handleTabChange = (nextTab) => {
     if (nextTab === activeTab) return;
@@ -245,14 +258,18 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
       {!writesEnabled && !loading ? <p className="settings-management-disabled">Gestión de usuarios temporalmente deshabilitada.</p> : null}
       {message ? <div className="settings-inline-alert is-success" role="status" aria-live="polite">{message}</div> : null}
       {error ? <div className="settings-inline-alert is-error" role="alert" aria-live="assertive">{error}</div> : null}
-      {showForm ? <ManagementForm key={`${activeTab}-${pilotInitialValues?.user_id || "new"}`} kind={activeTab === "users" ? "user" : "pilot"} aircraftId={aircraftId} disabled={!writesEnabled} initialValues={pilotInitialValues} submitting={mutating} onCancel={() => { setShowForm(false); setPilotInitialValues(null); }} onSubmit={(form) => runMutation(
-        () => activeTab === "users" ? createPlatformUser(form) : authorizeAircraftPilot(form),
-        activeTab === "users"
-          ? "Usuario creado correctamente."
-          : pilotInitialValues
-            ? "Piloto reautorizado correctamente."
-            : "Piloto autorizado correctamente."
-      )} /> : null}
+      {showForm ? (
+        <div ref={formRef} className="settings-management-form-container">
+          <ManagementForm key={`${activeTab}-${pilotInitialValues?.user_id || "new"}`} kind={activeTab === "users" ? "user" : "pilot"} aircraftId={aircraftId} disabled={!writesEnabled} initialValues={pilotInitialValues} submitting={mutating} onCancel={() => { setShowForm(false); setPilotInitialValues(null); }} onSubmit={(form) => runMutation(
+            () => activeTab === "users" ? createPlatformUser(form) : authorizeAircraftPilot(form),
+            activeTab === "users"
+              ? "Usuario creado correctamente."
+              : pilotInitialValues
+                ? "Piloto reautorizado correctamente."
+                : "Piloto autorizado correctamente."
+          )} />
+        </div>
+      ) : null}
       {loading ? <p className="dashboard-status">Cargando datos...</p> : null}
       {!loading && !error && data.length === 0 ? <div className="settings-users-empty">{activeTab === "pilots" ? "No hay pilotos autorizados para esta aeronave." : "No hay usuarios disponibles."}</div> : null}
       {!loading && data.length > 0 ? (activeTab === "users"

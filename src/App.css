@@ -1607,12 +1607,25 @@ select {
   font-weight: 700;
 }
 
-.settings-management-form {
+.settings-management-form-container {
+  scroll-margin-top: 18px;
   margin-bottom: 18px;
   padding: 16px;
   border: 1px solid var(--app-border);
   border-radius: 14px;
   background: var(--app-surface-muted);
+}
+
+.settings-management-form {
+  margin: 0;
+}
+
+.settings-management-form-title {
+  margin: 0 0 16px;
+  color: var(--app-text);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
 }
 
 .settings-management-grid {
