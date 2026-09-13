@@ -76,7 +76,8 @@ function PlatformUsersTable({ aircraftId, aircraftRegistration, busy, currentUse
       <table className="settings-users-table">
         <thead><tr><th>Usuario</th><th>Estado</th><th>Datos</th><th>Accesos por aeronave</th></tr></thead>
         <tbody>{users.map((user) => {
-          const permission = user.permisos.find((item) => item.aircraft_id === aircraftId);
+          const permisos = Array.isArray(user.permisos) ? user.permisos : [];
+          const permission = permisos.find((item) => item.aircraft_id === aircraftId);
           const roleDraftKey = `${aircraftId}:${user.user_id}`;
           const role = roleDrafts[roleDraftKey] || permission?.rol || "PILOT";
           const active = String(user.estado).toUpperCase() === "ACTIVO";
@@ -100,7 +101,7 @@ function PlatformUsersTable({ aircraftId, aircraftRegistration, busy, currentUse
               <td>
                 <div className="settings-current-accesses">
                   <span className="settings-access-label">Accesos actuales</span>
-                  {user.permisos.length ? <div className="settings-access-list">{user.permisos.map((item, index) => (
+                  {permisos.length ? <div className="settings-access-list">{permisos.map((item, index) => (
                     <span key={`${item.aircraft_id}-${item.rol}-${index}`} className="settings-access-item">
                       <strong>{item.matricula || item.aircraft_id}</strong>
                       <span><b>{item.rol}</b><StatusBadge>{item.estado}</StatusBadge></span>
@@ -109,7 +110,6 @@ function PlatformUsersTable({ aircraftId, aircraftRegistration, busy, currentUse
                 </div>
                 <div className="settings-permission-editor">
                   <span className="settings-access-label">Gestionar {aircraftRegistration}</span>
-                  {isCurrentUser ? <span className="settings-users-self">Tu usuario</span> : null}
                   <div className="settings-permission-actions">
                     <span className="settings-role-select">
                       <select aria-label={`Rol de ${user.nombre || user.email} en la aeronave seleccionada`} value={role} disabled={!writesEnabled || busy || !active} onChange={(event) => setRoleDrafts((current) => ({ ...current, [roleDraftKey]: event.target.value }))}>
@@ -179,6 +179,17 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
   const [showForm, setShowForm] = useState(false);
   const [pilotInitialValues, setPilotInitialValues] = useState(null);
 
+  const handleTabChange = (nextTab) => {
+    if (nextTab === activeTab) return;
+    setData([]);
+    setError("");
+    setMessage("");
+    setShowForm(false);
+    setPilotInitialValues(null);
+    setLoading(true);
+    setActiveTab(nextTab);
+  };
+
   useEffect(() => { if (!isGlobalAdmin && activeTab !== "pilots") setActiveTab("pilots"); }, [activeTab, isGlobalAdmin]);
 
   const fetchData = useCallback(async (signal) => {
@@ -224,8 +235,8 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
   return (
     <div className="settings-users-panel">
       <div className="settings-user-tabs" role="tablist" aria-label="Usuarios de Settings">
-        {isGlobalAdmin ? <button type="button" role="tab" aria-selected={activeTab === "users"} className={`settings-user-tab ${activeTab === "users" ? "is-active" : ""}`} onClick={() => setActiveTab("users")}>Usuarios</button> : null}
-        <button type="button" role="tab" aria-selected={activeTab === "pilots"} className={`settings-user-tab ${activeTab === "pilots" ? "is-active" : ""}`} onClick={() => setActiveTab("pilots")}>Pilotos</button>
+        {isGlobalAdmin ? <button type="button" role="tab" aria-selected={activeTab === "users"} className={`settings-user-tab ${activeTab === "users" ? "is-active" : ""}`} onClick={() => handleTabChange("users")}>Usuarios</button> : null}
+        <button type="button" role="tab" aria-selected={activeTab === "pilots"} className={`settings-user-tab ${activeTab === "pilots" ? "is-active" : ""}`} onClick={() => handleTabChange("pilots")}>Pilotos</button>
       </div>
       <div className="settings-users-heading">
         <div><p className="dashboard-eyebrow">{activeTab === "users" ? "Administracion de plataforma" : "Aeronave seleccionada"}</p><h3>{activeTab === "users" ? "Usuarios autorizados" : `Pilotos autorizados · ${aircraftRegistration}`}</h3></div>
