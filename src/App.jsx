@@ -1353,6 +1353,7 @@ function App() {
           aircraftRole={selectedAircraftRole}
           canEdit={canEditAircraft}
           isGlobalAdmin={isGlobalAdmin}
+          currentUserId={currentUser?.userId || ""}
           settings={settings}
           loading={settingsLoading}
           error={settingsError}

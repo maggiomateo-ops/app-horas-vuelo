@@ -389,6 +389,7 @@ export async function getAircraftPilotsForManager(requestingUserId, aircraftId) 
         nombre: String(user.nombre || "").trim(),
         email: String(user.email || "").trim().toLowerCase(),
         telefono: String(user.telefono || "").trim(),
+        dni: String(user.dni || "").trim(),
         licencia: String(user.licencia || "").trim(),
         estado: String(user.estado || "").trim(),
         permiso_estado: String(permission.estado || "").trim(),

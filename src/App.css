@@ -1535,6 +1535,25 @@ select {
   gap: 7px;
 }
 
+.settings-current-accesses {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-access-label {
+  color: var(--app-text-soft);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.settings-current-accesses .settings-access-list {
+  align-items: stretch;
+  flex-direction: column;
+}
+
 .settings-access-item {
   display: inline-flex;
   flex-direction: column;
@@ -1543,6 +1562,17 @@ select {
   border: 1px solid var(--app-border);
   border-radius: 9px;
   background: var(--app-surface-muted);
+}
+
+.settings-access-item > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-access-item > span > b {
+  font-size: 10px;
 }
 
 .settings-pilot-statuses {
@@ -1564,6 +1594,276 @@ select {
   text-align: center;
   font-size: 13px;
   font-weight: 700;
+}
+
+.settings-management-disabled {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settings-management-form-container {
+  scroll-margin-top: 18px;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface-muted);
+}
+
+.settings-management-form {
+  margin: 0;
+}
+
+.settings-management-form-title {
+  margin: 0 0 16px;
+  color: var(--app-text);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.settings-management-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-management-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.settings-management-grid input,
+.settings-permission-editor select {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 9px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+}
+
+.settings-management-grid input:read-only {
+  background: color-mix(in srgb, var(--app-surface-muted) 72%, var(--app-surface));
+  color: var(--app-text-muted);
+  cursor: default;
+}
+
+.settings-reauthorization-note {
+  margin: 12px 0 0;
+  font-size: 11px;
+}
+
+.settings-management-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  align-self: end;
+  min-height: 40px;
+}
+
+.settings-management-checkbox input {
+  min-height: auto;
+}
+
+.settings-management-actions,
+.settings-permission-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-management-actions {
+  margin-top: 14px;
+}
+
+.settings-secondary-button,
+.settings-row-action {
+  border: 1px solid var(--app-border-strong);
+  border-radius: 9px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.settings-secondary-button {
+  min-height: 40px;
+  padding: 8px 13px;
+}
+
+.settings-row-action {
+  margin-top: 8px;
+  padding: 7px 9px;
+}
+
+.settings-row-action.is-danger {
+  border-color: color-mix(in srgb, var(--app-danger) 35%, var(--app-border));
+  color: var(--app-danger);
+}
+
+.settings-row-action:disabled,
+.settings-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.settings-permission-editor {
+  align-items: flex-start;
+  flex-direction: column;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border);
+}
+
+.settings-permission-actions,
+.settings-pilot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.settings-role-select {
+  position: relative;
+  display: inline-flex;
+}
+
+.settings-role-select::after {
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  color: var(--app-primary-strong);
+  content: "▼";
+  font-size: 9px;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.settings-role-select select {
+  min-width: 118px;
+  padding-right: 30px;
+  appearance: none;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.settings-role-select select:disabled {
+  cursor: not-allowed;
+}
+
+.settings-permission-editor .settings-row-action {
+  margin-top: 0;
+}
+
+.settings-users-warning {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--app-danger);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.settings-pilot-status-box {
+  display: grid;
+  grid-template-columns: minmax(62px, 1fr) auto;
+  align-items: center;
+  gap: 7px 12px;
+  max-width: 210px;
+  padding: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface-muted);
+}
+
+.settings-pilot-status-box > span:not(.settings-user-status) {
+  color: var(--app-text-soft);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.settings-pilot-actions {
+  margin-top: 9px;
+}
+
+.settings-pilot-actions .settings-row-action,
+.settings-pilot-actions .settings-users-self {
+  margin-top: 0;
+}
+
+.settings-inline-alert {
+  margin: 0 0 16px;
+  padding: 11px 13px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.settings-inline-alert::before {
+  margin-right: 8px;
+  font-weight: 900;
+}
+
+.settings-inline-alert.is-success {
+  border-color: color-mix(in srgb, var(--app-success) 32%, var(--app-border));
+  background: color-mix(in srgb, var(--app-success) 9%, var(--app-surface));
+  color: var(--app-success);
+}
+
+.settings-inline-alert.is-success::before {
+  content: "✓";
+}
+
+.settings-inline-alert.is-error {
+  border-color: color-mix(in srgb, var(--app-danger) 35%, var(--app-border));
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+}
+
+.settings-inline-alert.is-error::before {
+  content: "!";
+}
+
+.settings-users-self,
+.settings-access-help {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.settings-users-self {
+  color: var(--app-primary-strong);
+}
+
+.settings-access-help {
+  flex-basis: 100%;
+}
+
+@media (max-width: 720px) {
+  .settings-management-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-users-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 .settings-tab {
