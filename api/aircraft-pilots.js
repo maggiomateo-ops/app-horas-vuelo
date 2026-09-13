@@ -56,7 +56,11 @@ export default async function handler(req, res) {
 
     try {
       const result = await getAircraftPilotsForManager(userId, aircraftId);
-      return res.status(200).json({ ok: true, ...result });
+      return res.status(200).json({
+        ok: true,
+        ...result,
+        writes_enabled: userManagementWritesEnabled(),
+      });
     } catch (error) {
       const status = getErrorStatus(error);
       const errorMessages = {

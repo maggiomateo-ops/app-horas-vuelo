@@ -1566,6 +1566,151 @@ select {
   font-weight: 700;
 }
 
+.settings-management-disabled {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settings-management-form {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface-muted);
+}
+
+.settings-management-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-management-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.settings-management-grid input,
+.settings-permission-editor select {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 9px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+}
+
+.settings-management-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  align-self: end;
+  min-height: 40px;
+}
+
+.settings-management-checkbox input {
+  min-height: auto;
+}
+
+.settings-management-actions,
+.settings-permission-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-management-actions {
+  margin-top: 14px;
+}
+
+.settings-secondary-button,
+.settings-row-action {
+  border: 1px solid var(--app-border-strong);
+  border-radius: 9px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.settings-secondary-button {
+  min-height: 40px;
+  padding: 8px 13px;
+}
+
+.settings-row-action {
+  margin-top: 8px;
+  padding: 7px 9px;
+}
+
+.settings-row-action.is-danger {
+  border-color: color-mix(in srgb, var(--app-danger) 35%, var(--app-border));
+  color: var(--app-danger);
+}
+
+.settings-row-action:disabled,
+.settings-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.settings-permission-editor {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border);
+}
+
+.settings-permission-editor .settings-row-action {
+  margin-top: 0;
+}
+
+.settings-users-warning {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--app-danger);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.settings-users-self,
+.settings-access-help {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.settings-users-self {
+  color: var(--app-primary-strong);
+}
+
+.settings-access-help {
+  flex-basis: 100%;
+}
+
+@media (max-width: 720px) {
+  .settings-management-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-users-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 .settings-tab {
   padding: 10px 14px;
   border: 1px solid var(--app-border);

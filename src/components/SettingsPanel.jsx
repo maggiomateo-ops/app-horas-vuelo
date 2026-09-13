@@ -72,6 +72,7 @@ function SettingsPanel({
   aircraftRole,
   canEdit,
   isGlobalAdmin,
+  currentUserId,
   settings,
   loading,
   error,
@@ -136,7 +137,7 @@ function SettingsPanel({
         <p className="dashboard-meta">
           {activeSection === "aircraft"
             ? (canEdit ? "Editable para OWNER y ADMIN." : "Acceso de solo lectura.")
-            : "Usuarios en modo solo lectura."}
+            : "Gestion de usuarios y accesos."}
         </p>
       </div>
 
@@ -438,6 +439,7 @@ function SettingsPanel({
           aircraftId={aircraftId}
           aircraftRegistration={aircraftRegistration}
           isGlobalAdmin={isGlobalAdmin}
+          currentUserId={currentUserId}
           onUnauthorized={onUnauthorized}
         />
       )}

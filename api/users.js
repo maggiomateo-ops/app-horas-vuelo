@@ -44,7 +44,11 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     try {
       const users = await getPlatformUsersForAdmin(userId);
-      return res.status(200).json({ ok: true, users });
+      return res.status(200).json({
+        ok: true,
+        users,
+        writes_enabled: userManagementWritesEnabled(),
+      });
     } catch (error) {
       const status = getErrorStatus(error);
       return res.status(status).json({

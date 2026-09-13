@@ -119,6 +119,15 @@ function normalize(value) {
   return String(value ?? "").trim();
 }
 
+function assertNotSelfPermissionRevoke(actorUserId, targetUserId) {
+  if (normalize(actorUserId) === normalize(targetUserId)) {
+    throw repositoryError(
+      "No podes revocar tu propio acceso a una aeronave.",
+      "SELF_PERMISSION_REVOKE"
+    );
+  }
+}
+
 function normalizeUpper(value) {
   return normalize(value).toUpperCase();
 }
@@ -678,6 +687,7 @@ export async function grantAircraftPermissionByAdmin(actorUserId, input) {
 export async function revokeAircraftPermissionByAdmin(actorUserId, input) {
   const initialData = await readManagementData();
   requireAdminActor(initialData, actorUserId);
+  assertNotSelfPermissionRevoke(actorUserId, input.user_id);
   const initialUser = findUserById(initialData.users, input.user_id);
 
   if (!initialUser) {
@@ -703,6 +713,7 @@ export async function revokeAircraftPermissionByAdmin(actorUserId, input) {
 
   const data = await readManagementData();
   const actor = requireAdminActor(data, actorUserId);
+  assertNotSelfPermissionRevoke(actorUserId, userId);
   const user = findUserById(data.users, userId);
   if (!user) {
     throw repositoryError("El usuario cambio durante la operacion.", "INTEGRITY_ERROR");
@@ -975,6 +986,7 @@ export async function revokeAircraftPilot(actorUserId, input) {
   );
   const aircraftId = normalize(initialManager.aircraft.aircraft_id);
   const userId = normalize(input.user_id);
+  assertNotSelfPermissionRevoke(actorUserId, userId);
   const initialPermission = getSinglePermission(initialData.permissions, userId, aircraftId);
 
   if (!initialPermission) {
@@ -998,6 +1010,7 @@ export async function revokeAircraftPilot(actorUserId, input) {
   const initialSnapshot = permissionSnapshot(initialPermission);
   const data = await readManagementData();
   const { actor, isAdmin } = authorizeAircraftManager(data, actorUserId, aircraftId);
+  assertNotSelfPermissionRevoke(actorUserId, userId);
   const permission = getSinglePermission(data.permissions, userId, aircraftId);
   assertPermissionSnapshotUnchanged(initialSnapshot, permission);
 
