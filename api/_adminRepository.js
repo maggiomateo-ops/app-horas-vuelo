@@ -96,6 +96,15 @@ function normalizeBoolean(value) {
   return value === true || String(value ?? "").trim().toUpperCase() === "TRUE";
 }
 
+function createEffectiveAdminAccess(userId, aircraftId) {
+  return {
+    user_id: userId,
+    aircraft_id: aircraftId,
+    rol: "ADMIN",
+    estado: "ACTIVO",
+  };
+}
+
 function findActiveAircraftById(aircrafts, aircraftId) {
   const normalizedAircraftId = String(aircraftId || "").trim();
   const aircraft = aircrafts.find(
@@ -267,6 +276,20 @@ export async function getAircraftsForUser(userId) {
   const user = findActiveUserById(adminData.users, userId);
   const normalizedUserId = String(user.user_id).trim();
 
+  if (normalizeBoolean(user.is_admin)) {
+    return adminData.aircrafts
+      .filter(
+        (aircraft) => String(aircraft.estado).trim().toUpperCase() === "ACTIVA"
+      )
+      .map((aircraft) => ({
+        aircraft_id: String(aircraft.aircraft_id).trim(),
+        matricula: aircraft.matricula,
+        fabricante: aircraft.fabricante,
+        modelo: aircraft.modelo,
+        rol: "ADMIN",
+      }));
+  }
+
   return adminData.permissions
     .filter(
       (permission) =>
@@ -411,15 +434,22 @@ export async function getValidatedAircraftAccess(userId, aircraftId) {
   const user = findActiveUserById(adminData.users, userId);
   const normalizedUserId = String(user.user_id).trim();
   const normalizedAircraftId = String(aircraftId || "").trim();
-  const permission = adminData.permissions.find(
-    (currentPermission) =>
-      String(currentPermission.user_id).trim() === normalizedUserId &&
-      String(currentPermission.aircraft_id).trim() === normalizedAircraftId
-  );
+  const isGlobalAdmin = normalizeBoolean(user.is_admin);
+  let permission;
 
-  if (!permission) throw new Error("El usuario no tiene permiso sobre la aeronave.");
-  if (String(permission.estado).trim().toUpperCase() !== "ACTIVO") {
-    throw new Error("El permiso no esta activo.");
+  if (isGlobalAdmin) {
+    permission = createEffectiveAdminAccess(normalizedUserId, normalizedAircraftId);
+  } else {
+    permission = adminData.permissions.find(
+      (currentPermission) =>
+        String(currentPermission.user_id).trim() === normalizedUserId &&
+        String(currentPermission.aircraft_id).trim() === normalizedAircraftId
+    );
+
+    if (!permission) throw new Error("El usuario no tiene permiso sobre la aeronave.");
+    if (String(permission.estado).trim().toUpperCase() !== "ACTIVO") {
+      throw new Error("El permiso no esta activo.");
+    }
   }
 
   const aircraft = adminData.aircrafts.find(
