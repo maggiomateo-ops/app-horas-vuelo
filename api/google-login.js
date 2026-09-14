@@ -4,56 +4,6 @@ import { getActiveUserByEmail, resolveGoogleUser } from "./_adminRepository.js";
 
 const googleClient = new OAuth2Client();
 
-function getUserResolutionSource() {
-  return process.env.GOOGLE_USER_RESOLUTION_SOURCE === "sheets-api"
-    ? "sheets-api"
-    : "apps-script";
-}
-
-async function resolveActiveUserFromAppsScript(email) {
-  const appsScriptUrl = String(process.env.APPS_SCRIPT_URL || "").trim();
-  const appSecret = String(process.env.APPS_SCRIPT_SECRET || "").trim();
-
-  if (!appsScriptUrl || !appSecret) {
-    throw new Error("AUTH_CONFIGURATION_ERROR");
-  }
-
-  const url = new URL(appsScriptUrl);
-  url.searchParams.set("action", "resolveUser");
-  url.searchParams.set("email", email);
-  url.searchParams.set("appSecret", appSecret);
-
-  let response;
-
-  try {
-    response = await fetch(url.toString(), { method: "GET" });
-  } catch {
-    throw new Error("USER_SERVICE_UNAVAILABLE");
-  }
-
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error("USER_SERVICE_UNAVAILABLE");
-  }
-
-  if (!data?.ok) {
-    throw new Error("USER_NOT_AUTHORIZED");
-  }
-
-  const user = data.user;
-  const userId = String(user?.user_id || "").trim();
-  const userEmail = String(user?.email || "").trim().toLowerCase();
-  const name = String(user?.nombre || "").trim();
-  const status = String(user?.estado || "").trim().toUpperCase();
-
-  if (!userId || !userEmail || !name || status !== "ACTIVO" || userEmail !== email) {
-    throw new Error("INVALID_USER_RESPONSE");
-  }
-
-  return { userId, email: userEmail, name, isAdmin: false };
-}
-
 async function resolveActiveUserFromSheets(email, googleSub) {
   let user;
 
@@ -87,9 +37,7 @@ async function resolveActiveUserFromSheets(email, googleSub) {
 }
 
 function resolveActiveUser(email, googleSub) {
-  return getUserResolutionSource() === "sheets-api"
-    ? resolveActiveUserFromSheets(email, googleSub)
-    : resolveActiveUserFromAppsScript(email);
+  return resolveActiveUserFromSheets(email, googleSub);
 }
 
 export default async function handler(req, res) {
@@ -156,10 +104,6 @@ export default async function handler(req, res) {
         ok: false,
         error: "La cuenta de Google no coincide con la identidad autorizada.",
       });
-    }
-
-    if (error.message === "AUTH_CONFIGURATION_ERROR") {
-      return res.status(500).json({ ok: false, error: "Google Auth no esta configurado." });
     }
 
     return res.status(502).json({
