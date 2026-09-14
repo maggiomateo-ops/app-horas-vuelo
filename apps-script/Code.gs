@@ -665,7 +665,7 @@
     return SpreadsheetApp.openById(adminSpreadsheetId);
   }
 
-  const ADMIN_CACHE_KEY = "APP_HORAS_ADMIN_DATA_V1";
+  const ADMIN_CACHE_KEY = "APP_HORAS_ADMIN_DATA_V2";
   const ADMIN_CACHE_TTL_SECONDS = 60;
 
   function readAdminSheetRecords(ss, sheetName, requiredHeaders) {
@@ -710,7 +710,7 @@
       users: readAdminSheetRecords(
         ss,
         "USUARIOS",
-        ["user_id", "email", "nombre", "estado"]
+        ["user_id", "email", "nombre", "estado", "is_admin"]
       ),
       permissions: readAdminSheetRecords(
         ss,
@@ -858,6 +858,19 @@
     return permission;
   }
 
+  function normalizeBoolean(value) {
+    return value === true || String(value || "").trim().toUpperCase() === "TRUE";
+  }
+
+  function createEffectiveAdminPermission(userId, aircraftId) {
+    return {
+      user_id: String(userId).trim(),
+      aircraft_id: String(aircraftId).trim(),
+      rol: "ADMIN",
+      estado: "ACTIVO"
+    };
+  }
+
   function validateUserAircraftAccess(userId, aircraftId) {
     return getValidatedAccessContext(userId, aircraftId);
   }
@@ -865,16 +878,21 @@
   function getValidatedAccessContext(userId, aircraftId) {
     const adminData = getAdminData();
     const user = getUserById(userId, adminData);
-    const permission = getUserPermissionForAircraft(userId, aircraftId, adminData);
-    const aircraft = getAircraftById(aircraftId, adminData);
 
     if (String(user.estado).trim().toUpperCase() !== "ACTIVO") {
       throw new Error("El usuario " + userId + " no está activo.");
     }
 
-    if (String(permission.estado).trim().toUpperCase() !== "ACTIVO") {
+    const isGlobalAdmin = normalizeBoolean(user.is_admin);
+    const permission = isGlobalAdmin
+      ? createEffectiveAdminPermission(userId, aircraftId)
+      : getUserPermissionForAircraft(userId, aircraftId, adminData);
+
+    if (!isGlobalAdmin && String(permission.estado).trim().toUpperCase() !== "ACTIVO") {
       throw new Error("El permiso no está activo.");
     }
+
+    const aircraft = getAircraftById(aircraftId, adminData);
 
     if (String(aircraft.estado).trim().toUpperCase() !== "ACTIVA") {
       throw new Error("La aeronave " + aircraftId + " no está activa.");
@@ -892,6 +910,22 @@
 
     if (String(user.estado).trim().toUpperCase() !== "ACTIVO") {
       throw new Error("El usuario " + userId + " no está activo.");
+    }
+
+    if (normalizeBoolean(user.is_admin)) {
+      return adminData.aircrafts
+        .filter(function(aircraft) {
+          return String(aircraft.estado).trim().toUpperCase() === "ACTIVA";
+        })
+        .map(function(aircraft) {
+          return {
+            aircraft_id: String(aircraft.aircraft_id).trim(),
+            matricula: aircraft.matricula,
+            fabricante: aircraft.fabricante,
+            modelo: aircraft.modelo,
+            rol: "ADMIN"
+          };
+        });
     }
 
     return adminData.permissions

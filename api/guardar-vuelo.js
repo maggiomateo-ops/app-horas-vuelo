@@ -1,4 +1,5 @@
 import { requireAuth } from "./_auth.js";
+import { saveFlightFromSheets } from "./_flightRepository.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -12,18 +13,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const appsScriptUrl = String(process.env.APPS_SCRIPT_URL || "").trim();
     const userId = String(session.userId || "").trim();
     const payload = req.body && typeof req.body === "object" ? { ...req.body } : {};
     const aircraftId = String(
       payload.aircraft_id || process.env.LEGACY_AIRCRAFT_ID || ""
     ).trim();
-
-    if (!appsScriptUrl) {
-      return res
-        .status(401)
-        .json({ ok: false, error: "Falta APPS_SCRIPT_URL en variables de entorno." });
-    }
 
     if (!userId) {
       return res
@@ -44,33 +38,10 @@ export default async function handler(req, res) {
     delete payload.aircraft_id;
     delete payload.aircraftId;
 
-    const response = await fetch(appsScriptUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...payload,
-        userId,
-        aircraftId,
-        appSecret: process.env.APPS_SCRIPT_SECRET
-          ? String(process.env.APPS_SCRIPT_SECRET).trim()
-          : undefined,
-      }),
-    });
-
-    const text = await response.text();
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { ok: false, error: "Respuesta invalida de Apps Script.", raw: text };
-    }
-
-    return res.status(response.ok ? 200 : response.status).json(data);
+    const data = await saveFlightFromSheets({ userId, aircraftId, payload });
+    return res.status(200).json(data);
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       ok: false,
       error: error.message || "Error interno del servidor.",
     });

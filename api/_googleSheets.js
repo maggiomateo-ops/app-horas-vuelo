@@ -128,7 +128,12 @@ export async function batchUpdateSpreadsheetValues(spreadsheetId, updates) {
   return response.data;
 }
 
-export async function appendSpreadsheetValues(spreadsheetId, range, values) {
+export async function appendSpreadsheetValues(
+  spreadsheetId,
+  range,
+  values,
+  { insertDataOption = "INSERT_ROWS" } = {}
+) {
   const normalizedSpreadsheetId = normalizeSpreadsheetId(spreadsheetId);
   const normalizedRange = String(range || "").trim();
 
@@ -138,11 +143,15 @@ export async function appendSpreadsheetValues(spreadsheetId, range, values) {
 
   validateRows(values);
 
+  if (!["INSERT_ROWS", "OVERWRITE"].includes(insertDataOption)) {
+    throw new Error("La opcion insertDataOption de Google Sheets no es valida.");
+  }
+
   const url = new URL(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(normalizedSpreadsheetId)}/values/${encodeURIComponent(normalizedRange)}:append`
   );
   url.searchParams.set("valueInputOption", "RAW");
-  url.searchParams.set("insertDataOption", "INSERT_ROWS");
+  url.searchParams.set("insertDataOption", insertDataOption);
 
   const authClient = await getAuthClient();
   const response = await authClient.request({
@@ -152,6 +161,24 @@ export async function appendSpreadsheetValues(spreadsheetId, range, values) {
       majorDimension: "ROWS",
       values,
     },
+  });
+
+  return response.data;
+}
+
+export async function clearSpreadsheetValues(spreadsheetId, range) {
+  const normalizedSpreadsheetId = normalizeSpreadsheetId(spreadsheetId);
+  const normalizedRange = String(range || "").trim();
+
+  if (!normalizedRange) {
+    throw new Error("Falta el rango que se debe limpiar en Google Sheets.");
+  }
+
+  const authClient = await getAuthClient();
+  const response = await authClient.request({
+    method: "POST",
+    url: `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(normalizedSpreadsheetId)}/values/${encodeURIComponent(normalizedRange)}:clear`,
+    data: {},
   });
 
   return response.data;
