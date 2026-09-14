@@ -97,7 +97,12 @@ export async function saveFlightFromSheets({ userId, aircraftId, payload }) {
     };
   }
 
-  await appendSpreadsheetValues(access.spreadsheetId, FLIGHT_ROWS_RANGE, [flightRow]);
+  await appendSpreadsheetValues(
+    access.spreadsheetId,
+    FLIGHT_ROWS_RANGE,
+    [flightRow],
+    { insertDataOption: "OVERWRITE" }
+  );
 
   return {
     ok: true,
