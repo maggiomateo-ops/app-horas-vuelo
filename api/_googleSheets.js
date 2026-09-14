@@ -156,3 +156,21 @@ export async function appendSpreadsheetValues(spreadsheetId, range, values) {
 
   return response.data;
 }
+
+export async function clearSpreadsheetValues(spreadsheetId, range) {
+  const normalizedSpreadsheetId = normalizeSpreadsheetId(spreadsheetId);
+  const normalizedRange = String(range || "").trim();
+
+  if (!normalizedRange) {
+    throw new Error("Falta el rango que se debe limpiar en Google Sheets.");
+  }
+
+  const authClient = await getAuthClient();
+  const response = await authClient.request({
+    method: "POST",
+    url: `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(normalizedSpreadsheetId)}/values/${encodeURIComponent(normalizedRange)}:clear`,
+    data: {},
+  });
+
+  return response.data;
+}
