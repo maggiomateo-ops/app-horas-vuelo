@@ -1,9 +1,14 @@
 import { getValidatedAircraftAccess } from "./_adminRepository.js";
-import { batchGetSpreadsheetValues } from "./_googleSheets.js";
+import {
+  appendSpreadsheetValues,
+  batchGetSpreadsheetValues,
+  batchUpdateSpreadsheetValues,
+} from "./_googleSheets.js";
 import { DEFAULT_SETTINGS, normalizeSettings } from "../src/services/settingsService.js";
 
 const SETTINGS_KEY = "APP_HORAS_SETTINGS";
-const SETTINGS_RANGE = ["CONFIGURACION!A:B"];
+const SETTINGS_SHEET_RANGE = "CONFIGURACION!A:B";
+const SETTINGS_RANGE = [SETTINGS_SHEET_RANGE];
 
 function createSettingsError(message, code) {
   const error = new Error(message);
@@ -41,4 +46,41 @@ export async function getSettingsFromSheets({ userId, aircraftId }) {
   }
 
   return normalizeSettings(storedSettings);
+}
+
+export async function saveSettingsToSheets({ userId, aircraftId, settings }) {
+  const access = await getValidatedAircraftAccess(userId, aircraftId);
+  const role = String(access.permission?.rol || "").trim().toUpperCase();
+
+  if (role !== "OWNER" && role !== "ADMIN") {
+    const error = new Error("El usuario no tiene permiso para modificar settings.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const normalizedSettings = normalizeSettings(settings);
+  const serializedSettings = JSON.stringify(normalizedSettings);
+  const [values] = await batchGetSpreadsheetValues(
+    access.spreadsheetId,
+    SETTINGS_RANGE
+  );
+  const settingsRowIndex = values
+    .slice(1)
+    .findIndex((row) => String(row[0] || "").trim() === SETTINGS_KEY);
+
+  if (settingsRowIndex >= 0) {
+    const rowNumber = settingsRowIndex + 2;
+    await batchUpdateSpreadsheetValues(access.spreadsheetId, [
+      {
+        range: `CONFIGURACION!B${rowNumber}`,
+        values: [[serializedSettings]],
+      },
+    ]);
+  } else {
+    await appendSpreadsheetValues(access.spreadsheetId, SETTINGS_SHEET_RANGE, [
+      [SETTINGS_KEY, serializedSettings],
+    ]);
+  }
+
+  return normalizedSettings;
 }

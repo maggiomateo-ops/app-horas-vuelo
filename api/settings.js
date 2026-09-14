@@ -1,9 +1,18 @@
 import { requireAuth } from "./_auth.js";
-import { getSettingsFromSheets } from "./_settingsRepository.js";
+import {
+  getSettingsFromSheets,
+  saveSettingsToSheets,
+} from "./_settingsRepository.js";
 import { DEFAULT_SETTINGS, normalizeSettings } from "../src/services/settingsService.js";
 
 function getSettingsDataSource() {
   return process.env.SETTINGS_DATA_SOURCE === "sheets-api"
+    ? "sheets-api"
+    : "apps-script";
+}
+
+function getSettingsWritesDataSource() {
+  return process.env.SETTINGS_WRITES_DATA_SOURCE === "sheets-api"
     ? "sheets-api"
     : "apps-script";
 }
@@ -118,6 +127,24 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
+    if (getSettingsWritesDataSource() === "sheets-api") {
+      try {
+        const settings = await saveSettingsToSheets({
+          userId,
+          aircraftId,
+          settings: body.settings,
+        });
+        return res.status(200).json({ ok: true, settings });
+      } catch (error) {
+        return res.status(error.statusCode || 502).json({
+          ok: false,
+          error: error.statusCode === 403
+            ? error.message
+            : "No se pudieron guardar los settings.",
+        });
+      }
+    }
+
     const settingsUrl = buildSettingsUrl(userId, aircraftId);
 
     if (!settingsUrl) {
