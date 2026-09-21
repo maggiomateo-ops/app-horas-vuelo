@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "migrate": "node migrate.js"
+    "migrate": "node migrate.js",
+    "migrate:adopt": "node migrate.js --adopt-existing"
   },
   "dependencies": {
     "pg": "8.23.0"
