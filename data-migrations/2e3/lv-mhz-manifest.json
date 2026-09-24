@@ -1,0 +1,144 @@
+{
+  "manifest_version": 1,
+  "stage": "2E.3",
+  "target": {
+    "environment": "Neon TEST",
+    "project": "App Horas TEST",
+    "branch": "test",
+    "database": "app_horas",
+    "production_writes_allowed": false
+  },
+  "sources": {
+    "admin_spreadsheet": {
+      "spreadsheet_id": "1vCgti5s0oxpLHbd4RgL2syyRXZ65a2rjy1wpHf_leX0",
+      "sheets": ["USUARIOS", "PERMISOS", "AERONAVES"],
+      "mode": "READ_ONLY",
+      "expected_counts": {
+        "users": 1,
+        "permissions": 1,
+        "aircraft": 1
+      }
+    },
+    "aircraft_spreadsheet": {
+      "legacy_aircraft_id": "A001",
+      "registration": "LV-MHZ",
+      "spreadsheet_id": "1xF3RFKq32RiIGBU-HByvUE3w0Efyq68BQT7z0Cc-1os",
+      "mode": "READ_ONLY",
+      "sheets": {
+        "flight_capture": "Computacion Horas",
+        "aircraft_history": "Historial Aeronave",
+        "engine_history": "Historial Motor",
+        "propeller_history": "Historial Helice",
+        "settings": "CONFIGURACION",
+        "costs": "Costs"
+      }
+    }
+  },
+  "source_precedence": {
+    "flight_record_authority": "Historial Aeronave",
+    "flight_record_expected_count": 346,
+    "component_history_validation_sources": ["Historial Motor", "Historial Helice"],
+    "component_history_expected_count_each": 346,
+    "enrichment_source": "Computacion Horas",
+    "enrichment_expected_count": 274,
+    "expected_history_only_ids": "1-72",
+    "costs_in_scope": false,
+    "canonical_fields_from_aircraft_history": [
+      "legacy_id",
+      "flight_date",
+      "departure_location",
+      "arrival_location",
+      "time_in_service_hours",
+      "flight_time_hours",
+      "pilot_source_label",
+      "remarks"
+    ],
+    "enrichment_fields_from_computacion": [
+      "utilization_owner_source_label",
+      "oil_added_source_value",
+      "fuel_left_source_value",
+      "fuel_right_source_value",
+      "raw_flight_time_jpi",
+      "raw_service_time_garmin"
+    ],
+    "rules": [
+      "Computacion Horas never creates a Flight Record absent from Historial Aeronave.",
+      "Computacion Horas never overwrites frozen canonical flight_time_hours or time_in_service_hours from Historial Aeronave.",
+      "Historial Motor and Historial Helice never create duplicate Flight Records.",
+      "Costs and financial columns are excluded under D-099."
+    ]
+  },
+  "reconciliation": {
+    "history_id_sets_identical": true,
+    "computacion_ids_subset_of_history": true,
+    "history_only_ids_exactly_1_through_72": true,
+    "cross_sheet_date_route_pilot_remarks_match": true,
+    "aircraft": {
+      "opening_tis_hours": 2302.2,
+      "tracked_tis_sum_hours": 405.6,
+      "closing_tis_hours": 2707.8,
+      "adjustment_hours_required": 0
+    },
+    "engine": {
+      "opening_tis_hours": 99.9,
+      "tracked_tis_sum_hours": 405.6,
+      "closing_tis_hours": 505.5,
+      "adjustment_hours_required": 0,
+      "installed_on": null,
+      "installed_on_source_status": "UNKNOWN"
+    },
+    "propeller": {
+      "opening_tis_hours": 188.0,
+      "tracked_tis_sum_hours": 405.6,
+      "closing_tis_hours": 593.6,
+      "adjustment_hours_required": 0,
+      "installed_on": null,
+      "installed_on_source_status": "UNKNOWN"
+    }
+  },
+  "historical_time_semantics": {
+    "ids_1_through_200": {
+      "flight_time_hours": "USE_HISTORIAL_AERONAVE_AS_IS_NULL_WHEN_NULL",
+      "time_in_service_hours": "USE_HISTORIAL_AERONAVE"
+    },
+    "ids_201_and_later": {
+      "flight_time_hours": "USE_HISTORIAL_AERONAVE",
+      "time_in_service_hours": "USE_HISTORIAL_AERONAVE"
+    },
+    "never_backfill_flight_time_from_raw_jpi": true
+  },
+  "identity_preflight": {
+    "automatic_name_merge_allowed": false,
+    "pilot_source_label_count": 14,
+    "pilot_source_labels_requiring_explicit_mapping": [
+      "Christian Maggio",
+      "Mateo Maggio",
+      "Maggio",
+      "Facundo Alegre",
+      "Herrero",
+      "Mateo Pappalardo",
+      "Gino Marruco",
+      "Nicolas Herrero",
+      "Lautaro Michel",
+      "Bambicha Humberto Juan Augusto",
+      "Jurado",
+      "Francisco de La Cruz",
+      "Gustavo Nieto",
+      "Federico Filippini"
+    ],
+    "utilization_owner_source_labels_requiring_explicit_mapping": ["MAGGIO", "ALEGRE"],
+    "unresolved_values_may_remain_null": true,
+    "source_labels_must_be_preserved_in_migration_provenance": true
+  },
+  "dry_run_gates": [
+    "Admin counts equal manifest expectations.",
+    "Aircraft A001 resolves to the declared LV-MHZ spreadsheet ID.",
+    "Historial Aeronave contains exactly 346 unique nonblank IDs.",
+    "Historial Motor and Historial Helice contain the exact same ID set as Historial Aeronave.",
+    "Computacion Horas contains exactly 274 unique IDs and every ID exists in Historial Aeronave.",
+    "The set Historial Aeronave minus Computacion Horas is exactly numeric IDs 1 through 72.",
+    "Cross-sheet date/from/to/TIS/pilot/remarks reconciliation passes.",
+    "Aircraft/engine/propeller opening + tracked utilization equals closing source totals with zero adjustments.",
+    "No target INSERT is allowed until every dry-run gate passes and identity mappings are explicitly resolved or deliberately left NULL under D-140."
+  ]
+}
