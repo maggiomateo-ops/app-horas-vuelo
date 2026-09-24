@@ -1,0 +1,169 @@
+{
+  "target_manifest_version": 1,
+  "source_manifest_version": 1,
+  "migration_key": "lv-mhz-legacy-to-postgres-test-v1",
+  "uuid_scheme": {
+    "algorithm": "RFC4122_UUIDV5_SHA1",
+    "namespace": "6e3e6ad2-0b71-4ca8-9f7c-2d7a3e2d3a01",
+    "key_encoding": "UTF-8",
+    "random_uuid_allowed": false
+  },
+  "execution_metadata": {
+    "timestamp_token": "$MIGRATION_TIMESTAMP",
+    "timestamp_policy": "ONE_DATABASE_TRANSACTION_TIMESTAMP",
+    "operation_source": "MIGRATION",
+    "actor_type": "SYSTEM"
+  },
+  "source_identity_mapping": {
+    "legacy_user_id": "U001",
+    "legacy_aircraft_id": "A001",
+    "exact_user_person_link": {
+      "user_source_id": "U001",
+      "pilot_source_label": "Mateo Maggio"
+    },
+    "pilot_source_labels": [
+      "Christian Maggio",
+      "Mateo Maggio",
+      "Maggio",
+      "Facundo Alegre",
+      "Herrero",
+      "Mateo Pappalardo",
+      "Gino Marruco",
+      "Nicolas Herrero",
+      "Lautaro Michel",
+      "Bambicha Humberto Juan Augusto",
+      "Jurado",
+      "Francisco de La Cruz",
+      "Gustavo Nieto",
+      "Federico Filippini"
+    ],
+    "merge_by_name_similarity_allowed": false,
+    "utilization_owner_labels_are_provenance_only": ["MAGGIO", "ALEGRE"]
+  },
+  "canonical_defaults": {
+    "user_preferred_locale": "es",
+    "aircraft_status": "ACTIVE",
+    "person_status": "ACTIVE",
+    "aircraft_person_status": "ACTIVE",
+    "membership_role": "OWNER",
+    "membership_status": "ACTIVE",
+    "membership_capability": "MANAGE_OWNERSHIP",
+    "flight_status": "ACTIVE",
+    "flight_record_source": "MIGRATION",
+    "flight_revision_number": 1,
+    "flight_capture_method": null,
+    "flight_utilization_owner_party_id": null,
+    "component_status": "ACTIVE",
+    "component_position_index": 1,
+    "aircraft_baseline_source": "MIGRATION"
+  },
+  "fixed_target_counts": {
+    "app.users": 1,
+    "app.persons": 14,
+    "app.person_identifiers": 0,
+    "app.user_person_links": 1,
+    "app.aircraft": 1,
+    "app.aircraft_registrations": 1,
+    "app.aircraft_persons": 14,
+    "app.parties": 0,
+    "app.aircraft_ownership_interests": 0,
+    "app.aircraft_memberships": 1,
+    "app.aircraft_membership_capabilities": 1,
+    "app.aircraft_settings": 1,
+    "app.aircraft_flight_field_settings": 8,
+    "app.aircraft_flight_purposes": 0,
+    "app.aircraft_tanks": 2,
+    "app.components": 2,
+    "app.component_installations": 2,
+    "app.aircraft_utilization_baselines": 1,
+    "app.utilization_adjustments": 0,
+    "app.flight_records": 346,
+    "app.flight_record_revisions": 346,
+    "app.flight_counters": 0,
+    "app.flight_component_counters": 0,
+    "app.flight_component_runtime": 0,
+    "app.tracking_items": 3,
+    "app.tracking_item_events": 0,
+    "app.squawks": 0,
+    "app.squawk_status_events": 0,
+    "app.squawk_comments": 0,
+    "app.squawk_attachments": 0,
+    "app.export_templates": 0,
+    "app.export_template_versions": 0,
+    "app.export_template_version_fields": 0,
+    "app.export_runs": 0,
+    "app.export_run_datasets": 0,
+    "audit.audit_events": 347
+  },
+  "derived_target_counts": {
+    "app.flight_tank_readings": {
+      "formula": "NONBLANK_COMPUTACION_FUEL_LEFT + NONBLANK_COMPUTACION_FUEL_RIGHT"
+    },
+    "app.flight_component_consumables": {
+      "formula": "NONBLANK_COMPUTACION_OIL_ADDED"
+    }
+  },
+  "aircraft_transform": {
+    "manufacturer": "PIPER",
+    "model": "PA28R-201",
+    "serial_number": null,
+    "registration": "LV-MHZ",
+    "registration_country_code": null,
+    "registration_effective_from": "2022-10-26T00:00:00-03:00",
+    "registration_effective_from_precision": "DATE",
+    "registration_effective_from_meaning": "earliest-known-source-evidence"
+  },
+  "utilization_transform": {
+    "aircraft_opening_tis_hours": 2302.2,
+    "engine_opening_tis_hours": 99.9,
+    "propeller_opening_tis_hours": 188.0,
+    "baseline_effective_date": "2022-10-26",
+    "first_applicable_legacy_flight_id": "1",
+    "utilization_adjustment_count": 0
+  },
+  "settings_transform": {
+    "aircraft_settings": {
+      "default_capture_method": "DIRECT",
+      "default_oil_unit": "US_QUART",
+      "capture_engine_runtime": false
+    },
+    "flight_fields": [
+      {"field_code": "FLIGHT_PURPOSE", "is_enabled": false, "is_required": false, "display_order": null},
+      {"field_code": "LANDINGS", "is_enabled": false, "is_required": false, "display_order": null},
+      {"field_code": "PRESSURIZATION_CYCLES", "is_enabled": false, "is_required": false, "display_order": null},
+      {"field_code": "ENGINE_CYCLES", "is_enabled": false, "is_required": false, "display_order": null},
+      {"field_code": "ENGINE_STARTS", "is_enabled": false, "is_required": false, "display_order": null},
+      {"field_code": "FUEL_REMAINING", "is_enabled": true, "is_required": false, "display_order": 0},
+      {"field_code": "OIL_ADDED", "is_enabled": true, "is_required": false, "display_order": 1},
+      {"field_code": "REMARKS", "is_enabled": true, "is_required": false, "display_order": 2}
+    ],
+    "tanks": [
+      {"source_key": "LEFT", "name": "LEFT", "position_code": "LEFT", "display_unit": "LITER", "display_order": 0, "status": "ACTIVE"},
+      {"source_key": "RIGHT", "name": "RIGHT", "position_code": "RIGHT", "display_unit": "LITER", "display_order": 1, "status": "ACTIVE"}
+    ],
+    "flight_purposes": []
+  },
+  "component_transform": [
+    {"source_key": "ENGINE:1", "component_type": "ENGINE", "position_index": 1, "manufacturer": null, "model": null, "serial_number": null, "installed_on": null, "opening_tis_hours": 99.9},
+    {"source_key": "PROPELLER:1", "component_type": "PROPELLER", "position_index": 1, "manufacturer": null, "model": null, "serial_number": null, "installed_on": null, "opening_tis_hours": 188.0}
+  ],
+  "tracking_transform": [
+    {"source_key": "ANNUAL", "concept": "Annual inspection", "due_basis": "DATE", "recurrence": "RECURRING", "reference_mode": null, "due_date": "2027-09-30", "reference_tis_hours": null, "tracking_start_date": null, "interval_hours": null, "alert_before_value": 60, "status": "ACTIVE"},
+    {"source_key": "50H", "concept": "50-hour inspection", "due_basis": "TIME_IN_SERVICE", "recurrence": "RECURRING", "reference_mode": "ABSOLUTE_TIS", "due_date": null, "reference_tis_hours": 2659.4, "tracking_start_date": null, "interval_hours": 50, "alert_before_value": 10, "status": "ACTIVE"},
+    {"source_key": "100H", "concept": "100-hour inspection", "due_basis": "TIME_IN_SERVICE", "recurrence": "RECURRING", "reference_mode": "ABSOLUTE_TIS", "due_date": null, "reference_tis_hours": 2606.2, "tracking_start_date": null, "interval_hours": 100, "alert_before_value": 15, "status": "ACTIVE"}
+  ],
+  "audit_transform": {
+    "per_flight_event_count": 346,
+    "batch_summary_event_count": 1,
+    "per_flight_entity_type": "FLIGHT_RECORD",
+    "per_flight_action_code": "MIGRATION_CREATED",
+    "batch_entity_type": "MIGRATION_BATCH",
+    "batch_action_code": "MIGRATION_COMPLETED"
+  },
+  "write_gate": {
+    "neon_inserts_allowed": false,
+    "requires_migration_003_preflight": true,
+    "requires_explicit_apply_approval": true,
+    "requires_generated_count_match": true
+  }
+}
