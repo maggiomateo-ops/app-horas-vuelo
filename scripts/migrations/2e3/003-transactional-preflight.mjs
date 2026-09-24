@@ -36,6 +36,22 @@ function hardenedConnectionString(raw) {
   return url.toString();
 }
 
+function assertMigration003ConstraintSemantics(definition) {
+  const normalized = String(definition).replace(/\s+/g, " ").toLowerCase();
+  const requiredPatterns = [
+    ["installed_on IS NULL", /installed_on\s+is\s+null/],
+    ["removed_on IS NULL", /removed_on\s+is\s+null/],
+    ["removed_on >= installed_on", /removed_on\s*>=\s*installed_on/],
+    ["opening_tis_hours >= 0", /opening_tis_hours\s*>=\s*\(?0(?:\.0+)?\)?(?:::[a-z0-9_.]+)?/],
+  ];
+
+  for (const [label, pattern] of requiredPatterns) {
+    if (!pattern.test(normalized)) {
+      fail(`003 replacement CHECK is missing required condition: ${label}`);
+    }
+  }
+}
+
 async function readInstalledOnState(client) {
   const column = await client.query(`
     SELECT is_nullable
@@ -153,17 +169,7 @@ async function main() {
     if (during.isNullable !== "YES") {
       fail(`003 did not make installed_on nullable; found is_nullable=${during.isNullable}.`);
     }
-    const normalizedDuring = during.constraintDefinition.replace(/\s+/g, " ").toLowerCase();
-    for (const required of [
-      "installed_on is null",
-      "removed_on is null",
-      "removed_on >= installed_on",
-      "opening_tis_hours >= 0",
-    ]) {
-      if (!normalizedDuring.includes(required)) {
-        fail(`003 replacement CHECK is missing required condition: ${required}`);
-      }
-    }
+    assertMigration003ConstraintSemantics(during.constraintDefinition);
     if (during.constraintDefinition === before.constraintDefinition) {
       fail("003 did not replace ck_component_installation_values as expected.");
     }
