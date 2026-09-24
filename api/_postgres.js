@@ -17,6 +17,21 @@ function postgresError(message, code) {
   return error;
 }
 
+function normalizeDatabaseUrl(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    const sslMode = String(url.searchParams.get("sslmode") || "").toLowerCase();
+
+    if (["prefer", "require", "verify-ca"].includes(sslMode)) {
+      url.searchParams.set("sslmode", "verify-full");
+    }
+
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
 function getDatabaseUrl() {
   const databaseUrl = String(process.env.DATABASE_URL || "").trim();
 
@@ -27,7 +42,7 @@ function getDatabaseUrl() {
     );
   }
 
-  return databaseUrl;
+  return normalizeDatabaseUrl(databaseUrl);
 }
 
 export function getPostgresPool() {
