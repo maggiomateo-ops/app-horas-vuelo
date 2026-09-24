@@ -5,13 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node --check scripts/migrations/2e3/lv-mhz-write-bundle.mjs && node scripts/migrations/2e3/lv-mhz-write-bundle.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "postgres:check": "node scripts/check-postgres-runtime.mjs",
     "postgres:schema-check": "node scripts/check-postgres-repository-schema.mjs",
     "migration:lv-mhz:dry-run": "node scripts/migrations/2e3/lv-mhz-dry-run.mjs",
-    "migration:lv-mhz:bundle-check": "node scripts/migrations/2e3/lv-mhz-build-bundle.mjs"
+    "migration:lv-mhz:bundle-check": "node scripts/migrations/2e3/lv-mhz-build-bundle.mjs",
+    "migration:lv-mhz:writer-plan": "node scripts/migrations/2e3/lv-mhz-write-bundle.mjs",
+    "migration:lv-mhz:writer-preflight": "node scripts/migrations/2e3/lv-mhz-write-bundle.mjs --preflight"
   },
   "dependencies": {
     "google-auth-library": "^11.0.2",
