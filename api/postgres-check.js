@@ -4,7 +4,14 @@ const EXPECTED_BRANCH = "etapa-2e2-postgres-repositories";
 const EXPECTED_ROLE = "app_horas_runtime";
 const EXPECTED_DATABASE = "app_horas";
 
+function noStore(res) {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+  res.setHeader("X-Robots-Tag", "noindex");
+}
+
 export default async function handler(req, res) {
+  noStore(res);
+
   if (req.method !== "GET") {
     return res.status(405).json({ ok: false, error: "Method not allowed." });
   }
