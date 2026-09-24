@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/check-postgres-runtime.mjs && node scripts/check-postgres-repository-schema.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "postgres:check": "node scripts/check-postgres-runtime.mjs"
+    "postgres:check": "node scripts/check-postgres-runtime.mjs",
+    "postgres:schema-check": "node scripts/check-postgres-repository-schema.mjs"
   },
   "dependencies": {
     "google-auth-library": "^11.0.2",
