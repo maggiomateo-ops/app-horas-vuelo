@@ -8,7 +8,7 @@ on:
       - .github/workflows/2e2-lock-sync.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate-lock:
@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
+        with:
+          ref: etapa-2e2-postgres-repositories
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -30,10 +32,14 @@ jobs:
         run: |
           node -e "const l=require('./package-lock.json'); if(l.packages?.['']?.dependencies?.pg !== '8.23.0' || l.packages?.['node_modules/pg']?.version !== '8.23.0') process.exit(1)"
 
-      - name: Upload generated lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: root-package-lock
-          path: package-lock.json
-          if-no-files-found: error
-          retention-days: 1
+      - name: Commit generated lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json already synchronized"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "2E.2: sync root pg runtime lockfile"
+          git push origin HEAD:etapa-2e2-postgres-repositories
