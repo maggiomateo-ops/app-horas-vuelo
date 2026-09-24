@@ -3,7 +3,9 @@
   "allowed_modes": [
     "disabled",
     "003-preflight",
-    "003-apply"
+    "003-apply",
+    "003-verify",
+    "writer-preflight"
   ],
-  "notes": "Gate returned to disabled after successful persistent application of migration 003 to Neon TEST. Writer PREFLIGHT and final data APPLY remain separate gates; no data load is authorized by this file. DATABASE_MIGRATION_URL remains an encrypted GitHub Actions secret and must never be committed or copied to Vercel."
+  "notes": "Administrative gate is disabled by default. 003-verify and writer-preflight are read-only verification modes. No final data-apply mode exists here. DATABASE_MIGRATION_URL and GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON must remain encrypted GitHub Actions secrets and must never be committed or copied to Vercel Production."
 }
