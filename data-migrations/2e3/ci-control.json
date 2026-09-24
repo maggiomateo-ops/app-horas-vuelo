@@ -1,5 +1,5 @@
 {
-  "mode": "writer-preflight",
+  "mode": "disabled",
   "allowed_modes": [
     "disabled",
     "003-preflight",
@@ -7,5 +7,5 @@
     "003-verify",
     "writer-preflight"
   ],
-  "notes": "writer-preflight is read-only: regenerate the LV-MHZ bundle from the source Sheets, verify exact migrations/schema/empty TEST target, and perform zero inserts. Final data APPLY remains unavailable in this control file."
+  "notes": "Administrative gate is disabled. writer-preflight remains read-only but requires encrypted GitHub Actions secrets DATABASE_MIGRATION_URL and GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON. Final data APPLY remains unavailable in this control file."
 }
