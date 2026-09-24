@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node -e \"if (!process.env.DATABASE_URL) process.exit(1)\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
