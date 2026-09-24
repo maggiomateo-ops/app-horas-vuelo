@@ -25,7 +25,8 @@ function id(value) {
 
 function numberOrNull(value) {
   if (value === null || value === undefined || text(value) === "") return null;
-  const numeric = Number(value);
+  const normalized = typeof value === "string" ? value.replace(",", ".") : value;
+  const numeric = Number(normalized);
   return Number.isFinite(numeric) ? numeric : null;
 }
 
@@ -95,6 +96,14 @@ function numericIdRange(from, to) {
   const values = [];
   for (let current = from; current <= to; current += 1) values.push(String(current));
   return values;
+}
+
+function frequency(values) {
+  const counts = new Map();
+  for (const value of values.map(text).filter(Boolean)) {
+    counts.set(value, (counts.get(value) || 0) + 1);
+  }
+  return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
 }
 
 const adminSource = manifest.sources.admin_spreadsheet;
@@ -255,6 +264,27 @@ assertSetEqual(
   "Owner source labels"
 );
 
+const enrichmentCounts = {
+  oil_added_rows: computacionRows.filter(({ row }) => numberOrNull(row[10]) !== null).length,
+  fuel_left_rows: computacionRows.filter(({ row }) => numberOrNull(row[11]) !== null).length,
+  fuel_right_rows: computacionRows.filter(({ row }) => numberOrNull(row[12]) !== null).length,
+  owner_label_rows: computacionRows.filter(({ row }) => text(row[9])).length,
+  remarks_rows: computacionRows.filter(({ row }) => text(row[13])).length,
+};
+
+const historyFieldCounts = {
+  flight_time_nonnull: aircraftHistoryRows.filter(({ row }) => numberOrNull(row[8]) !== null).length,
+  flight_time_null: aircraftHistoryRows.filter(({ row }) => numberOrNull(row[8]) === null).length,
+  time_in_service_nonnull: aircraftHistoryRows.filter(({ row }) => numberOrNull(row[6]) !== null).length,
+  pilot_label_rows: aircraftHistoryRows.filter(({ row }) => text(row[9])).length,
+  remarks_rows: aircraftHistoryRows.filter(({ row }) => text(row[10])).length,
+};
+
+const identityCounts = {
+  pilot_label_frequency: frequency(aircraftHistoryRows.map(({ row }) => row[9])),
+  owner_label_frequency: frequency(computacionRows.map(({ row }) => row[9])),
+};
+
 console.log(JSON.stringify({
   ok: true,
   source: {
@@ -271,6 +301,9 @@ console.log(JSON.stringify({
       history_only_ids: historyOnly.length,
       pilot_source_labels: pilotLabels.size,
       owner_source_labels: ownerLabels.size,
+      enrichment_counts: enrichmentCounts,
+      history_field_counts: historyFieldCounts,
+      identity_counts: identityCounts,
     },
   },
   utilization: derived,
