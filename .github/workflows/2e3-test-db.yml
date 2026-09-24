@@ -8,6 +8,11 @@ on:
       - .github/workflows/2e3-test-db.yml
       - data-migrations/2e3/ci-control.json
       - scripts/migrations/2e3/003-transactional-preflight.mjs
+      - scripts/migrations/2e3/verify-003-applied.mjs
+      - scripts/migrations/2e3/lv-mhz-write-bundle.mjs
+      - scripts/migrations/2e3/lv-mhz-build-bundle.mjs
+      - data-migrations/2e3/lv-mhz-target-manifest.json
+      - data-migrations/2e3/lv-mhz-manifest.json
       - db/migrations/003_component_installation_historical_date.sql
       - db/migrate.js
       - db/package.json
@@ -24,7 +29,7 @@ concurrency:
 jobs:
   test-database-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout exact branch commit
@@ -35,8 +40,12 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate preflight script syntax
-        run: node --check scripts/migrations/2e3/003-transactional-preflight.mjs
+      - name: Validate administrative script syntax
+        run: |
+          node --check scripts/migrations/2e3/003-transactional-preflight.mjs
+          node --check scripts/migrations/2e3/verify-003-applied.mjs
+          node --check scripts/migrations/2e3/lv-mhz-write-bundle.mjs
+          node --check scripts/migrations/2e3/lv-mhz-build-bundle.mjs
 
       - name: Read gated operation mode
         id: control
@@ -61,8 +70,19 @@ jobs:
             exit 1
           fi
 
-      - name: Install root dependencies for rollback preflight
-        if: steps.control.outputs.mode == '003-preflight'
+      - name: Require encrypted Google Sheets secret for writer preflight
+        if: steps.control.outputs.mode == 'writer-preflight'
+        env:
+          GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
+        shell: bash
+        run: |
+          if [ -z "$GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON" ]; then
+            echo "GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON GitHub Actions secret is missing." >&2
+            exit 1
+          fi
+
+      - name: Install root dependencies for read-only validation
+        if: steps.control.outputs.mode == '003-preflight' || steps.control.outputs.mode == '003-verify' || steps.control.outputs.mode == 'writer-preflight'
         run: npm ci
 
       - name: Run migration 003 transactional rollback preflight
@@ -70,6 +90,19 @@ jobs:
         env:
           DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
         run: node scripts/migrations/2e3/003-transactional-preflight.mjs
+
+      - name: Verify migration 003 persistent state read-only
+        if: steps.control.outputs.mode == '003-verify'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+        run: node scripts/migrations/2e3/verify-003-applied.mjs
+
+      - name: Run LV-MHZ writer preflight read-only
+        if: steps.control.outputs.mode == 'writer-preflight'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
+        run: node scripts/migrations/2e3/lv-mhz-write-bundle.mjs --preflight
 
       - name: Install isolated migration-runner dependencies
         if: steps.control.outputs.mode == '003-apply'
