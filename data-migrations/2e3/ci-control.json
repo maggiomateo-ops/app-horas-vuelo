@@ -1,5 +1,5 @@
 {
-  "mode": "disabled",
+  "mode": "003-apply",
   "allowed_modes": [
     "disabled",
     "003-preflight",
