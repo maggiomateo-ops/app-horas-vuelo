@@ -1,0 +1,9 @@
+{
+  "mode": "disabled",
+  "allowed_modes": [
+    "disabled",
+    "003-preflight",
+    "003-apply"
+  ],
+  "notes": "Changing away from disabled requires the corresponding explicit approval gate. DATABASE_MIGRATION_URL must remain an encrypted GitHub Actions secret and must never be committed or copied to Vercel."
+}
