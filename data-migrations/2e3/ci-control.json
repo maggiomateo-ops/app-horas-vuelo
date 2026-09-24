@@ -1,9 +1,9 @@
 {
-  "mode": "003-apply",
+  "mode": "disabled",
   "allowed_modes": [
     "disabled",
     "003-preflight",
     "003-apply"
   ],
-  "notes": "Gate returned to disabled after successful rollback-only 003 preflight. Persistent 003-apply still requires separate explicit user approval. DATABASE_MIGRATION_URL remains an encrypted GitHub Actions secret and must never be committed or copied to Vercel."
+  "notes": "Gate returned to disabled after successful persistent application of migration 003 to Neon TEST. Writer PREFLIGHT and final data APPLY remain separate gates; no data load is authorized by this file. DATABASE_MIGRATION_URL remains an encrypted GitHub Actions secret and must never be committed or copied to Vercel."
 }
