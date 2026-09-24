@@ -1,5 +1,5 @@
 {
-  "mode": "disabled",
+  "mode": "003-verify",
   "allowed_modes": [
     "disabled",
     "003-preflight",
@@ -7,5 +7,5 @@
     "003-verify",
     "writer-preflight"
   ],
-  "notes": "Administrative gate is disabled by default. 003-verify and writer-preflight are read-only verification modes. No final data-apply mode exists here. DATABASE_MIGRATION_URL and GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON must remain encrypted GitHub Actions secrets and must never be committed or copied to Vercel Production."
+  "notes": "003-verify is a read-only post-apply verification gate for the real Neon TEST database. No data-write mode exists here. DATABASE_MIGRATION_URL and GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON remain encrypted GitHub Actions secrets."
 }
