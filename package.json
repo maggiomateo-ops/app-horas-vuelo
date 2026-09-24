@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/migrations/2e3/lv-mhz-dry-run.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
