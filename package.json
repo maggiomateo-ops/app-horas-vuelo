@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/migrations/2e3/lv-mhz-check-test-readiness.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -13,7 +14,8 @@
     "migration:lv-mhz:dry-run": "node scripts/migrations/2e3/lv-mhz-dry-run.mjs",
     "migration:lv-mhz:bundle-check": "node scripts/migrations/2e3/lv-mhz-build-bundle.mjs",
     "migration:lv-mhz:writer-plan": "node scripts/migrations/2e3/lv-mhz-write-bundle.mjs",
-    "migration:lv-mhz:writer-preflight": "node scripts/migrations/2e3/lv-mhz-write-bundle.mjs --preflight"
+    "migration:lv-mhz:writer-preflight": "node scripts/migrations/2e3/lv-mhz-write-bundle.mjs --preflight",
+    "migration:lv-mhz:test-readiness": "node scripts/migrations/2e3/lv-mhz-check-test-readiness.mjs"
   },
   "dependencies": {
     "google-auth-library": "^11.0.2",
