@@ -74,6 +74,8 @@
     "app.aircraft_flight_purposes": 0,
     "app.aircraft_tanks": 2,
     "app.components": 2,
+    "app.flight_import_batches": 0,
+    "app.flight_import_issues": 0,
     "app.component_installations": 2,
     "app.aircraft_utilization_baselines": 1,
     "app.utilization_adjustments": 0,
