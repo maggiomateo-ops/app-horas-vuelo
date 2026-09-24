@@ -1,0 +1,82 @@
+name: 2E.3 TEST database administration
+
+on:
+  push:
+    branches:
+      - etapa-2e3-test-data-migration
+    paths:
+      - .github/workflows/2e3-test-db.yml
+      - data-migrations/2e3/ci-control.json
+      - scripts/migrations/2e3/003-transactional-preflight.mjs
+      - db/migrations/003_component_installation_historical_date.sql
+      - db/migrate.js
+      - db/package.json
+      - db/package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 2e3-test-database-administration
+  cancel-in-progress: false
+
+jobs:
+  test-database-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout exact branch commit
+        uses: actions/checkout@v4
+
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate preflight script syntax
+        run: node --check scripts/migrations/2e3/003-transactional-preflight.mjs
+
+      - name: Read gated operation mode
+        id: control
+        shell: bash
+        run: |
+          MODE="$(node -e "const c=require('./data-migrations/2e3/ci-control.json'); if(!c.allowed_modes.includes(c.mode)) process.exit(2); process.stdout.write(c.mode)")"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "2E.3 control mode: $MODE"
+
+      - name: Disabled gate
+        if: steps.control.outputs.mode == 'disabled'
+        run: echo "2E.3 TEST database administration is disabled. No database connection will be opened."
+
+      - name: Require encrypted migration secret
+        if: steps.control.outputs.mode != 'disabled'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_MIGRATION_URL" ]; then
+            echo "DATABASE_MIGRATION_URL GitHub Actions secret is missing." >&2
+            exit 1
+          fi
+
+      - name: Install root dependencies for rollback preflight
+        if: steps.control.outputs.mode == '003-preflight'
+        run: npm ci
+
+      - name: Run migration 003 transactional rollback preflight
+        if: steps.control.outputs.mode == '003-preflight'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+        run: node scripts/migrations/2e3/003-transactional-preflight.mjs
+
+      - name: Install isolated migration-runner dependencies
+        if: steps.control.outputs.mode == '003-apply'
+        run: npm --prefix db ci
+
+      - name: Apply migration 003 through canonical migration runner
+        if: steps.control.outputs.mode == '003-apply'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+        run: npm --prefix db run migrate
