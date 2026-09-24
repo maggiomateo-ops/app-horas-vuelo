@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node --check scripts/migrations/2e3/lv-mhz-write-bundle.mjs && node scripts/migrations/2e3/lv-mhz-write-bundle.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
