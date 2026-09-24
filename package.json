@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/migrations/2e3/lv-mhz-test-probe.mjs identity",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
