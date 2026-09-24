@@ -1,9 +1,9 @@
 {
-  "mode": "disabled",
+  "mode": "003-preflight",
   "allowed_modes": [
     "disabled",
     "003-preflight",
     "003-apply"
   ],
-  "notes": "Gate returned to disabled after rollback-only preflight. Persistent 003-apply still requires separate explicit user approval. DATABASE_MIGRATION_URL remains an encrypted GitHub Actions secret and must never be committed or copied to Vercel."
+  "notes": "003-preflight is authorized as a rollback-only validation gate. Persistent 003-apply still requires separate explicit user approval. DATABASE_MIGRATION_URL remains an encrypted GitHub Actions secret and must never be committed or copied to Vercel."
 }
