@@ -1,4 +1,6 @@
 import { requireAuth } from "./_auth.js";
+import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
+import { getLegacySettingsShapeFromPostgres } from "./_postgresSettingsParityAdapter.js";
 import {
   getSettingsFromSheets,
   saveSettingsToSheets,
@@ -34,12 +36,25 @@ export default async function handler(req, res) {
       .json({ ok: false, error: "Falta aircraft_id o LEGACY_AIRCRAFT_ID." });
   }
 
+  let source;
+  try {
+    source = resolveDataSource("SETTINGS_DATA_SOURCE");
+  } catch {
+    return res.status(500).json({
+      ok: false,
+      error: "La fuente de datos de Settings no esta configurada correctamente.",
+    });
+  }
+
   if (req.method === "GET") {
     try {
-      const settings = await getSettingsFromSheets({ userId, aircraftId });
+      const settings = source === DATA_SOURCE.POSTGRES
+        ? await getLegacySettingsShapeFromPostgres({ userId, aircraftId })
+        : await getSettingsFromSheets({ userId, aircraftId });
+
       return res.status(200).json({ ok: true, settings });
     } catch (error) {
-      return res.status(502).json({
+      return res.status(error.statusCode || 502).json({
         ok: false,
         error: error.code === "INVALID_SETTINGS_JSON"
           ? error.message
@@ -49,6 +64,13 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
+    if (source === DATA_SOURCE.POSTGRES) {
+      return res.status(503).json({
+        ok: false,
+        error: "La escritura de Settings en Postgres todavia no esta habilitada en TEST.",
+      });
+    }
+
     try {
       const settings = await saveSettingsToSheets({
         userId,
