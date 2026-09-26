@@ -24,6 +24,15 @@ function nearlyEqual(left, right, tolerance = 0.000001) {
   return Math.abs(Number(left) - Number(right)) <= tolerance;
 }
 
+function selectorDiagnostic(variableName) {
+  const raw = String(process.env[variableName] || "").trim();
+  return {
+    present: raw.length > 0,
+    rawValue: raw || null,
+    normalized: resolveDataSource(variableName),
+  };
+}
+
 export default async function handler(req, res) {
   noStore(res);
 
@@ -39,8 +48,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    const routingDiagnostics = Object.fromEntries(
+      ROUTING_VARIABLES.map((variableName) => [variableName, selectorDiagnostic(variableName)])
+    );
     const routing = Object.fromEntries(
-      ROUTING_VARIABLES.map((variableName) => [variableName, resolveDataSource(variableName)])
+      ROUTING_VARIABLES.map((variableName) => [
+        variableName,
+        routingDiagnostics[variableName].normalized,
+      ])
     );
 
     const [{ rows: privilegeRows }, { rows: activeUsers }] = await Promise.all([
@@ -119,6 +134,7 @@ export default async function handler(req, res) {
       currentDatabase: result?.current_database || null,
       runtimeCredentialScope: "branch-preview",
       routing,
+      routingDiagnostics,
       checks,
       paritySummary: {
         aircrafts: aircrafts.length,
