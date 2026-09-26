@@ -1,4 +1,5 @@
 import { requireAuth } from "./_auth.js";
+import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { saveFlightFromSheets } from "./_flightRepository.js";
 
 export default async function handler(req, res) {
@@ -10,6 +11,24 @@ export default async function handler(req, res) {
 
   if (!session) {
     return undefined;
+  }
+
+  let source;
+  try {
+    source = resolveDataSource("FLIGHT_DATA_SOURCE");
+  } catch {
+    return res.status(500).json({
+      ok: false,
+      error: "La fuente de datos de vuelos no esta configurada correctamente.",
+    });
+  }
+
+  if (source === DATA_SOURCE.POSTGRES) {
+    return res.status(503).json({
+      ok: false,
+      error:
+        "Las mutaciones de vuelos en Postgres TEST estan bloqueadas hasta completar el gate de ownership canonico.",
+    });
   }
 
   try {
