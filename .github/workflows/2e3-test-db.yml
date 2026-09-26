@@ -70,8 +70,8 @@ jobs:
             exit 1
           fi
 
-      - name: Require encrypted Google Sheets secret for writer preflight
-        if: steps.control.outputs.mode == 'writer-preflight'
+      - name: Require encrypted Google Sheets secret for writer modes
+        if: steps.control.outputs.mode == 'writer-preflight' || steps.control.outputs.mode == 'writer-apply'
         env:
           GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
         shell: bash
@@ -81,8 +81,8 @@ jobs:
             exit 1
           fi
 
-      - name: Install root dependencies for read-only validation
-        if: steps.control.outputs.mode == '003-preflight' || steps.control.outputs.mode == '003-verify' || steps.control.outputs.mode == 'writer-preflight'
+      - name: Install root dependencies for validation or writer
+        if: steps.control.outputs.mode == '003-preflight' || steps.control.outputs.mode == '003-verify' || steps.control.outputs.mode == 'writer-preflight' || steps.control.outputs.mode == 'writer-apply'
         run: npm ci
 
       - name: Run migration 003 transactional rollback preflight
@@ -103,6 +103,14 @@ jobs:
           DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
           GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
         run: node scripts/migrations/2e3/lv-mhz-write-bundle.mjs --preflight
+
+      - name: Apply LV-MHZ writer atomically to TEST
+        if: steps.control.outputs.mode == 'writer-apply'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
+          CONFIRM_TEST_MIGRATION: APPLY_LV_MHZ_2E3
+        run: node scripts/migrations/2e3/lv-mhz-write-bundle.mjs --apply
 
       - name: Install isolated migration-runner dependencies
         if: steps.control.outputs.mode == '003-apply'
