@@ -1,5 +1,7 @@
 import { requireAuth } from "./_auth.js";
+import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { getHistorialesFromSheets } from "./_historialesRepository.js";
+import { getLegacyHistorialesShapeFromPostgres } from "./_postgresHistorialesParityAdapter.js";
 
 const ALLOWED_MODES = new Set(["historiales", "dashboard"]);
 
@@ -40,14 +42,28 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: "Modo de historiales no valido." });
   }
 
+  let source;
   try {
-    const data = await getHistorialesFromSheets({ userId, aircraftId, mode });
+    source = resolveDataSource("HISTORIALES_DATA_SOURCE");
+  } catch {
+    return res.status(500).json({
+      ok: false,
+      error: "La fuente de datos de historiales no esta configurada correctamente.",
+    });
+  }
+
+  try {
+    const data = source === DATA_SOURCE.POSTGRES
+      ? await getLegacyHistorialesShapeFromPostgres({ userId, aircraftId, mode })
+      : await getHistorialesFromSheets({ userId, aircraftId, mode });
 
     return res.status(200).json(data);
-  } catch {
-    return res.status(502).json({
+  } catch (error) {
+    return res.status(error.statusCode || 502).json({
       ok: false,
-      error: "No se pudieron cargar los historiales desde Google Sheets.",
+      error: source === DATA_SOURCE.POSTGRES
+        ? "No se pudieron cargar los historiales desde Postgres TEST."
+        : "No se pudieron cargar los historiales desde Google Sheets.",
     });
   }
 }
