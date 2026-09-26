@@ -1,6 +1,8 @@
 import { OAuth2Client } from "google-auth-library";
 import { createSessionCookie } from "./_auth.js";
 import { getActiveUserByEmail, resolveGoogleUser } from "./_adminRepository.js";
+import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
+import { resolveActiveUserByVerifiedEmailFromPostgres } from "./_postgresIdentityRepository.js";
 
 const googleClient = new OAuth2Client();
 
@@ -36,7 +38,45 @@ async function resolveActiveUserFromSheets(email, googleSub) {
   return { userId, email: userEmail, name, isAdmin };
 }
 
-function resolveActiveUser(email, googleSub) {
+async function resolveActiveUserFromPostgres(email) {
+  try {
+    const user = await resolveActiveUserByVerifiedEmailFromPostgres(email);
+    const userId = String(user?.user_id || "").trim();
+    const userEmail = String(user?.email || "").trim().toLowerCase();
+    const name = String(user?.nombre || "").trim();
+    const status = String(user?.estado || "").trim().toUpperCase();
+
+    if (!userId || !userEmail || !name || status !== "ACTIVO" || userEmail !== email) {
+      throw new Error("INVALID_USER_RESPONSE");
+    }
+
+    return { userId, email: userEmail, name, isAdmin: false };
+  } catch (error) {
+    const code = String(error?.code || error?.message || "");
+
+    if (code === "USER_NOT_AUTHORIZED") {
+      throw new Error("USER_NOT_AUTHORIZED");
+    }
+
+    if (code === "GOOGLE_IDENTITY_MISMATCH") {
+      throw new Error("GOOGLE_IDENTITY_MISMATCH");
+    }
+
+    if (code === "INVALID_USER_RESPONSE") {
+      throw new Error("INVALID_USER_RESPONSE");
+    }
+
+    throw new Error("USER_SERVICE_UNAVAILABLE");
+  }
+}
+
+async function resolveActiveUser(email, googleSub) {
+  const source = resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE");
+
+  if (source === DATA_SOURCE.POSTGRES) {
+    return resolveActiveUserFromPostgres(email);
+  }
+
   return resolveActiveUserFromSheets(email, googleSub);
 }
 
