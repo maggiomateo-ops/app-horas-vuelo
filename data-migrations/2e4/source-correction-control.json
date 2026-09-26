@@ -1,5 +1,5 @@
 {
-  "mode": "source-correction-preflight",
+  "mode": "source-correction-apply",
   "allowed_modes": [
     "disabled",
     "source-correction-preflight",
