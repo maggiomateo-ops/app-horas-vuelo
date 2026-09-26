@@ -47,6 +47,14 @@ function quoteTable(tableName) {
   return `${quoteIdentifier(parts[0])}.${quoteIdentifier(parts[1])}`;
 }
 
+function hardenedConnectionString(raw) {
+  const url = new URL(raw);
+  if (url.searchParams.get("sslmode") === "require") {
+    url.searchParams.set("sslmode", "verify-full");
+  }
+  return url.toString();
+}
+
 function replaceTimestampToken(value, timestamp) {
   if (value === TIMESTAMP_TOKEN) return timestamp;
   if (Array.isArray(value)) return value.map((item) => replaceTimestampToken(item, timestamp));
@@ -194,6 +202,22 @@ async function assertMigrationsApplied(client) {
   }
 }
 
+function assertMigration003ConstraintSemantics(definition) {
+  const normalized = String(definition).replace(/\s+/g, " ").toLowerCase();
+  const requiredPatterns = [
+    ["installed_on IS NULL", /installed_on\s+is\s+null/],
+    ["removed_on IS NULL", /removed_on\s+is\s+null/],
+    ["removed_on >= installed_on", /removed_on\s*>=\s*installed_on/],
+    ["opening_tis_hours >= 0", /opening_tis_hours\s*>=\s*\(?0(?:\.0+)?\)?(?:::[a-z0-9_.]+)?/],
+  ];
+
+  for (const [label, pattern] of requiredPatterns) {
+    if (!pattern.test(normalized)) {
+      fail(`Migration 003 CHECK does not contain required condition: ${label}`);
+    }
+  }
+}
+
 async function assertMigration003Schema(client) {
   const column = await client.query(`
     SELECT is_nullable
@@ -213,12 +237,7 @@ async function assertMigration003Schema(client) {
        AND conrelid = 'app.component_installations'::regclass
   `);
   if (constraint.rowCount !== 1) fail("ck_component_installation_values is missing.");
-  const normalized = String(constraint.rows[0].definition).replace(/\s+/g, " ").toLowerCase();
-  for (const required of ["removed_on is null", "installed_on is null", "removed_on >= installed_on", "opening_tis_hours >= 0"]) {
-    if (!normalized.includes(required)) {
-      fail(`Migration 003 CHECK does not contain required condition: ${required}`);
-    }
-  }
+  assertMigration003ConstraintSemantics(constraint.rows[0].definition);
 }
 
 async function readTableCounts(client, tableNames) {
@@ -402,7 +421,7 @@ async function main() {
     fail("DATABASE_MIGRATION_URL is required for PREFLIGHT/APPLY. The writer never falls back to DATABASE_URL.");
   }
 
-  const client = new Client({ connectionString });
+  const client = new Client({ connectionString: hardenedConnectionString(connectionString) });
   await client.connect();
   try {
     const identity = await runPreflight(client, bundle);
