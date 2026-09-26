@@ -1,8 +1,26 @@
 import { createSessionCookie, validateCredentials } from "./_auth.js";
+import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Metodo no permitido." });
+  }
+
+  let googleUserResolutionSource;
+  try {
+    googleUserResolutionSource = resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE");
+  } catch {
+    return res.status(500).json({
+      ok: false,
+      error: "La fuente de identidad no esta configurada correctamente.",
+    });
+  }
+
+  if (googleUserResolutionSource === DATA_SOURCE.POSTGRES) {
+    return res.status(503).json({
+      ok: false,
+      error: "En la Preview Postgres TEST el ingreso se realiza con Google.",
+    });
   }
 
   const username = String(req.body?.username ?? "").trim();
