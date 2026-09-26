@@ -1,11 +1,12 @@
 {
-  "mode": "disabled",
+  "mode": "writer-apply",
   "allowed_modes": [
     "disabled",
     "003-preflight",
     "003-apply",
     "003-verify",
-    "writer-preflight"
+    "writer-preflight",
+    "writer-apply"
   ],
-  "notes": "Administrative gate is disabled after successful read-only writer-preflight. Final data APPLY remains unavailable in this control file and still requires separate explicit user approval. DATABASE_MIGRATION_URL and GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON remain encrypted GitHub Actions secrets."
+  "notes": "writer-apply is explicitly authorized by the user for the LV-MHZ 2E.3 TEST load only. It runs the deterministic writer in one serializable transaction with an advisory lock, exact migration/schema/empty-target preflight, generated count checks and operational reconciliation. Any failure must roll back. Production remains untouched."
 }
