@@ -163,7 +163,7 @@
     "batch_action_code": "MIGRATION_COMPLETED"
   },
   "write_gate": {
-    "neon_inserts_allowed": false,
+    "neon_inserts_allowed": true,
     "requires_migration_003_preflight": true,
     "requires_explicit_apply_approval": true,
     "requires_generated_count_match": true
