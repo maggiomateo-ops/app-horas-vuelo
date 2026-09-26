@@ -11,6 +11,7 @@ on:
       - scripts/migrations/2e3/verify-003-applied.mjs
       - scripts/migrations/2e3/lv-mhz-write-bundle.mjs
       - scripts/migrations/2e3/lv-mhz-build-bundle.mjs
+      - scripts/migrations/2e3/lv-mhz-verify-loaded.mjs
       - data-migrations/2e3/lv-mhz-target-manifest.json
       - data-migrations/2e3/lv-mhz-manifest.json
       - db/migrations/003_component_installation_historical_date.sql
@@ -46,6 +47,7 @@ jobs:
           node --check scripts/migrations/2e3/verify-003-applied.mjs
           node --check scripts/migrations/2e3/lv-mhz-write-bundle.mjs
           node --check scripts/migrations/2e3/lv-mhz-build-bundle.mjs
+          node --check scripts/migrations/2e3/lv-mhz-verify-loaded.mjs
 
       - name: Read gated operation mode
         id: control
@@ -71,7 +73,7 @@ jobs:
           fi
 
       - name: Require encrypted Google Sheets secret for writer modes
-        if: steps.control.outputs.mode == 'writer-preflight' || steps.control.outputs.mode == 'writer-apply'
+        if: steps.control.outputs.mode == 'writer-preflight' || steps.control.outputs.mode == 'writer-apply' || steps.control.outputs.mode == 'writer-verify'
         env:
           GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
         shell: bash
@@ -82,7 +84,7 @@ jobs:
           fi
 
       - name: Install root dependencies for validation or writer
-        if: steps.control.outputs.mode == '003-preflight' || steps.control.outputs.mode == '003-verify' || steps.control.outputs.mode == 'writer-preflight' || steps.control.outputs.mode == 'writer-apply'
+        if: steps.control.outputs.mode == '003-preflight' || steps.control.outputs.mode == '003-verify' || steps.control.outputs.mode == 'writer-preflight' || steps.control.outputs.mode == 'writer-apply' || steps.control.outputs.mode == 'writer-verify'
         run: npm ci
 
       - name: Run migration 003 transactional rollback preflight
@@ -103,6 +105,13 @@ jobs:
           DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
           GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
         run: node scripts/migrations/2e3/lv-mhz-write-bundle.mjs --preflight
+
+      - name: Verify committed LV-MHZ TEST load read-only
+        if: steps.control.outputs.mode == 'writer-verify'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
+        run: node scripts/migrations/2e3/lv-mhz-verify-loaded.mjs
 
       - name: Apply LV-MHZ writer atomically to TEST
         if: steps.control.outputs.mode == 'writer-apply'
