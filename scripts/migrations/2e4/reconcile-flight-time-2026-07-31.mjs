@@ -84,24 +84,6 @@ function normalizeDatabaseUrl(rawUrl) {
   return url.toString();
 }
 
-function assertSourceRow(row, kind) {
-  if (!row) fail(`${kind}: legacy row ${TARGET.legacyId} missing.`);
-  if (dateKey(row[1], row[2], row[3]) !== TARGET.flightDate) fail(`${kind}: date mismatch.`);
-  if (text(row[4]) !== TARGET.departure || text(row[5]) !== TARGET.arrival) fail(`${kind}: route mismatch.`);
-  if (text(row[8]) !== TARGET.pilot) fail(`${kind}: pilot mismatch.`);
-  if (kind === "Historial Aeronave") {
-    if (!nearlyEqual(numberOrNull(row[6]), TARGET.timeInServiceHours)) fail(`${kind}: TIS mismatch.`);
-    if (!nearlyEqual(numberOrNull(row[8]), TARGET.correctedFlightTimeHours)) fail(`${kind}: corrected flight time is not 2.1.`);
-    if (text(row[9]) !== TARGET.pilot) fail(`${kind}: pilot mismatch.`);
-    if (text(row[10]) !== TARGET.remarks) fail(`${kind}: remarks mismatch.`);
-  } else {
-    if (!nearlyEqual(numberOrNull(row[6]), TARGET.correctedFlightTimeHours)) fail(`${kind}: raw JPI flight time is not 2.1.`);
-    if (!nearlyEqual(numberOrNull(row[7]), TARGET.timeInServiceHours)) fail(`${kind}: Garmin TIS mismatch.`);
-    if (text(row[8]) !== TARGET.pilot) fail(`${kind}: pilot mismatch.`);
-    if (text(row[13]) !== TARGET.remarks) fail(`${kind}: remarks mismatch.`);
-  }
-}
-
 async function loadAndValidateSources() {
   const [historyValues, computationValues] = await batchGetSpreadsheetValues(
     TARGET.spreadsheetId,
@@ -124,8 +106,6 @@ async function loadAndValidateSources() {
   if (!nearlyEqual(numberOrNull(computationRow[6]), TARGET.correctedFlightTimeHours)) fail("Computacion Horas: JPI flight time is not 2.1.");
   if (!nearlyEqual(numberOrNull(computationRow[7]), TARGET.timeInServiceHours)) fail("Computacion Horas: Garmin TIS mismatch.");
   if (text(computationRow[8]) !== TARGET.pilot || text(computationRow[13]) !== TARGET.remarks) fail("Computacion Horas: identity/remarks mismatch.");
-
-  return { historyRow, computationRow };
 }
 
 const flightId = uuidv5(`flight:A001:legacy:${TARGET.legacyId}`);
@@ -152,7 +132,7 @@ async function loadCurrentFlight(queryable = client, lock = false) {
         flight_record.status,
         flight_record.record_source,
         revision.revision_number,
-        revision.flight_date,
+        revision.flight_date::text AS flight_date,
         revision.departure_location,
         revision.arrival_location,
         revision.pilot_person_id,
@@ -199,7 +179,7 @@ async function loadCurrentFlight(queryable = client, lock = false) {
 function assertCanonicalIdentity(row) {
   if (row.status !== "ACTIVE" || row.record_source !== "MIGRATION") fail("Target flight is not ACTIVE MIGRATION data.");
   if (String(row.registration || "") !== TARGET.aircraftRegistration) fail("Target registration mismatch.");
-  if (String(row.flight_date).slice(0, 10) !== TARGET.flightDate) fail("Target DB date mismatch.");
+  if (text(row.flight_date) !== TARGET.flightDate) fail("Target DB date mismatch.");
   if (text(row.departure_location) !== TARGET.departure || text(row.arrival_location) !== TARGET.arrival) fail("Target DB route mismatch.");
   if (text(row.pilot_name) !== TARGET.pilot) fail("Target DB pilot mismatch.");
   if (text(row.remarks) !== TARGET.remarks) fail("Target DB remarks mismatch.");
@@ -207,36 +187,11 @@ function assertCanonicalIdentity(row) {
 }
 
 async function copyRevisionChildren(queryable, oldRevisionId, newRevisionId) {
-  await queryable.query(
-    `INSERT INTO app.flight_counters (flight_revision_id, counter_code, counter_value)
-     SELECT $2::uuid, counter_code, counter_value
-     FROM app.flight_counters WHERE flight_revision_id = $1::uuid`,
-    [oldRevisionId, newRevisionId]
-  );
-  await queryable.query(
-    `INSERT INTO app.flight_component_counters (flight_revision_id, component_installation_id, counter_code, counter_value)
-     SELECT $2::uuid, component_installation_id, counter_code, counter_value
-     FROM app.flight_component_counters WHERE flight_revision_id = $1::uuid`,
-    [oldRevisionId, newRevisionId]
-  );
-  await queryable.query(
-    `INSERT INTO app.flight_tank_readings (flight_revision_id, tank_id, entered_value, entered_unit, canonical_liters)
-     SELECT $2::uuid, tank_id, entered_value, entered_unit, canonical_liters
-     FROM app.flight_tank_readings WHERE flight_revision_id = $1::uuid`,
-    [oldRevisionId, newRevisionId]
-  );
-  await queryable.query(
-    `INSERT INTO app.flight_component_consumables (flight_revision_id, component_installation_id, consumable_code, entered_value, entered_unit, canonical_liters)
-     SELECT $2::uuid, component_installation_id, consumable_code, entered_value, entered_unit, canonical_liters
-     FROM app.flight_component_consumables WHERE flight_revision_id = $1::uuid`,
-    [oldRevisionId, newRevisionId]
-  );
-  await queryable.query(
-    `INSERT INTO app.flight_component_runtime (flight_revision_id, component_installation_id, engine_start_at, engine_stop_at, engine_running_hours)
-     SELECT $2::uuid, component_installation_id, engine_start_at, engine_stop_at, engine_running_hours
-     FROM app.flight_component_runtime WHERE flight_revision_id = $1::uuid`,
-    [oldRevisionId, newRevisionId]
-  );
+  await queryable.query(`INSERT INTO app.flight_counters (flight_revision_id, counter_code, counter_value) SELECT $2::uuid, counter_code, counter_value FROM app.flight_counters WHERE flight_revision_id = $1::uuid`, [oldRevisionId, newRevisionId]);
+  await queryable.query(`INSERT INTO app.flight_component_counters (flight_revision_id, component_installation_id, counter_code, counter_value) SELECT $2::uuid, component_installation_id, counter_code, counter_value FROM app.flight_component_counters WHERE flight_revision_id = $1::uuid`, [oldRevisionId, newRevisionId]);
+  await queryable.query(`INSERT INTO app.flight_tank_readings (flight_revision_id, tank_id, entered_value, entered_unit, canonical_liters) SELECT $2::uuid, tank_id, entered_value, entered_unit, canonical_liters FROM app.flight_tank_readings WHERE flight_revision_id = $1::uuid`, [oldRevisionId, newRevisionId]);
+  await queryable.query(`INSERT INTO app.flight_component_consumables (flight_revision_id, component_installation_id, consumable_code, entered_value, entered_unit, canonical_liters) SELECT $2::uuid, component_installation_id, consumable_code, entered_value, entered_unit, canonical_liters FROM app.flight_component_consumables WHERE flight_revision_id = $1::uuid`, [oldRevisionId, newRevisionId]);
+  await queryable.query(`INSERT INTO app.flight_component_runtime (flight_revision_id, component_installation_id, engine_start_at, engine_stop_at, engine_running_hours) SELECT $2::uuid, component_installation_id, engine_start_at, engine_stop_at, engine_running_hours FROM app.flight_component_runtime WHERE flight_revision_id = $1::uuid`, [oldRevisionId, newRevisionId]);
 }
 
 try {
@@ -245,58 +200,18 @@ try {
 
   if (MODE === "preflight") {
     if (Number(before.revision_number) !== 1) fail(`Preflight expected revision 1; got ${before.revision_number}.`);
-    if (!nearlyEqual(before.flight_time_hours, TARGET.oldFlightTimeHours)) {
-      fail(`Preflight expected flight_time_hours 21.0; got ${before.flight_time_hours}.`);
-    }
-    console.log(JSON.stringify({
-      ok: true,
-      mode: MODE,
-      flightId,
-      currentRevisionId: before.current_revision_id,
-      revisionNumber: Number(before.revision_number),
-      dbFlightTimeHours: Number(before.flight_time_hours),
-      sourceFlightTimeHours: TARGET.correctedFlightTimeHours,
-      timeInServiceHours: Number(before.time_in_service_hours),
-      persistentWritesPerformed: 0,
-    }, null, 2));
-    process.exitCode = 0;
+    if (!nearlyEqual(before.flight_time_hours, TARGET.oldFlightTimeHours)) fail(`Preflight expected flight_time_hours 21.0; got ${before.flight_time_hours}.`);
+    console.log(JSON.stringify({ ok: true, mode: MODE, flightId, currentRevisionId: before.current_revision_id, revisionNumber: Number(before.revision_number), dbFlightTimeHours: Number(before.flight_time_hours), sourceFlightTimeHours: TARGET.correctedFlightTimeHours, timeInServiceHours: Number(before.time_in_service_hours), persistentWritesPerformed: 0 }, null, 2));
   } else if (MODE === "verify") {
     if (Number(before.revision_number) !== 2) fail(`Verify expected revision 2; got ${before.revision_number}.`);
-    if (!nearlyEqual(before.flight_time_hours, TARGET.correctedFlightTimeHours)) {
-      fail(`Verify expected flight_time_hours 2.1; got ${before.flight_time_hours}.`);
-    }
-    const { rows: revisionRows } = await client.query(
-      `SELECT revision_number, flight_time_hours, correction_reason
-       FROM app.flight_record_revisions
-       WHERE flight_id = $1::uuid
-       ORDER BY revision_number`,
-      [flightId]
-    );
+    if (!nearlyEqual(before.flight_time_hours, TARGET.correctedFlightTimeHours)) fail(`Verify expected flight_time_hours 2.1; got ${before.flight_time_hours}.`);
+    const { rows: revisionRows } = await client.query(`SELECT revision_number, flight_time_hours, correction_reason FROM app.flight_record_revisions WHERE flight_id = $1::uuid ORDER BY revision_number`, [flightId]);
     if (revisionRows.length !== 2) fail(`Verify expected exactly 2 revisions; got ${revisionRows.length}.`);
     if (!nearlyEqual(revisionRows[0].flight_time_hours, TARGET.oldFlightTimeHours)) fail("Original revision was mutated; expected preserved 21.0.");
     if (!nearlyEqual(revisionRows[1].flight_time_hours, TARGET.correctedFlightTimeHours)) fail("Revision 2 is not 2.1.");
-    const { rows: auditRows } = await client.query(
-      `SELECT action_code, reason, metadata
-       FROM audit.audit_events
-       WHERE entity_type = 'FLIGHT_RECORD'
-         AND entity_id = $1::uuid
-         AND action_code = 'SOURCE_RECONCILED'
-       ORDER BY occurred_at DESC`,
-      [flightId]
-    );
+    const { rows: auditRows } = await client.query(`SELECT action_code, reason, metadata FROM audit.audit_events WHERE entity_type = 'FLIGHT_RECORD' AND entity_id = $1::uuid AND action_code = 'SOURCE_RECONCILED' ORDER BY occurred_at DESC`, [flightId]);
     if (auditRows.length !== 1) fail(`Verify expected one SOURCE_RECONCILED audit event; got ${auditRows.length}.`);
-    console.log(JSON.stringify({
-      ok: true,
-      mode: MODE,
-      flightId,
-      currentRevisionId: before.current_revision_id,
-      revisionNumber: Number(before.revision_number),
-      correctedFlightTimeHours: Number(before.flight_time_hours),
-      timeInServiceHours: Number(before.time_in_service_hours),
-      revisionCount: revisionRows.length,
-      auditCount: auditRows.length,
-      persistentWritesPerformed: 0,
-    }, null, 2));
+    console.log(JSON.stringify({ ok: true, mode: MODE, flightId, currentRevisionId: before.current_revision_id, revisionNumber: Number(before.revision_number), correctedFlightTimeHours: Number(before.flight_time_hours), timeInServiceHours: Number(before.time_in_service_hours), revisionCount: revisionRows.length, auditCount: auditRows.length, persistentWritesPerformed: 0 }, null, 2));
   } else {
     await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
     try {
@@ -306,15 +221,7 @@ try {
 
       if (Number(current.revision_number) === 2 && nearlyEqual(current.flight_time_hours, TARGET.correctedFlightTimeHours)) {
         await client.query("ROLLBACK");
-        console.log(JSON.stringify({
-          ok: true,
-          mode: MODE,
-          alreadyApplied: true,
-          flightId,
-          currentRevisionId: current.current_revision_id,
-          correctedFlightTimeHours: Number(current.flight_time_hours),
-          persistentWritesPerformed: 0,
-        }, null, 2));
+        console.log(JSON.stringify({ ok: true, mode: MODE, alreadyApplied: true, flightId, currentRevisionId: current.current_revision_id, correctedFlightTimeHours: Number(current.flight_time_hours), persistentWritesPerformed: 0 }, null, 2));
       } else {
         if (Number(current.revision_number) !== 1) fail(`Apply expected revision 1; got ${current.revision_number}.`);
         if (!nearlyEqual(current.flight_time_hours, TARGET.oldFlightTimeHours)) fail(`Apply expected current flight_time_hours 21.0; got ${current.flight_time_hours}.`);
@@ -324,98 +231,16 @@ try {
         const newRevisionId = idRows[0].revision_id;
         const requestId = idRows[0].request_id;
 
-        await client.query(
-          `INSERT INTO app.flight_record_revisions (
-             flight_revision_id, flight_id, revision_number, flight_date,
-             departure_location, arrival_location, pilot_person_id,
-             utilization_owner_party_id, flight_purpose_id, capture_method,
-             flight_time_hours, time_in_service_hours, tach_start, tach_end,
-             movement_start_at, takeoff_at, landing_at, final_stop_at, remarks,
-             created_by_user_id, created_at, correction_reason
-           )
-           SELECT
-             $2::uuid, flight_id, revision_number + 1, flight_date,
-             departure_location, arrival_location, pilot_person_id,
-             utilization_owner_party_id, flight_purpose_id, capture_method,
-             $3::numeric(8,1), time_in_service_hours, tach_start, tach_end,
-             movement_start_at, takeoff_at, landing_at, final_stop_at, remarks,
-             NULL, now(), $4
-           FROM app.flight_record_revisions
-           WHERE flight_revision_id = $1::uuid`,
-          [oldRevisionId, newRevisionId, TARGET.correctedFlightTimeHours, TARGET.correctionReason]
-        );
-
+        await client.query(`INSERT INTO app.flight_record_revisions (flight_revision_id, flight_id, revision_number, flight_date, departure_location, arrival_location, pilot_person_id, utilization_owner_party_id, flight_purpose_id, capture_method, flight_time_hours, time_in_service_hours, tach_start, tach_end, movement_start_at, takeoff_at, landing_at, final_stop_at, remarks, created_by_user_id, created_at, correction_reason) SELECT $2::uuid, flight_id, revision_number + 1, flight_date, departure_location, arrival_location, pilot_person_id, utilization_owner_party_id, flight_purpose_id, capture_method, $3::numeric(8,1), time_in_service_hours, tach_start, tach_end, movement_start_at, takeoff_at, landing_at, final_stop_at, remarks, NULL, now(), $4 FROM app.flight_record_revisions WHERE flight_revision_id = $1::uuid`, [oldRevisionId, newRevisionId, TARGET.correctedFlightTimeHours, TARGET.correctionReason]);
         await copyRevisionChildren(client, oldRevisionId, newRevisionId);
-
-        const updateResult = await client.query(
-          `UPDATE app.flight_records
-           SET current_revision_id = $2::uuid
-           WHERE flight_id = $1::uuid
-             AND current_revision_id = $3::uuid`,
-          [flightId, newRevisionId, oldRevisionId]
-        );
+        const updateResult = await client.query(`UPDATE app.flight_records SET current_revision_id = $2::uuid WHERE flight_id = $1::uuid AND current_revision_id = $3::uuid`, [flightId, newRevisionId, oldRevisionId]);
         if (updateResult.rowCount !== 1) fail(`Expected one flight root update; got ${updateResult.rowCount}.`);
-
-        await client.query(
-          `INSERT INTO audit.audit_events (
-             request_id, actor_type, actor_user_id, operation_source,
-             aircraft_id, entity_type, entity_id, entity_key, action_code,
-             before_state, after_state, reason, metadata, payload_version
-           ) VALUES (
-             $1::uuid, 'SYSTEM', NULL, 'MIGRATION',
-             $2::uuid, 'FLIGHT_RECORD', $3::uuid,
-             jsonb_build_object('legacy_id', $4, 'flight_date', $5, 'registration', $6),
-             'SOURCE_RECONCILED',
-             jsonb_build_object('current_revision_id', $7::uuid, 'revision_number', 1, 'flight_time_hours', $8::numeric, 'time_in_service_hours', $9::numeric),
-             jsonb_build_object('current_revision_id', $10::uuid, 'revision_number', 2, 'flight_time_hours', $11::numeric, 'time_in_service_hours', $9::numeric),
-             $12,
-             jsonb_build_object(
-               'source_spreadsheet_id', $13,
-               'historial_aeronave_row', $14,
-               'computacion_horas_row', $15,
-               'source_confirmation', 'Historial Aeronave corrected to 2.1; Computacion Horas independently confirms 2.1',
-               'legacy_id', $4
-             ),
-             1
-           )`,
-          [
-            requestId,
-            current.aircraft_id,
-            flightId,
-            TARGET.legacyId,
-            TARGET.flightDate,
-            TARGET.aircraftRegistration,
-            oldRevisionId,
-            TARGET.oldFlightTimeHours,
-            TARGET.timeInServiceHours,
-            newRevisionId,
-            TARGET.correctedFlightTimeHours,
-            TARGET.correctionReason,
-            TARGET.spreadsheetId,
-            TARGET.historySourceRow,
-            TARGET.computationSourceRow,
-          ]
-        );
-
+        await client.query(`INSERT INTO audit.audit_events (request_id, actor_type, actor_user_id, operation_source, aircraft_id, entity_type, entity_id, entity_key, action_code, before_state, after_state, reason, metadata, payload_version) VALUES ($1::uuid, 'SYSTEM', NULL, 'MIGRATION', $2::uuid, 'FLIGHT_RECORD', $3::uuid, jsonb_build_object('legacy_id', $4, 'flight_date', $5, 'registration', $6), 'SOURCE_RECONCILED', jsonb_build_object('current_revision_id', $7::uuid, 'revision_number', 1, 'flight_time_hours', $8::numeric, 'time_in_service_hours', $9::numeric), jsonb_build_object('current_revision_id', $10::uuid, 'revision_number', 2, 'flight_time_hours', $11::numeric, 'time_in_service_hours', $9::numeric), $12, jsonb_build_object('source_spreadsheet_id', $13, 'historial_aeronave_row', $14, 'computacion_horas_row', $15, 'source_confirmation', 'Historial Aeronave corrected to 2.1; Computacion Horas independently confirms 2.1', 'legacy_id', $4), 1)`, [requestId, current.aircraft_id, flightId, TARGET.legacyId, TARGET.flightDate, TARGET.aircraftRegistration, oldRevisionId, TARGET.oldFlightTimeHours, TARGET.timeInServiceHours, newRevisionId, TARGET.correctedFlightTimeHours, TARGET.correctionReason, TARGET.spreadsheetId, TARGET.historySourceRow, TARGET.computationSourceRow]);
         await client.query("COMMIT");
         const after = await loadCurrentFlight();
         assertCanonicalIdentity(after);
-        if (Number(after.revision_number) !== 2 || !nearlyEqual(after.flight_time_hours, TARGET.correctedFlightTimeHours)) {
-          fail("Post-commit verification failed.");
-        }
-        console.log(JSON.stringify({
-          ok: true,
-          mode: MODE,
-          alreadyApplied: false,
-          flightId,
-          previousRevisionId: oldRevisionId,
-          currentRevisionId: after.current_revision_id,
-          revisionNumber: Number(after.revision_number),
-          correctedFlightTimeHours: Number(after.flight_time_hours),
-          timeInServiceHours: Number(after.time_in_service_hours),
-          persistentWritesPerformed: 3,
-          writes: ["app.flight_record_revisions INSERT", "app.flight_records UPDATE", "audit.audit_events INSERT"],
-        }, null, 2));
+        if (Number(after.revision_number) !== 2 || !nearlyEqual(after.flight_time_hours, TARGET.correctedFlightTimeHours)) fail("Post-commit verification failed.");
+        console.log(JSON.stringify({ ok: true, mode: MODE, alreadyApplied: false, flightId, previousRevisionId: oldRevisionId, currentRevisionId: after.current_revision_id, revisionNumber: Number(after.revision_number), correctedFlightTimeHours: Number(after.flight_time_hours), timeInServiceHours: Number(after.time_in_service_hours), persistentWritesPerformed: 3, writes: ["app.flight_record_revisions INSERT", "app.flight_records UPDATE", "audit.audit_events INSERT"] }, null, 2));
       }
     } catch (error) {
       try { await client.query("ROLLBACK"); } catch {}
