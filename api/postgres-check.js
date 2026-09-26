@@ -102,6 +102,7 @@ export default async function handler(req, res) {
       ok: Object.values(checks).every(Boolean),
       currentUser: result?.current_user || null,
       currentDatabase: result?.current_database || null,
+      runtimeCredentialScope: "branch-preview",
       checks,
       paritySummary: {
         aircrafts: aircrafts.length,
