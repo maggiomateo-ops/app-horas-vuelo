@@ -1,5 +1,5 @@
 {
-  "mode": "source-correction-verify",
+  "mode": "disabled",
   "allowed_modes": [
     "disabled",
     "source-correction-preflight",
