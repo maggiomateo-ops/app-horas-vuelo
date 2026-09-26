@@ -1,6 +1,6 @@
 import { postgresQuery } from "./_postgres.js";
 
-const EXPECTED_BRANCH = "etapa-2e2-postgres-repositories";
+const EXPECTED_BRANCH = "etapa-2e4-test-app-parity";
 const EXPECTED_ROLE = "app_horas_runtime";
 const EXPECTED_DATABASE = "app_horas";
 
