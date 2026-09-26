@@ -1,0 +1,11 @@
+{
+  "mode": "disabled",
+  "allowed_modes": [
+    "disabled",
+    "source-correction-preflight",
+    "source-correction-apply",
+    "source-correction-verify"
+  ],
+  "target": "LV-MHZ flight 2026-07-31 AGR-RAE legacy 1789593961053",
+  "note": "Apply is limited to canonical revision correction 21.0 -> 2.1 after source reconciliation. Production is out of scope."
+}
