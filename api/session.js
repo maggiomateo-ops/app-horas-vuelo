@@ -1,6 +1,18 @@
 import { getSession } from "./_auth.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 
+function resolveParityCapabilities() {
+  const identitySource = resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE");
+  const settingsSource = resolveDataSource("SETTINGS_DATA_SOURCE");
+  const flightSource = resolveDataSource("FLIGHT_DATA_SOURCE");
+
+  return {
+    legacyUserManagementEnabled: identitySource !== DATA_SOURCE.POSTGRES,
+    settingsWritesEnabled: settingsSource !== DATA_SOURCE.POSTGRES,
+    flightWritesEnabled: flightSource !== DATA_SOURCE.POSTGRES,
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ ok: false, error: "Metodo no permitido." });
@@ -12,15 +24,14 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, authenticated: false });
   }
 
-  let legacyUserManagementEnabled;
+  let capabilities;
   try {
-    legacyUserManagementEnabled =
-      resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE") !== DATA_SOURCE.POSTGRES;
+    capabilities = resolveParityCapabilities();
   } catch {
     return res.status(500).json({
       ok: false,
       authenticated: false,
-      error: "La fuente de identidad no esta configurada correctamente.",
+      error: "Las fuentes de datos no estan configuradas correctamente.",
     });
   }
 
@@ -33,7 +44,7 @@ export default async function handler(req, res) {
         email: session.email,
         name: session.name,
         isAdmin: session.isAdmin === true,
-        legacyUserManagementEnabled,
+        ...capabilities,
       },
     });
   }
@@ -43,7 +54,7 @@ export default async function handler(req, res) {
     authenticated: true,
     user: {
       username: session.username,
-      legacyUserManagementEnabled,
+      ...capabilities,
     },
   });
 }
