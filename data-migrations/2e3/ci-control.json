@@ -1,5 +1,5 @@
 {
-  "mode": "writer-verify",
+  "mode": "disabled",
   "allowed_modes": [
     "disabled",
     "003-preflight",
@@ -8,5 +8,5 @@
     "writer-preflight",
     "writer-verify"
   ],
-  "notes": "writer-verify is read-only. It regenerates the exact approved LV-MHZ bundle from live Sheets, requires the approved bundle SHA256, verifies migrations/schema, compares all 40 persisted table counts and repeats operational/Audit reconciliation. writer-apply is no longer an allowed control mode."
+  "notes": "Administrative gate is disabled after successful post-load verification of the committed LV-MHZ 2E.3 TEST dataset. writer-apply is not an allowed control mode and the target manifest write gate is closed. Any future persistent data mutation requires a new explicit approval and code change. Production remains untouched."
 }
