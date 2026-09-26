@@ -1,12 +1,11 @@
 {
-  "mode": "writer-apply",
+  "mode": "disabled",
   "allowed_modes": [
     "disabled",
     "003-preflight",
     "003-apply",
     "003-verify",
-    "writer-preflight",
-    "writer-apply"
+    "writer-preflight"
   ],
-  "notes": "writer-apply is explicitly authorized by the user for the LV-MHZ 2E.3 TEST load only. It runs the deterministic writer in one serializable transaction with an advisory lock, exact migration/schema/empty-target preflight, generated count checks and operational reconciliation. Any failure must roll back. Production remains untouched."
+  "notes": "Administrative gate is disabled after the successful explicitly approved LV-MHZ 2E.3 atomic TEST data load. writer-apply is no longer an allowed control mode. Any future persistent data mutation requires a new explicit approval and code change. Production remains untouched."
 }
