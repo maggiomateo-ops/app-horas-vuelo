@@ -1,0 +1,88 @@
+name: 2E.4 TEST source reconciliation
+
+on:
+  push:
+    branches:
+      - etapa-2e4-test-app-parity
+    paths:
+      - .github/workflows/2e4-source-correction.yml
+      - data-migrations/2e4/source-correction-control.json
+      - scripts/migrations/2e4/reconcile-flight-time-2026-07-31.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 2e4-test-source-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  source-correction-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout exact branch commit
+        uses: actions/checkout@v4
+
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate reconciliation script syntax
+        run: node --check scripts/migrations/2e4/reconcile-flight-time-2026-07-31.mjs
+
+      - name: Read gated operation mode
+        id: control
+        shell: bash
+        run: |
+          MODE="$(node -e "const c=require('./data-migrations/2e4/source-correction-control.json'); if(!c.allowed_modes.includes(c.mode)) process.exit(2); process.stdout.write(c.mode)")"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "2E.4 source correction mode: $MODE"
+
+      - name: Disabled gate
+        if: steps.control.outputs.mode == 'disabled'
+        run: echo "2E.4 source reconciliation is disabled. No database connection will be opened."
+
+      - name: Require encrypted TEST secrets
+        if: steps.control.outputs.mode != 'disabled'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_MIGRATION_URL" ]; then
+            echo "DATABASE_MIGRATION_URL GitHub Actions secret is missing." >&2
+            exit 1
+          fi
+          if [ -z "$GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON" ]; then
+            echo "GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON GitHub Actions secret is missing." >&2
+            exit 1
+          fi
+
+      - name: Install root dependencies
+        if: steps.control.outputs.mode != 'disabled'
+        run: npm ci
+
+      - name: Preflight source correction read-only
+        if: steps.control.outputs.mode == 'source-correction-preflight'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
+        run: node scripts/migrations/2e4/reconcile-flight-time-2026-07-31.mjs --preflight
+
+      - name: Apply canonical source correction atomically
+        if: steps.control.outputs.mode == 'source-correction-apply'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
+        run: node scripts/migrations/2e4/reconcile-flight-time-2026-07-31.mjs --apply
+
+      - name: Verify canonical source correction read-only
+        if: steps.control.outputs.mode == 'source-correction-verify'
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_JSON }}
+        run: node scripts/migrations/2e4/reconcile-flight-time-2026-07-31.mjs --verify
