@@ -1,5 +1,7 @@
 import { requireAuth } from "./_auth.js";
 import { getAircraftsForUser } from "./_adminRepository.js";
+import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
+import { getAircraftsForUserFromPostgres } from "./_postgresAircraftRepository.js";
 
 const AIRCRAFT_RESPONSE_FIELDS = [
   "aircraft_id",
@@ -17,6 +19,16 @@ function sanitizeAircraft(aircraft) {
 
     return result;
   }, {});
+}
+
+async function loadAircrafts(userId) {
+  const source = resolveDataSource("AIRCRAFT_DATA_SOURCE");
+
+  if (source === DATA_SOURCE.POSTGRES) {
+    return getAircraftsForUserFromPostgres(userId);
+  }
+
+  return getAircraftsForUser(userId);
 }
 
 export default async function handler(req, res) {
@@ -39,7 +51,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const aircrafts = await getAircraftsForUser(userId);
+    const aircrafts = await loadAircrafts(userId);
 
     return res.status(200).json({
       ok: true,
