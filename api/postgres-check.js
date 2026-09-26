@@ -1,4 +1,5 @@
 import { postgresQuery } from "./_postgres.js";
+import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { getAircraftsForUserFromPostgres } from "./_postgresAircraftRepository.js";
 import { getLegacyHistorialesShapeFromPostgres } from "./_postgresHistorialesParityAdapter.js";
 import { getLegacySettingsShapeFromPostgres } from "./_postgresSettingsParityAdapter.js";
@@ -6,6 +7,13 @@ import { getLegacySettingsShapeFromPostgres } from "./_postgresSettingsParityAda
 const EXPECTED_BRANCH = "etapa-2e4-test-app-parity";
 const EXPECTED_ROLE = "app_horas_runtime";
 const EXPECTED_DATABASE = "app_horas";
+const ROUTING_VARIABLES = [
+  "GOOGLE_USER_RESOLUTION_SOURCE",
+  "AIRCRAFT_DATA_SOURCE",
+  "SETTINGS_DATA_SOURCE",
+  "HISTORIALES_DATA_SOURCE",
+  "FLIGHT_DATA_SOURCE",
+];
 
 function noStore(res) {
   res.setHeader("Cache-Control", "no-store, max-age=0");
@@ -31,6 +39,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    const routing = Object.fromEntries(
+      ROUTING_VARIABLES.map((variableName) => [variableName, resolveDataSource(variableName)])
+    );
+
     const [{ rows: privilegeRows }, { rows: activeUsers }] = await Promise.all([
       postgresQuery(`
         SELECT
@@ -73,6 +85,9 @@ export default async function handler(req, res) {
     const latestPropeller = histories?.historialHelice?.at(-1) || null;
 
     const checks = {
+      allParitySelectorsPostgres: Object.values(routing).every(
+        (source) => source === DATA_SOURCE.POSTGRES
+      ),
       role: result?.current_user === EXPECTED_ROLE,
       database: result?.current_database === EXPECTED_DATABASE,
       appSchemaUsage: result?.app_schema_usage === true,
@@ -103,6 +118,7 @@ export default async function handler(req, res) {
       currentUser: result?.current_user || null,
       currentDatabase: result?.current_database || null,
       runtimeCredentialScope: "branch-preview",
+      routing,
       checks,
       paritySummary: {
         aircrafts: aircrafts.length,
