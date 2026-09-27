@@ -347,9 +347,9 @@ async function resolveManualReferences(client, aircraftId, payload, flightDate) 
   const { rows: shares } = await client.query(
     `SELECT count(*)::int AS owner_count,COALESCE(sum(ownership_share),0)::numeric AS total_share
        FROM app.aircraft_ownership_interests oi JOIN app.parties p ON p.party_id=oi.party_id
-      WHERE oi.aircraft_id=$1::uuid AND p.status='ACTIVE' AND oi.effective_from_at<=now()
-        AND (oi.effective_to_at IS NULL OR oi.effective_to_at>now())`,
-    [aircraftId]
+      WHERE oi.aircraft_id=$1::uuid AND p.status='ACTIVE' AND oi.effective_from_at::date <= $2::date
+        AND (oi.effective_to_at IS NULL OR oi.effective_to_at::date > $2::date)`,
+    [aircraftId, flightDate]
   );
   if (!shares[0] || Number(shares[0].total_share) !== 100 || Number(shares[0].owner_count) < 1) {
     throw repositoryError("Ownership canonico no esta configurado al 100%.", "FLIGHT_OWNERSHIP_NOT_READY", 409);
