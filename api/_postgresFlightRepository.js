@@ -321,7 +321,7 @@ async function requireFlightOwnerInTransaction(client, userId, aircraftId) {
   }
 }
 
-async function resolveManualReferences(client, aircraftId, payload) {
+async function resolveManualReferences(client, aircraftId, payload, flightDate) {
   const pilotName = String(payload.piloto || "").trim();
   const ownerName = String(payload.propietario || "").trim();
   if (!pilotName || !ownerName) throw repositoryError("Piloto y propietario son obligatorios.", "FLIGHT_INVALID_PAYLOAD", 422);
@@ -338,7 +338,7 @@ async function resolveManualReferences(client, aircraftId, payload) {
       JOIN app.parties party ON party.party_id=oi.party_id
       LEFT JOIN app.persons p ON p.person_id=party.person_id
       WHERE oi.aircraft_id=$1::uuid AND party.status='ACTIVE'
-        AND oi.effective_from_at<=now() AND (oi.effective_to_at IS NULL OR oi.effective_to_at>now())
+        AND oi.effective_from_at::date <= $3::date AND (oi.effective_to_at IS NULL OR oi.effective_to_at::date > $3::date)
         AND lower(CASE WHEN party.party_type='PERSON' THEN p.full_name ELSE party.organization_name END)=lower($2)`,
     [aircraftId, ownerName]
   );
