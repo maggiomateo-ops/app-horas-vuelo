@@ -340,7 +340,7 @@ async function resolveManualReferences(client, aircraftId, payload, flightDate) 
       WHERE oi.aircraft_id=$1::uuid AND party.status='ACTIVE'
         AND oi.effective_from_at::date <= $3::date AND (oi.effective_to_at IS NULL OR oi.effective_to_at::date > $3::date)
         AND lower(CASE WHEN party.party_type='PERSON' THEN p.full_name ELSE party.organization_name END)=lower($2)`,
-    [aircraftId, ownerName]
+    [aircraftId, ownerName, flightDate]
   );
   if (owners.length !== 1) throw repositoryError("El propietario seleccionado no coincide con ownership canonico vigente.", "FLIGHT_OWNER_NOT_RESOLVED", 409);
 
