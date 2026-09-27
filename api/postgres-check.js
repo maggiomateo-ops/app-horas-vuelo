@@ -3,6 +3,7 @@ import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { getAircraftsForUserFromPostgres } from "./_postgresAircraftRepository.js";
 import { getLegacyHistorialesShapeFromPostgres } from "./_postgresHistorialesParityAdapter.js";
 import { getLegacySettingsShapeFromPostgres } from "./_postgresSettingsParityAdapter.js";
+import { resolveSettingsWriteCapability } from "./_settingsWriteCapability.js";
 
 const EXPECTED_BRANCH = "etapa-2e4-test-app-parity";
 const EXPECTED_ROLE = "app_horas_runtime";
@@ -57,6 +58,9 @@ export default async function handler(req, res) {
         routingDiagnostics[variableName].normalized,
       ])
     );
+    const settingsWriteCapability = resolveSettingsWriteCapability(
+      routing.SETTINGS_DATA_SOURCE
+    );
 
     const [{ rows: privilegeRows }, { rows: activeUsers }] = await Promise.all([
       postgresQuery(`
@@ -103,6 +107,11 @@ export default async function handler(req, res) {
       allParitySelectorsPostgres: Object.values(routing).every(
         (source) => source === DATA_SOURCE.POSTGRES
       ),
+      settingsWritesFailClosed: settingsWriteCapability.enabled === false,
+      settingsWriteModeDisabled: settingsWriteCapability.mode === "DISABLED",
+      settingsEditablePathsEmpty:
+        Array.isArray(settingsWriteCapability.editablePaths) &&
+        settingsWriteCapability.editablePaths.length === 0,
       role: result?.current_user === EXPECTED_ROLE,
       database: result?.current_database === EXPECTED_DATABASE,
       appSchemaUsage: result?.app_schema_usage === true,
@@ -114,6 +123,15 @@ export default async function handler(req, res) {
       exactlyOneAircraft: aircrafts.length === 1,
       aircraftRegistration: aircrafts[0]?.matricula === "LV-MHZ",
       settingsRegistration: settings?.appConfig?.aircraftRegistration === "LV-MHZ",
+      settingsOilUnitParity: settings?.appConfig?.oilUnitLabel === "Qrt",
+      settingsAnnualDueDateParity:
+        settings?.kpiParams?.annualInspection?.nextDueDate === "2027-09-30",
+      settingsAnnualWarningParity:
+        nearlyEqual(settings?.kpiParams?.thresholds?.annualInspection?.warningDays, 60),
+      settings50WarningParity:
+        nearlyEqual(settings?.kpiParams?.thresholds?.inspection50?.warningHours, 10),
+      settings100WarningParity:
+        nearlyEqual(settings?.kpiParams?.thresholds?.inspection100?.warningHours, 15),
       ownershipStillUnconfigured: settings?.operationalConfig?.ownerOptions?.length === 0,
       aircraftHistoryCount: histories?.historialAeronave?.length === 346,
       engineHistoryCount: histories?.historialMotor?.length === 346,
@@ -135,6 +153,7 @@ export default async function handler(req, res) {
       runtimeCredentialScope: "branch-preview",
       routing,
       routingDiagnostics,
+      settingsWriteCapability,
       checks,
       paritySummary: {
         aircrafts: aircrafts.length,
@@ -146,6 +165,16 @@ export default async function handler(req, res) {
         engineClosingTis: latestEngine?.tiempoTotalEnServicio ?? null,
         propellerClosingDurg: latestPropeller?.durg ?? null,
         ownerOptions: settings?.operationalConfig?.ownerOptions?.length ?? null,
+        settingsOilUnit: settings?.appConfig?.oilUnitLabel ?? null,
+        settingsAnnualDueDate: settings?.kpiParams?.annualInspection?.nextDueDate ?? null,
+        settingsWarningThresholds: {
+          annualDays:
+            settings?.kpiParams?.thresholds?.annualInspection?.warningDays ?? null,
+          inspection50Hours:
+            settings?.kpiParams?.thresholds?.inspection50?.warningHours ?? null,
+          inspection100Hours:
+            settings?.kpiParams?.thresholds?.inspection100?.warningHours ?? null,
+        },
       },
       writesPerformed: 0,
     });
