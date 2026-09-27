@@ -3,7 +3,8 @@ import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { getAircraftsForUserFromPostgres } from "./_postgresAircraftRepository.js";
 import { getLegacyHistorialesShapeFromPostgres } from "./_postgresHistorialesParityAdapter.js";
 import { getLegacySettingsShapeFromPostgres } from "./_postgresSettingsParityAdapter.js";
-import { resolveSettingsWriteCapability } from "./_settingsWriteCapability.js";
+import { resolveSettingsWriteCapability, resolvePostgresFlightWriteCapability } from "./_settingsWriteCapability.js";
+import { saveLegacyFlightToPostgres, requireCanonicalOwnershipReadyForFlightFromPostgres } from "./_postgresFlightRepository.js";
 
 const EXPECTED_BRANCH = "etapa-2e4-test-app-parity";
 const EXPECTED_ROLE = "app_horas_runtime";
@@ -37,7 +38,7 @@ function selectorDiagnostic(variableName) {
 export default async function handler(req, res) {
   noStore(res);
 
-  if (req.method !== "GET") {
+  if (!["GET", "POST"].includes(req.method)) {
     return res.status(405).json({ ok: false, error: "Method not allowed." });
   }
 
@@ -60,6 +61,9 @@ export default async function handler(req, res) {
     );
     const settingsWriteCapability = resolveSettingsWriteCapability(
       routing.SETTINGS_DATA_SOURCE
+    );
+    const flightWriteCapability = resolvePostgresFlightWriteCapability(
+      routing.FLIGHT_DATA_SOURCE
     );
 
     const [{ rows: privilegeRows }, { rows: activeUsers }] = await Promise.all([
@@ -98,6 +102,69 @@ export default async function handler(req, res) {
           }),
         ])
       : [null, null];
+
+    if (req.method === "POST") {
+      const canaryAction = String(req.body?.canaryAction || "").trim().toUpperCase();
+      if (!flightWriteCapability.enabled || flightWriteCapability.mode !== "CANONICAL_REVISIONED") {
+        return res.status(409).json({ ok: false, code: "FLIGHT_CANARY_GATE_DISABLED", error: "Flight canary gate is disabled." });
+      }
+      if (!activeUserId || !aircraftId) {
+        return res.status(409).json({ ok: false, code: "FLIGHT_CANARY_CONTEXT_INVALID", error: "Expected exactly one active TEST user and aircraft." });
+      }
+      await requireCanonicalOwnershipReadyForFlightFromPostgres({ userId: activeUserId, aircraftId });
+
+      if (canaryAction === "CREATE") {
+        const data = await saveLegacyFlightToPostgres({
+          userId: activeUserId,
+          aircraftId,
+          payload: {
+            modo: "create", dia: "27", mes: "09", anio: "2026",
+            desde: "TST", hasta: "TST", tiempoVueloJPI: 0.1, tiempoEnServicioGarmin: 0.1,
+            piloto: "Mateo Maggio", propietario: "Christian Maggio",
+            combustibleTanqueIzquierdo: "", combustibleTanqueDerecho: "", aceiteAgregado: "",
+            observaciones: "2E.4 D-237 controlled TEST canary"
+          }
+        });
+        return res.status(200).json({ ok: true, canaryAction, data });
+      }
+
+      const { rows: canaryRows } = await postgresQuery(
+        `SELECT f.flight_id,f.status,r.revision_number,r.flight_time_hours,r.time_in_service_hours,r.remarks
+           FROM app.flight_records f JOIN app.flight_record_revisions r ON r.flight_revision_id=f.current_revision_id
+          WHERE f.aircraft_id=$1::uuid AND f.record_source='MANUAL'
+            AND r.remarks LIKE '2E.4 D-237 controlled TEST canary%'
+          ORDER BY f.created_at DESC LIMIT 1`,
+        [aircraftId]
+      );
+      const canary = canaryRows[0];
+      if (!canary) return res.status(404).json({ ok: false, code: "FLIGHT_CANARY_NOT_FOUND", error: "Canary Flight Record not found." });
+
+      if (canaryAction === "CORRECT") {
+        const data = await saveLegacyFlightToPostgres({
+          userId: activeUserId,
+          aircraftId,
+          payload: {
+            modo: "update", id: canary.flight_id, dia: "27", mes: "09", anio: "2026",
+            desde: "TST", hasta: "TST", tiempoVueloJPI: 0.2, tiempoEnServicioGarmin: 0.2,
+            piloto: "Mateo Maggio", propietario: "Christian Maggio",
+            combustibleTanqueIzquierdo: "", combustibleTanqueDerecho: "", aceiteAgregado: "",
+            observaciones: "2E.4 D-237 controlled TEST canary corrected",
+            correctionReason: "2E.4 controlled correction canary"
+          }
+        });
+        return res.status(200).json({ ok: true, canaryAction, data });
+      }
+
+      if (canaryAction === "VOID") {
+        const data = await saveLegacyFlightToPostgres({
+          userId: activeUserId,
+          aircraftId,
+          payload: { modo: "delete", id: canary.flight_id, voidReason: "2E.4 controlled void canary" }
+        });
+        return res.status(200).json({ ok: true, canaryAction, data });
+      }
+      return res.status(400).json({ ok: false, code: "FLIGHT_CANARY_ACTION_INVALID", error: "Use CREATE, CORRECT or VOID." });
+    }
 
     const latestAircraft = histories?.historialAeronave?.at(-1) || null;
     const latestEngine = histories?.historialMotor?.at(-1) || null;
@@ -154,6 +221,7 @@ export default async function handler(req, res) {
       routing,
       routingDiagnostics,
       settingsWriteCapability,
+      flightWriteCapability,
       checks,
       paritySummary: {
         aircrafts: aircrafts.length,
