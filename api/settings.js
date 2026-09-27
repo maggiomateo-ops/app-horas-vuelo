@@ -1,6 +1,10 @@
 import { requireAuth } from "./_auth.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
-import { getLegacySettingsShapeFromPostgres } from "./_postgresSettingsParityAdapter.js";
+import {
+  getLegacySettingsShapeFromPostgres,
+  saveLegacySettingsShapeToPostgres,
+} from "./_postgresSettingsParityAdapter.js";
+import { resolveSettingsWriteCapability } from "./_settingsWriteCapability.js";
 import {
   getSettingsFromSheets,
   saveSettingsToSheets,
@@ -37,12 +41,14 @@ export default async function handler(req, res) {
   }
 
   let source;
+  let settingsWriteCapability;
   try {
     source = resolveDataSource("SETTINGS_DATA_SOURCE");
+    settingsWriteCapability = resolveSettingsWriteCapability(source);
   } catch {
     return res.status(500).json({
       ok: false,
-      error: "La fuente de datos de Settings no esta configurada correctamente.",
+      error: "La fuente o capacidad de escritura de Settings no esta configurada correctamente.",
     });
   }
 
@@ -64,14 +70,29 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    if (source === DATA_SOURCE.POSTGRES) {
+    if (source === DATA_SOURCE.POSTGRES && !settingsWriteCapability.enabled) {
       return res.status(503).json({
         ok: false,
-        error: "La escritura de Settings en Postgres todavia no esta habilitada en TEST.",
+        error: "La escritura de Settings en Postgres esta deshabilitada en este Preview.",
       });
     }
 
     try {
+      if (source === DATA_SOURCE.POSTGRES) {
+        const result = await saveLegacySettingsShapeToPostgres({
+          userId,
+          aircraftId,
+          settings: body.settings,
+        });
+
+        return res.status(200).json({
+          ok: true,
+          settings: result.settings,
+          changed: result.changed,
+          changedPaths: result.changedPaths,
+        });
+      }
+
       const settings = await saveSettingsToSheets({
         userId,
         aircraftId,
@@ -79,11 +100,14 @@ export default async function handler(req, res) {
       });
       return res.status(200).json({ ok: true, settings });
     } catch (error) {
+      const exposeMessage = [400, 403, 409, 422].includes(error.statusCode);
+
       return res.status(error.statusCode || 502).json({
         ok: false,
-        error: error.statusCode === 403
+        error: exposeMessage
           ? error.message
           : "No se pudieron guardar los settings.",
+        code: exposeMessage ? error.code : undefined,
       });
     }
   }
