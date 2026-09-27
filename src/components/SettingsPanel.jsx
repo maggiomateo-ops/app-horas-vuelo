@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SettingsUsersPanel from "./SettingsUsersPanel";
 
 const SETTINGS_TABS = [
@@ -9,6 +9,18 @@ const SETTINGS_TABS = [
   { id: "thresholds", label: "Umbrales" },
   { id: "annual", label: "Utilizacion" },
 ];
+
+const SETTINGS_WRITE_MODE = Object.freeze({
+  LEGACY_FULL: "LEGACY_FULL",
+  CANONICAL_SUBSET: "CANONICAL_SUBSET",
+  DISABLED: "DISABLED",
+});
+
+const DISABLED_WRITE_CAPABILITY = Object.freeze({
+  enabled: false,
+  mode: SETTINGS_WRITE_MODE.DISABLED,
+  editablePaths: [],
+});
 
 function updateNestedValue(source, path, value) {
   const clone = structuredClone(source);
@@ -22,7 +34,15 @@ function updateNestedValue(source, path, value) {
   return clone;
 }
 
-function SettingsField({ label, type = "text", value, onChange, step, placeholder }) {
+function SettingsField({
+  label,
+  type = "text",
+  value,
+  onChange,
+  step,
+  placeholder,
+  disabled = false,
+}) {
   return (
     <label className="settings-field">
       <span>{label}</span>
@@ -32,12 +52,13 @@ function SettingsField({ label, type = "text", value, onChange, step, placeholde
         step={step}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
       />
     </label>
   );
 }
 
-function OwnerOptionsField({ value, onChange }) {
+function OwnerOptionsField({ value, onChange, disabled = false }) {
   const [inputValue, setInputValue] = useState(value.join(", "));
 
   useEffect(() => {
@@ -45,6 +66,10 @@ function OwnerOptionsField({ value, onChange }) {
   }, [value]);
 
   const commitValue = () => {
+    if (disabled) {
+      return;
+    }
+
     onChange(
       inputValue
         .split(",")
@@ -61,6 +86,7 @@ function OwnerOptionsField({ value, onChange }) {
         value={inputValue}
         onChange={(event) => setInputValue(event.target.value)}
         onBlur={commitValue}
+        disabled={disabled}
       />
     </label>
   );
@@ -85,10 +111,78 @@ function SettingsPanel({
   const [saveMessage, setSaveMessage] = useState("");
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [writeCapability, setWriteCapability] = useState(DISABLED_WRITE_CAPABILITY);
+  const [writeCapabilityLoading, setWriteCapabilityLoading] = useState(true);
 
   useEffect(() => {
     setDraft(settings);
   }, [settings]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let ignore = false;
+
+    async function loadWriteCapability() {
+      try {
+        setWriteCapabilityLoading(true);
+        const response = await fetch("/api/session", {
+          method: "GET",
+          credentials: "include",
+          signal: controller.signal,
+        });
+
+        if (response.status === 401) {
+          onUnauthorized?.();
+          return;
+        }
+
+        const result = await response.json().catch(() => null);
+        if (!response.ok || !result?.authenticated || !result?.user) {
+          throw new Error("No se pudo validar la capacidad de escritura de Settings.");
+        }
+
+        if (!ignore) {
+          setWriteCapability({
+            enabled: result.user.settingsWritesEnabled === true,
+            mode: String(result.user.settingsWriteMode || SETTINGS_WRITE_MODE.DISABLED),
+            editablePaths: Array.isArray(result.user.settingsEditablePaths)
+              ? result.user.settingsEditablePaths
+              : null,
+          });
+        }
+      } catch (capabilityError) {
+        if (capabilityError.name === "AbortError") {
+          return;
+        }
+
+        if (!ignore) {
+          setWriteCapability(DISABLED_WRITE_CAPABILITY);
+        }
+      } finally {
+        if (!ignore) {
+          setWriteCapabilityLoading(false);
+        }
+      }
+    }
+
+    loadWriteCapability();
+
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [onUnauthorized]);
+
+  const editablePathSet = useMemo(
+    () => new Set(writeCapability.editablePaths || []),
+    [writeCapability.editablePaths]
+  );
+  const effectiveCanEdit = canEdit && writeCapability.enabled;
+  const canonicalSubsetMode =
+    writeCapability.mode === SETTINGS_WRITE_MODE.CANONICAL_SUBSET;
+  const canEditPath = (path) =>
+    effectiveCanEdit &&
+    (writeCapability.mode === SETTINGS_WRITE_MODE.LEGACY_FULL || editablePathSet.has(path));
 
   const canViewUsers =
     isGlobalAdmin || String(aircraftRole || "").trim().toUpperCase() === "OWNER";
@@ -108,7 +202,7 @@ function SettingsPanel({
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!canEdit) {
+    if (!effectiveCanEdit) {
       return;
     }
 
@@ -125,6 +219,22 @@ function SettingsPanel({
     }
   };
 
+  const editStatusText = (() => {
+    if (!canEdit) {
+      return "Acceso de solo lectura.";
+    }
+    if (writeCapabilityLoading) {
+      return "Validando permisos de escritura...";
+    }
+    if (!writeCapability.enabled) {
+      return "Escritura deshabilitada en este entorno.";
+    }
+    if (canonicalSubsetMode) {
+      return "Edicion parcial habilitada para Settings canonicos.";
+    }
+    return "Editable para OWNER y ADMIN.";
+  })();
+
   return (
     <section className="settings-panel">
       <div className="dashboard-section-header">
@@ -135,9 +245,7 @@ function SettingsPanel({
           <h2 className="dashboard-title">Settings</h2>
         </div>
         <p className="dashboard-meta">
-          {activeSection === "aircraft"
-            ? (canEdit ? "Editable para OWNER y ADMIN." : "Acceso de solo lectura.")
-            : "Gestion de usuarios y accesos."}
+          {activeSection === "aircraft" ? editStatusText : "Gestion de usuarios y accesos."}
         </p>
       </div>
 
@@ -173,8 +281,15 @@ function SettingsPanel({
 
           {loading ? <p className="dashboard-status">Cargando settings...</p> : null}
           {error ? <p className="dashboard-status dashboard-status-error">{error}</p> : null}
-          {!canEdit ? (
-            <p className="dashboard-inline-note">Podés consultar estos valores, pero no modificarlos.</p>
+          {!effectiveCanEdit && !writeCapabilityLoading ? (
+            <p className="dashboard-inline-note">
+              Podés consultar estos valores, pero la escritura de Settings no está habilitada en este entorno.
+            </p>
+          ) : null}
+          {canonicalSubsetMode && effectiveCanEdit ? (
+            <p className="dashboard-inline-note">
+              En Postgres TEST solo podés editar la unidad de aceite, la próxima fecha de inspección anual y los tres umbrales amarillos. El resto permanece de solo lectura en esta etapa.
+            </p>
           ) : null}
 
           <div className="settings-tabs" role="tablist" aria-label="Tabs de settings">
@@ -193,28 +308,32 @@ function SettingsPanel({
           </div>
 
           <form className="settings-form" onSubmit={handleSubmit}>
-        <fieldset className="settings-readonly-fieldset" disabled={!canEdit}>
+        <fieldset className="settings-readonly-fieldset" disabled={!effectiveCanEdit}>
         {activeTab === "app" ? (
           <div className="settings-grid">
             <SettingsField
               label="Nombre visible"
               value={draft.appConfig.aircraftName}
               onChange={handleChange(["appConfig", "aircraftName"])}
+              disabled={!canEditPath("appConfig.aircraftName")}
             />
             <SettingsField
               label="Matricula"
               value={draft.appConfig.aircraftRegistration}
               onChange={handleChange(["appConfig", "aircraftRegistration"])}
+              disabled={!canEditPath("appConfig.aircraftRegistration")}
             />
             <SettingsField
               label="Unidad de aceite"
               value={draft.appConfig.oilUnitLabel}
               onChange={handleChange(["appConfig", "oilUnitLabel"])}
+              disabled={!canEditPath("appConfig.oilUnitLabel")}
             />
             <SettingsField
               label="Moneda"
               value={draft.appConfig.currency}
               onChange={handleChange(["appConfig", "currency"])}
+              disabled={!canEditPath("appConfig.currency")}
             />
           </div>
         ) : null}
@@ -224,16 +343,19 @@ function SettingsPanel({
             <OwnerOptionsField
               value={draft.operationalConfig.ownerOptions}
               onChange={handleChange(["operationalConfig", "ownerOptions"])}
+              disabled={!canEditPath("operationalConfig.ownerOptions")}
             />
             <SettingsField
               label="Origen predeterminado"
               value={draft.operationalConfig.defaultOrigin}
               onChange={handleChange(["operationalConfig", "defaultOrigin"])}
+              disabled={!canEditPath("operationalConfig.defaultOrigin")}
             />
             <SettingsField
               label="Destino predeterminado"
               value={draft.operationalConfig.defaultDestination}
               onChange={handleChange(["operationalConfig", "defaultDestination"])}
+              disabled={!canEditPath("operationalConfig.defaultDestination")}
             />
             <SettingsField
               label="Tiempo de vuelo JPI predeterminado"
@@ -245,6 +367,7 @@ function SettingsPanel({
                   value === "" ? "" : Number(value)
                 )
               }
+              disabled={!canEditPath("operationalConfig.defaultFlightTimeJPI")}
             />
             <SettingsField
               label="Tiempo en servicio Garmin predeterminado"
@@ -256,6 +379,7 @@ function SettingsPanel({
                   value === "" ? "" : Number(value)
                 )
               }
+              disabled={!canEditPath("operationalConfig.defaultServiceTimeGarmin")}
             />
           </div>
         ) : null}
@@ -270,6 +394,7 @@ function SettingsPanel({
                   type="date"
                   value={draft.kpiParams.annualInspection.nextDueDate}
                   onChange={handleChange(["kpiParams", "annualInspection", "nextDueDate"])}
+                  disabled={!canEditPath("kpiParams.annualInspection.nextDueDate")}
                 />
               </div>
             </div>
@@ -282,6 +407,7 @@ function SettingsPanel({
                   type="date"
                   value={draft.kpiParams.inspection50.lastInspectionDate}
                   onChange={handleChange(["kpiParams", "inspection50", "lastInspectionDate"])}
+                  disabled={!canEditPath("kpiParams.inspection50.lastInspectionDate")}
                 />
               </div>
             </div>
@@ -294,6 +420,7 @@ function SettingsPanel({
                   type="date"
                   value={draft.kpiParams.inspection100.lastInspectionDate}
                   onChange={handleChange(["kpiParams", "inspection100", "lastInspectionDate"])}
+                  disabled={!canEditPath("kpiParams.inspection100.lastInspectionDate")}
                 />
               </div>
             </div>
@@ -308,6 +435,7 @@ function SettingsPanel({
               step="0.01"
               value={draft.kpiParams.oil.currentPrice}
               onChange={handleChange(["kpiParams", "oil", "currentPrice"])}
+              disabled={!canEditPath("kpiParams.oil.currentPrice")}
             />
             <SettingsField
               label="Ventana movil (meses)"
@@ -315,6 +443,7 @@ function SettingsPanel({
               step="1"
               value={draft.kpiParams.oil.analysisWindowMonths}
               onChange={handleChange(["kpiParams", "oil", "analysisWindowMonths"])}
+              disabled={!canEditPath("kpiParams.oil.analysisWindowMonths")}
             />
           </div>
         ) : null}
@@ -334,10 +463,12 @@ function SettingsPanel({
                     "annualInspection",
                     "dangerDays",
                   ])}
+                  disabled={!canEditPath("kpiParams.thresholds.annualInspection.dangerDays")}
                 />
                 <SettingsField
                   label="Amarillo desde (dias)"
                   type="number"
+                  step="0.1"
                   value={draft.kpiParams.thresholds.annualInspection.warningDays}
                   onChange={handleChange([
                     "kpiParams",
@@ -345,6 +476,7 @@ function SettingsPanel({
                     "annualInspection",
                     "warningDays",
                   ])}
+                  disabled={!canEditPath("kpiParams.thresholds.annualInspection.warningDays")}
                 />
               </div>
             </div>
@@ -362,10 +494,12 @@ function SettingsPanel({
                     "inspection50",
                     "dangerHours",
                   ])}
+                  disabled={!canEditPath("kpiParams.thresholds.inspection50.dangerHours")}
                 />
                 <SettingsField
                   label="Amarillo desde (hrs)"
                   type="number"
+                  step="0.1"
                   value={draft.kpiParams.thresholds.inspection50.warningHours}
                   onChange={handleChange([
                     "kpiParams",
@@ -373,6 +507,7 @@ function SettingsPanel({
                     "inspection50",
                     "warningHours",
                   ])}
+                  disabled={!canEditPath("kpiParams.thresholds.inspection50.warningHours")}
                 />
               </div>
             </div>
@@ -390,10 +525,12 @@ function SettingsPanel({
                     "inspection100",
                     "dangerHours",
                   ])}
+                  disabled={!canEditPath("kpiParams.thresholds.inspection100.dangerHours")}
                 />
                 <SettingsField
                   label="Amarillo desde (hrs)"
                   type="number"
+                  step="0.1"
                   value={draft.kpiParams.thresholds.inspection100.warningHours}
                   onChange={handleChange([
                     "kpiParams",
@@ -401,6 +538,7 @@ function SettingsPanel({
                     "inspection100",
                     "warningHours",
                   ])}
+                  disabled={!canEditPath("kpiParams.thresholds.inspection100.warningHours")}
                 />
               </div>
             </div>
@@ -415,13 +553,14 @@ function SettingsPanel({
               step="0.1"
               value={draft.kpiParams.annualUtilizationLegacy["2022"]}
               onChange={handleChange(["kpiParams", "annualUtilizationLegacy", "2022"])}
+              disabled={!canEditPath("kpiParams.annualUtilizationLegacy.2022")}
             />
           </div>
         ) : null}
 
         </fieldset>
 
-        {canEdit ? (
+        {effectiveCanEdit ? (
           <div className="settings-actions">
             <button type="submit" className="settings-save-button" disabled={loading || isSaving}>
               {isSaving ? "Guardando..." : "Guardar settings"}
