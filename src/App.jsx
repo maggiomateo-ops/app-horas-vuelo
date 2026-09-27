@@ -519,8 +519,10 @@ function App() {
   }, [systemPrefersDark, themeMode]);
 
   const normalizarPropietarioSelect = (valor) => {
-    const u = String(valor ?? "").trim().toUpperCase();
-    return settings.operationalConfig.ownerOptions.includes(u) ? u : "";
+    const normalized = String(valor ?? "").trim().toLocaleLowerCase();
+    return settings.operationalConfig.ownerOptions.find(
+      (option) => String(option).trim().toLocaleLowerCase() === normalized
+    ) || "";
   };
 
   const limpiarFormulario = () => {
@@ -646,11 +648,11 @@ function App() {
       return;
     }
 
-    const confirmarBorrado = window.confirm(
-      "Se eliminara el ultimo vuelo cargado de la planilla. Deseas continuar?"
+    const voidReason = window.prompt(
+      "Este vuelo no se borra: quedará ANULADO y conservará su historial. Ingresá el motivo de anulación:"
     );
 
-    if (!confirmarBorrado) {
+    if (!voidReason?.trim()) {
       return;
     }
 
@@ -670,6 +672,7 @@ function App() {
           aircraft_id: selectedAircraft.aircraft_id,
           modo: "delete",
           id: ultimoInput.id,
+          voidReason: voidReason.trim(),
         }),
       });
 
@@ -687,7 +690,7 @@ function App() {
 
       limpiarFormulario();
       setUltimoInput(null);
-      setMensajeExito("Ultimo vuelo eliminado correctamente.");
+      setMensajeExito("Vuelo anulado correctamente.");
     } catch (error) {
       setMensajeError(error.message || "Hubo un error al borrar el vuelo.");
     } finally {
@@ -755,6 +758,14 @@ function App() {
     setFormErrors({});
 
     const [anio, mes, dia] = fecha.split("-");
+    let correctionReason = "";
+    if (editingId) {
+      correctionReason = window.prompt("Ingresá el motivo de la corrección del vuelo:")?.trim() || "";
+      if (!correctionReason) {
+        setMensajeError("Para corregir un vuelo tenés que indicar el motivo.");
+        return;
+      }
+    }
 
     const payload = {
       aircraft_id: selectedAircraft.aircraft_id,
@@ -775,6 +786,7 @@ function App() {
       combustibleTanqueDerecho:
         combustibleTanqueDerecho === "" ? "" : Number(combustibleTanqueDerecho),
       observaciones: observaciones.trim(),
+      ...(editingId ? { correctionReason } : {}),
     };
 
     try {
@@ -1313,7 +1325,7 @@ function App() {
                   Replicar
                 </button>
                 <button type="button" onClick={handleDeleteUltimoVuelo} disabled={loading} className="form-action-button is-danger">
-                  Borrar vuelo
+                  Anular vuelo
                 </button>
               </div>
             </section>
