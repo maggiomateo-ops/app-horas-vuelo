@@ -1,7 +1,8 @@
 import { requireAuth } from "./_auth.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { saveFlightFromSheets } from "./_flightRepository.js";
-import { requireCanonicalOwnershipReadyForFlightFromPostgres } from "./_postgresFlightRepository.js";
+import { requireCanonicalOwnershipReadyForFlightFromPostgres, saveLegacyFlightToPostgres } from "./_postgresFlightRepository.js";
+import { resolvePostgresFlightWriteCapability } from "./_settingsWriteCapability.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -32,11 +33,16 @@ export default async function handler(req, res) {
 
     if (source === DATA_SOURCE.POSTGRES) {
       await requireCanonicalOwnershipReadyForFlightFromPostgres({ userId, aircraftId });
-      return res.status(503).json({
-        ok: false,
-        code: "POSTGRES_FLIGHT_WRITES_NOT_ENABLED",
-        error: "Ownership canonico listo. Las mutaciones de vuelos permanecen bloqueadas hasta habilitar el contrato Postgres de Flight writes.",
-      });
+      const capability = resolvePostgresFlightWriteCapability(source);
+      if (!capability.enabled) {
+        return res.status(503).json({
+          ok: false,
+          code: "POSTGRES_FLIGHT_WRITES_NOT_ENABLED",
+          error: "Ownership canonico listo. Las mutaciones de vuelos permanecen bloqueadas hasta habilitar explicitamente el gate de Flight writes.",
+        });
+      }
+      const data = await saveLegacyFlightToPostgres({ userId, aircraftId, payload });
+      return res.status(200).json(data);
     }
 
     delete payload.userId;
