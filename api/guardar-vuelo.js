@@ -1,6 +1,7 @@
 import { requireAuth } from "./_auth.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { saveFlightFromSheets } from "./_flightRepository.js";
+import { requireCanonicalOwnershipReadyForFlightFromPostgres } from "./_postgresFlightRepository.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -8,46 +9,34 @@ export default async function handler(req, res) {
   }
 
   const session = requireAuth(req, res);
-
-  if (!session) {
-    return undefined;
-  }
+  if (!session) return undefined;
 
   let source;
   try {
     source = resolveDataSource("FLIGHT_DATA_SOURCE");
   } catch {
-    return res.status(500).json({
-      ok: false,
-      error: "La fuente de datos de vuelos no esta configurada correctamente.",
-    });
-  }
-
-  if (source === DATA_SOURCE.POSTGRES) {
-    return res.status(503).json({
-      ok: false,
-      error:
-        "Las mutaciones de vuelos en Postgres TEST estan bloqueadas hasta completar el gate de ownership canonico.",
-    });
+    return res.status(500).json({ ok: false, error: "La fuente de datos de vuelos no esta configurada correctamente." });
   }
 
   try {
     const userId = String(session.userId || "").trim();
     const payload = req.body && typeof req.body === "object" ? { ...req.body } : {};
-    const aircraftId = String(
-      payload.aircraft_id || process.env.LEGACY_AIRCRAFT_ID || ""
-    ).trim();
+    const aircraftId = String(payload.aircraft_id || process.env.LEGACY_AIRCRAFT_ID || "").trim();
 
     if (!userId) {
-      return res
-        .status(500)
-        .json({ ok: false, error: "La sesion no contiene un userId valido." });
+      return res.status(500).json({ ok: false, error: "La sesion no contiene un userId valido." });
+    }
+    if (!aircraftId) {
+      return res.status(500).json({ ok: false, error: "Falta aircraft_id o LEGACY_AIRCRAFT_ID." });
     }
 
-    if (!aircraftId) {
-      return res
-        .status(500)
-        .json({ ok: false, error: "Falta aircraft_id o LEGACY_AIRCRAFT_ID." });
+    if (source === DATA_SOURCE.POSTGRES) {
+      await requireCanonicalOwnershipReadyForFlightFromPostgres({ userId, aircraftId });
+      return res.status(503).json({
+        ok: false,
+        code: "POSTGRES_FLIGHT_WRITES_NOT_ENABLED",
+        error: "Ownership canonico listo. Las mutaciones de vuelos permanecen bloqueadas hasta habilitar el contrato Postgres de Flight writes.",
+      });
     }
 
     delete payload.userId;
@@ -62,6 +51,7 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(error.statusCode || 500).json({
       ok: false,
+      code: error.code || undefined,
       error: error.message || "Error interno del servidor.",
     });
   }
