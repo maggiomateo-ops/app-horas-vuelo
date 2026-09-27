@@ -177,15 +177,18 @@ function SettingsPanel({
     () => new Set(writeCapability.editablePaths || []),
     [writeCapability.editablePaths]
   );
-  const effectiveCanEdit = canEdit && writeCapability.enabled;
   const canonicalSubsetMode =
     writeCapability.mode === SETTINGS_WRITE_MODE.CANONICAL_SUBSET;
+  const isOwner = String(aircraftRole || "").trim().toUpperCase() === "OWNER";
+  const effectiveCanEdit =
+    canEdit &&
+    writeCapability.enabled &&
+    (!canonicalSubsetMode || isOwner);
   const canEditPath = (path) =>
     effectiveCanEdit &&
     (writeCapability.mode === SETTINGS_WRITE_MODE.LEGACY_FULL || editablePathSet.has(path));
 
-  const canViewUsers =
-    isGlobalAdmin || String(aircraftRole || "").trim().toUpperCase() === "OWNER";
+  const canViewUsers = isGlobalAdmin || isOwner;
 
   useEffect(() => {
     if (!canViewUsers && activeSection === "users") {
@@ -228,6 +231,9 @@ function SettingsPanel({
     }
     if (!writeCapability.enabled) {
       return "Escritura deshabilitada en este entorno.";
+    }
+    if (canonicalSubsetMode && !isOwner) {
+      return "La edicion Postgres TEST requiere rol OWNER.";
     }
     if (canonicalSubsetMode) {
       return "Edicion parcial habilitada para Settings canonicos.";
@@ -283,7 +289,7 @@ function SettingsPanel({
           {error ? <p className="dashboard-status dashboard-status-error">{error}</p> : null}
           {!effectiveCanEdit && !writeCapabilityLoading ? (
             <p className="dashboard-inline-note">
-              Podés consultar estos valores, pero la escritura de Settings no está habilitada en este entorno.
+              Podés consultar estos valores, pero la escritura de Settings no está habilitada para este acceso en este entorno.
             </p>
           ) : null}
           {canonicalSubsetMode && effectiveCanEdit ? (
