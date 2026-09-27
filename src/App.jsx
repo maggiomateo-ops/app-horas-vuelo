@@ -819,7 +819,10 @@ function App() {
           : "Vuelo guardado correctamente."
       );
 
-      setUltimoInput(payload);
+      setUltimoInput({
+        ...payload,
+        id: result.id ?? payload.id,
+      });
       limpiarFormulario();
     } catch (error) {
       setMensajeError(error.message || "Hubo un error al guardar el vuelo.");
