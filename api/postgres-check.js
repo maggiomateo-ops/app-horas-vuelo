@@ -103,8 +103,10 @@ export default async function handler(req, res) {
         ])
       : [null, null];
 
-    if (req.method === "POST") {
-      const canaryAction = String(req.body?.canaryAction || "").trim().toUpperCase();
+    const canaryQueryAction = String(req.query?.canaryAction || "").trim().toUpperCase();
+    const isCanaryRequest = req.method === "POST" || canaryQueryAction.length > 0;
+    if (isCanaryRequest) {
+      const canaryAction = String(req.body?.canaryAction || canaryQueryAction).trim().toUpperCase();
       if (!flightWriteCapability.enabled || flightWriteCapability.mode !== "CANONICAL_REVISIONED") {
         return res.status(409).json({ ok: false, code: "FLIGHT_CANARY_GATE_DISABLED", error: "Flight canary gate is disabled." });
       }
