@@ -14,51 +14,28 @@ function resolveParityCapabilities() {
     settingsWriteMode: settingsWriteCapability.mode,
     settingsEditablePaths: settingsWriteCapability.editablePaths,
     flightWritesEnabled: flightSource !== DATA_SOURCE.POSTGRES,
+    flightWriteMode: flightSource === DATA_SOURCE.POSTGRES ? "DISABLED" : "LEGACY_FULL",
   };
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") {
-    return res.status(405).json({ ok: false, error: "Metodo no permitido." });
-  }
-
+  if (req.method !== "GET") return res.status(405).json({ ok: false, error: "Metodo no permitido." });
   const session = getSession(req);
-
-  if (!session) {
-    return res.status(401).json({ ok: false, authenticated: false });
-  }
+  if (!session) return res.status(401).json({ ok: false, authenticated: false });
 
   let capabilities;
   try {
     capabilities = resolveParityCapabilities();
   } catch {
-    return res.status(500).json({
-      ok: false,
-      authenticated: false,
-      error: "Las fuentes de datos o capacidades de escritura no estan configuradas correctamente.",
-    });
+    return res.status(500).json({ ok: false, authenticated: false, error: "Las fuentes de datos o capacidades de escritura no estan configuradas correctamente." });
   }
 
   if (session.version === 2) {
     return res.status(200).json({
-      ok: true,
-      authenticated: true,
-      user: {
-        userId: session.userId,
-        email: session.email,
-        name: session.name,
-        isAdmin: session.isAdmin === true,
-        ...capabilities,
-      },
+      ok: true, authenticated: true,
+      user: { userId: session.userId, email: session.email, name: session.name, isAdmin: session.isAdmin === true, ...capabilities },
     });
   }
 
-  return res.status(200).json({
-    ok: true,
-    authenticated: true,
-    user: {
-      username: session.username,
-      ...capabilities,
-    },
-  });
+  return res.status(200).json({ ok: true, authenticated: true, user: { username: session.username, ...capabilities } });
 }
