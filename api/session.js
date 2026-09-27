@@ -1,14 +1,18 @@
 import { getSession } from "./_auth.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
+import { resolveSettingsWriteCapability } from "./_settingsWriteCapability.js";
 
 function resolveParityCapabilities() {
   const identitySource = resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE");
   const settingsSource = resolveDataSource("SETTINGS_DATA_SOURCE");
   const flightSource = resolveDataSource("FLIGHT_DATA_SOURCE");
+  const settingsWriteCapability = resolveSettingsWriteCapability(settingsSource);
 
   return {
     legacyUserManagementEnabled: identitySource !== DATA_SOURCE.POSTGRES,
-    settingsWritesEnabled: settingsSource !== DATA_SOURCE.POSTGRES,
+    settingsWritesEnabled: settingsWriteCapability.enabled,
+    settingsWriteMode: settingsWriteCapability.mode,
+    settingsEditablePaths: settingsWriteCapability.editablePaths,
     flightWritesEnabled: flightSource !== DATA_SOURCE.POSTGRES,
   };
 }
@@ -31,7 +35,7 @@ export default async function handler(req, res) {
     return res.status(500).json({
       ok: false,
       authenticated: false,
-      error: "Las fuentes de datos no estan configuradas correctamente.",
+      error: "Las fuentes de datos o capacidades de escritura no estan configuradas correctamente.",
     });
   }
 
