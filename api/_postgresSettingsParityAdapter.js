@@ -1,11 +1,34 @@
 import { DEFAULT_SETTINGS, normalizeSettings } from "../src/services/settingsService.js";
 import { postgresQuery } from "./_postgres.js";
-import { getAircraftSettingsProjectionFromPostgres } from "./_postgresSettingsRepository.js";
+import {
+  getAircraftSettingsProjectionFromPostgres,
+  saveCanonicalSettingsSubsetToPostgres,
+} from "./_postgresSettingsRepository.js";
+import { POSTGRES_SETTINGS_EDITABLE_PATHS } from "./_settingsWriteCapability.js";
 
 const OIL_UNIT_LABEL = Object.freeze({
   US_QUART: "Qrt",
   LITER: "L",
 });
+const OIL_UNIT_CANONICAL = Object.freeze({
+  QRT: "US_QUART",
+  QUART: "US_QUART",
+  US_QUART: "US_QUART",
+  L: "LITER",
+  LITER: "LITER",
+  LITRE: "LITER",
+});
+const EDITABLE_PATH_SET = new Set(POSTGRES_SETTINGS_EDITABLE_PATHS);
+
+function adapterError(message, code, statusCode = 400, metadata = null) {
+  const error = new Error(message);
+  error.code = code;
+  error.statusCode = statusCode;
+  if (metadata) {
+    error.metadata = metadata;
+  }
+  return error;
+}
 
 function asNumber(value) {
   if (value === null || value === undefined || value === "") {
@@ -124,6 +147,101 @@ function chooseNumber(...values) {
   return null;
 }
 
+function flattenLeafValues(value, prefix = "", result = new Map()) {
+  if (Array.isArray(value) || value === null || typeof value !== "object") {
+    result.set(prefix, value);
+    return result;
+  }
+
+  for (const [key, nestedValue] of Object.entries(value)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    flattenLeafValues(nestedValue, path, result);
+  }
+
+  return result;
+}
+
+function sameValue(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function unsupportedChangedPaths(currentSettings, requestedSettings) {
+  const currentLeaves = flattenLeafValues(currentSettings);
+  const requestedLeaves = flattenLeafValues(requestedSettings);
+  const paths = new Set([...currentLeaves.keys(), ...requestedLeaves.keys()]);
+
+  return [...paths]
+    .filter((path) => !EDITABLE_PATH_SET.has(path))
+    .filter((path) => !sameValue(currentLeaves.get(path), requestedLeaves.get(path)))
+    .sort();
+}
+
+function normalizeOilUnit(value) {
+  const normalized = String(value || "").trim().toUpperCase();
+  const canonical = OIL_UNIT_CANONICAL[normalized];
+
+  if (!canonical) {
+    throw adapterError(
+      "Unidad de aceite no valida. Usar Qrt o L.",
+      "SETTINGS_INVALID_OIL_UNIT",
+      422
+    );
+  }
+
+  return canonical;
+}
+
+function normalizeIsoDate(value, label) {
+  const normalized = String(value || "").trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    throw adapterError(`${label} debe tener formato AAAA-MM-DD.`, "SETTINGS_INVALID_DATE", 422);
+  }
+
+  const parsed = new Date(`${normalized}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== normalized) {
+    throw adapterError(`${label} no es una fecha valida.`, "SETTINGS_INVALID_DATE", 422);
+  }
+
+  return normalized;
+}
+
+function normalizeAlert(value, label) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric) || numeric < 0 || Math.abs(numeric * 10 - Math.round(numeric * 10)) > 1e-9) {
+    throw adapterError(
+      `${label} debe ser un numero mayor o igual a 0 con hasta un decimal.`,
+      "SETTINGS_INVALID_ALERT_THRESHOLD",
+      422
+    );
+  }
+
+  return Math.round(numeric * 10) / 10;
+}
+
+function desiredCanonicalSubset(settings) {
+  return {
+    defaultOilUnit: normalizeOilUnit(settings.appConfig.oilUnitLabel),
+    annualDueDate: normalizeIsoDate(
+      settings.kpiParams.annualInspection.nextDueDate,
+      "Proxima fecha de inspeccion anual"
+    ),
+    annualWarning: normalizeAlert(
+      settings.kpiParams.thresholds.annualInspection.warningDays,
+      "Umbral amarillo de inspeccion anual"
+    ),
+    inspection50Warning: normalizeAlert(
+      settings.kpiParams.thresholds.inspection50.warningHours,
+      "Umbral amarillo de inspeccion 50 hrs"
+    ),
+    inspection100Warning: normalizeAlert(
+      settings.kpiParams.thresholds.inspection100.warningHours,
+      "Umbral amarillo de inspeccion 100 hrs"
+    ),
+  };
+}
+
 export async function getLegacySettingsShapeFromPostgres({ userId, aircraftId }) {
   const projection = await getAircraftSettingsProjectionFromPostgres({ userId, aircraftId });
   const canonicalAircraftId = projection.aircraft.aircraft_id;
@@ -169,8 +287,8 @@ export async function getLegacySettingsShapeFromPostgres({ userId, aircraftId })
     );
   settings.kpiParams.thresholds.annualInspection.warningDays =
     chooseNumber(
-      annualThresholds.warningDays,
       annual?.alert_before_value,
+      annualThresholds.warningDays,
       DEFAULT_SETTINGS.kpiParams.thresholds.annualInspection.warningDays
     );
 
@@ -181,8 +299,8 @@ export async function getLegacySettingsShapeFromPostgres({ userId, aircraftId })
     );
   settings.kpiParams.thresholds.inspection50.warningHours =
     chooseNumber(
-      inspection50Thresholds.warningHours,
       inspection50?.alert_before_value,
+      inspection50Thresholds.warningHours,
       DEFAULT_SETTINGS.kpiParams.thresholds.inspection50.warningHours
     );
 
@@ -193,8 +311,8 @@ export async function getLegacySettingsShapeFromPostgres({ userId, aircraftId })
     );
   settings.kpiParams.thresholds.inspection100.warningHours =
     chooseNumber(
-      inspection100Thresholds.warningHours,
       inspection100?.alert_before_value,
+      inspection100Thresholds.warningHours,
       DEFAULT_SETTINGS.kpiParams.thresholds.inspection100.warningHours
     );
 
@@ -205,4 +323,45 @@ export async function getLegacySettingsShapeFromPostgres({ userId, aircraftId })
   settings.kpiParams.annualUtilizationLegacy["2022"] = "";
 
   return normalizeSettings(settings);
+}
+
+export async function saveLegacySettingsShapeToPostgres({
+  userId,
+  aircraftId,
+  settings,
+}) {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    throw adapterError(
+      "El payload de settings no es valido.",
+      "SETTINGS_INVALID_PAYLOAD",
+      400
+    );
+  }
+
+  const currentSettings = await getLegacySettingsShapeFromPostgres({ userId, aircraftId });
+  const requestedSettings = normalizeSettings(settings);
+  const blockedPaths = unsupportedChangedPaths(currentSettings, requestedSettings);
+
+  if (blockedPaths.length > 0) {
+    throw adapterError(
+      `Estos campos son de solo lectura en Postgres TEST: ${blockedPaths.join(", ")}.`,
+      "SETTINGS_FIELD_NOT_WRITABLE",
+      409,
+      { blockedPaths }
+    );
+  }
+
+  const desired = desiredCanonicalSubset(requestedSettings);
+  const result = await saveCanonicalSettingsSubsetToPostgres({
+    userId,
+    aircraftId,
+    desired,
+  });
+  const persistedSettings = await getLegacySettingsShapeFromPostgres({ userId, aircraftId });
+
+  return {
+    settings: persistedSettings,
+    changed: result.changed,
+    changedPaths: result.changedPaths,
+  };
 }
