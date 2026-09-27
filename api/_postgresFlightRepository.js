@@ -464,7 +464,7 @@ export async function saveLegacyFlightToPostgres({ userId, aircraftId, payload }
       return {ok:true,modo:"delete",id:flightId,changed:true,message:"Vuelo anulado correctamente"};
     }
 
-    const refs=await resolveManualReferences(client,normalizedAircraftId,payload);
+    const refs=await resolveManualReferences(client,normalizedAircraftId,payload,legacyFlightDate(payload));
     const state=revisionState(payload,refs);
 
     if(mode==="create"){
