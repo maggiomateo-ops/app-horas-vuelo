@@ -1,20 +1,21 @@
 import { getSession } from "./_auth.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
-import { resolveSettingsWriteCapability } from "./_settingsWriteCapability.js";
+import { resolveSettingsWriteCapability, resolvePostgresFlightWriteCapability } from "./_settingsWriteCapability.js";
 
 function resolveParityCapabilities() {
   const identitySource = resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE");
   const settingsSource = resolveDataSource("SETTINGS_DATA_SOURCE");
   const flightSource = resolveDataSource("FLIGHT_DATA_SOURCE");
   const settingsWriteCapability = resolveSettingsWriteCapability(settingsSource);
+  const flightWriteCapability = resolvePostgresFlightWriteCapability(flightSource);
 
   return {
     legacyUserManagementEnabled: identitySource !== DATA_SOURCE.POSTGRES,
     settingsWritesEnabled: settingsWriteCapability.enabled,
     settingsWriteMode: settingsWriteCapability.mode,
     settingsEditablePaths: settingsWriteCapability.editablePaths,
-    flightWritesEnabled: flightSource !== DATA_SOURCE.POSTGRES,
-    flightWriteMode: flightSource === DATA_SOURCE.POSTGRES ? "DISABLED" : "LEGACY_FULL",
+    flightWritesEnabled: flightWriteCapability.enabled,
+    flightWriteMode: flightWriteCapability.mode,
   };
 }
 
