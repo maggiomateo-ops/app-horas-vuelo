@@ -58,3 +58,13 @@ export function resolveSettingsWriteCapability(settingsSource) {
     editablePaths: enabled ? [...POSTGRES_SETTINGS_EDITABLE_PATHS] : [],
   };
 }
+
+
+export function resolvePostgresFlightWriteCapability(flightSource) {
+  const normalizedSource = String(flightSource || "").trim().toUpperCase();
+  if (normalizedSource !== "POSTGRES") return { enabled: true, mode: "LEGACY_FULL" };
+  const raw = String(process.env.POSTGRES_FLIGHT_WRITES_ENABLED || "").trim().toLowerCase();
+  if (!raw || raw === "false") return { enabled: false, mode: "DISABLED" };
+  if (raw === "true") return { enabled: true, mode: "CANONICAL_REVISIONED" };
+  throw capabilityError("POSTGRES_FLIGHT_WRITES_ENABLED debe ser true, false o estar ausente.", "FLIGHT_WRITE_FLAG_INVALID");
+}
