@@ -2,7 +2,8 @@ import { getSession } from "./_auth.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { resolveSettingsWriteCapability, resolvePostgresFlightWriteCapability } from "./_settingsWriteCapability.js";
 
-// Deployment marker: refresh Preview environment after Flight write gate activation.\nfunction resolveParityCapabilities() {
+// Deployment marker: refresh Preview environment after Flight write gate activation.
+function resolveParityCapabilities() {
   const identitySource = resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE");
   const settingsSource = resolveDataSource("SETTINGS_DATA_SOURCE");
   const flightSource = resolveDataSource("FLIGHT_DATA_SOURCE");
