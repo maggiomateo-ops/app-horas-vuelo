@@ -147,6 +147,25 @@ function chooseNumber(...values) {
   return null;
 }
 
+function legacyDate(value) {
+  if (!value) {
+    return "";
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  const normalized = String(value).trim();
+  const isoMatch = normalized.match(/^\d{4}-\d{2}-\d{2}/);
+  if (isoMatch) {
+    return isoMatch[0];
+  }
+
+  const parsed = new Date(normalized);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString().slice(0, 10) : "";
+}
+
 function flattenLeafValues(value, prefix = "", result = new Map()) {
   if (Array.isArray(value) || value === null || typeof value !== "object") {
     result.set(prefix, value);
@@ -266,15 +285,13 @@ export async function getLegacySettingsShapeFromPostgres({ userId, aircraftId })
 
   settings.operationalConfig.ownerOptions = ownerOptions;
 
-  settings.kpiParams.annualInspection.nextDueDate = annual?.due_date
-    ? String(annual.due_date).slice(0, 10)
-    : "";
-  settings.kpiParams.inspection50.lastInspectionDate = String(
-    inspection50Legacy.lastInspectionDate || ""
-  ).slice(0, 10);
-  settings.kpiParams.inspection100.lastInspectionDate = String(
-    inspection100Legacy.lastInspectionDate || ""
-  ).slice(0, 10);
+  settings.kpiParams.annualInspection.nextDueDate = legacyDate(annual?.due_date);
+  settings.kpiParams.inspection50.lastInspectionDate = legacyDate(
+    inspection50Legacy.lastInspectionDate
+  );
+  settings.kpiParams.inspection100.lastInspectionDate = legacyDate(
+    inspection100Legacy.lastInspectionDate
+  );
 
   const annualThresholds = parseJsonObject(annualLegacy.thresholds);
   const inspection50Thresholds = parseJsonObject(inspection50Legacy.thresholds);
