@@ -89,120 +89,136 @@ async function loadFlightRootAndCurrentRevision({ aircraftId, flightId, includeV
 
 async function loadFlightCounters(flightRevisionId) {
   const { rows } = await postgresQuery(
-    `
-      SELECT counter_code, counter_value
-      FROM app.flight_counters
-      WHERE flight_revision_id = $1::uuid
-      ORDER BY counter_code
-    `,
+    `SELECT counter_code, counter_value FROM app.flight_counters
+      WHERE flight_revision_id = $1::uuid ORDER BY counter_code`,
     [flightRevisionId]
   );
-
   return rows;
 }
 
 async function loadComponentCounters(flightRevisionId) {
   const { rows } = await postgresQuery(
-    `
-      SELECT
-        counter.component_installation_id,
-        installation.component_id,
-        component.component_type,
-        installation.position_index,
-        counter.counter_code,
-        counter.counter_value
+    `SELECT counter.component_installation_id, installation.component_id,
+        component.component_type, installation.position_index,
+        counter.counter_code, counter.counter_value
       FROM app.flight_component_counters counter
       JOIN app.component_installations installation
         ON installation.component_installation_id = counter.component_installation_id
-      JOIN app.components component
-        ON component.component_id = installation.component_id
+      JOIN app.components component ON component.component_id = installation.component_id
       WHERE counter.flight_revision_id = $1::uuid
-      ORDER BY
-        component.component_type,
-        installation.position_index,
-        counter.counter_code
-    `,
+      ORDER BY component.component_type, installation.position_index, counter.counter_code`,
     [flightRevisionId]
   );
-
   return rows;
 }
 
 async function loadTankReadings(flightRevisionId) {
   const { rows } = await postgresQuery(
-    `
-      SELECT
-        reading.tank_id,
-        tank.name,
-        tank.position_code,
-        tank.display_order,
-        reading.entered_value,
-        reading.entered_unit,
-        reading.canonical_liters
+    `SELECT reading.tank_id, tank.name, tank.position_code, tank.display_order,
+        reading.entered_value, reading.entered_unit, reading.canonical_liters
       FROM app.flight_tank_readings reading
-      JOIN app.aircraft_tanks tank
-        ON tank.tank_id = reading.tank_id
+      JOIN app.aircraft_tanks tank ON tank.tank_id = reading.tank_id
       WHERE reading.flight_revision_id = $1::uuid
-      ORDER BY tank.display_order, tank.tank_id
-    `,
+      ORDER BY tank.display_order, tank.tank_id`,
     [flightRevisionId]
   );
-
   return rows;
 }
 
 async function loadComponentConsumables(flightRevisionId) {
   const { rows } = await postgresQuery(
-    `
-      SELECT
-        consumable.component_installation_id,
-        installation.component_id,
-        component.component_type,
-        installation.position_index,
-        consumable.consumable_code,
-        consumable.entered_value,
-        consumable.entered_unit,
-        consumable.canonical_liters
+    `SELECT consumable.component_installation_id, installation.component_id,
+        component.component_type, installation.position_index,
+        consumable.consumable_code, consumable.entered_value,
+        consumable.entered_unit, consumable.canonical_liters
       FROM app.flight_component_consumables consumable
       JOIN app.component_installations installation
         ON installation.component_installation_id = consumable.component_installation_id
-      JOIN app.components component
-        ON component.component_id = installation.component_id
+      JOIN app.components component ON component.component_id = installation.component_id
       WHERE consumable.flight_revision_id = $1::uuid
-      ORDER BY
-        component.component_type,
-        installation.position_index,
-        consumable.consumable_code
-    `,
+      ORDER BY component.component_type, installation.position_index, consumable.consumable_code`,
     [flightRevisionId]
   );
-
   return rows;
 }
 
 async function loadComponentRuntime(flightRevisionId) {
   const { rows } = await postgresQuery(
-    `
-      SELECT
-        runtime.component_installation_id,
-        installation.component_id,
-        component.component_type,
-        installation.position_index,
-        runtime.engine_start_at,
-        runtime.engine_stop_at,
-        runtime.engine_running_hours
+    `SELECT runtime.component_installation_id, installation.component_id,
+        component.component_type, installation.position_index,
+        runtime.engine_start_at, runtime.engine_stop_at, runtime.engine_running_hours
       FROM app.flight_component_runtime runtime
       JOIN app.component_installations installation
         ON installation.component_installation_id = runtime.component_installation_id
-      JOIN app.components component
-        ON component.component_id = installation.component_id
+      JOIN app.components component ON component.component_id = installation.component_id
       WHERE runtime.flight_revision_id = $1::uuid
-      ORDER BY component.component_type, installation.position_index
-    `,
+      ORDER BY component.component_type, installation.position_index`,
     [flightRevisionId]
   );
-
   return rows;
+}
+
+export async function getCanonicalOwnershipReadinessFromPostgres({ userId, aircraftId }) {
+  const access = await getValidatedAircraftAccessFromPostgres(userId, aircraftId);
+  const canonicalAircraftId = access.aircraft.aircraft_id;
+  const { rows } = await postgresQuery(
+    `
+      SELECT
+        ownership.ownership_interest_id,
+        ownership.party_id,
+        ownership.ownership_share,
+        ownership.effective_from_at,
+        ownership.effective_to_at,
+        party.party_type,
+        CASE
+          WHEN party.party_type = 'PERSON' THEN person.full_name
+          WHEN party.party_type = 'ORGANIZATION' THEN party.organization_name
+          ELSE NULL
+        END AS party_name
+      FROM app.aircraft_ownership_interests ownership
+      JOIN app.parties party ON party.party_id = ownership.party_id
+      LEFT JOIN app.persons person ON person.person_id = party.person_id
+      WHERE ownership.aircraft_id = $1::uuid
+        AND ownership.effective_from_at <= now()
+        AND (ownership.effective_to_at IS NULL OR ownership.effective_to_at > now())
+        AND party.status = 'ACTIVE'
+      ORDER BY lower(COALESCE(person.full_name, party.organization_name, '')), ownership.party_id
+    `,
+    [canonicalAircraftId]
+  );
+
+  const totalShare = rows.reduce((sum, row) => sum + Number(row.ownership_share || 0), 0);
+  const ready = rows.length > 0 && Math.abs(totalShare - 100) < 0.000001;
+
+  return {
+    aircraft: access.aircraft,
+    membership: access.membership,
+    ready,
+    total_share: totalShare,
+    owners: rows.map((row) => ({
+      ownership_interest_id: row.ownership_interest_id,
+      party_id: row.party_id,
+      name: row.party_name,
+      party_type: row.party_type,
+      ownership_share: Number(row.ownership_share),
+      effective_from_at: row.effective_from_at,
+      effective_to_at: row.effective_to_at,
+    })),
+  };
+}
+
+export async function requireCanonicalOwnershipReadyForFlightFromPostgres(args) {
+  const readiness = await getCanonicalOwnershipReadinessFromPostgres(args);
+
+  if (!readiness.ready) {
+    throw repositoryError(
+      "Las mutaciones de vuelos siguen bloqueadas hasta configurar ownership canonico activo al 100%.",
+      "FLIGHT_OWNERSHIP_NOT_READY",
+      409
+    );
+  }
+
+  return readiness;
 }
 
 export async function getCurrentFlightRecordFromPostgres({
@@ -241,51 +257,30 @@ export async function getCurrentFlightRecordFromPostgres({
     aircraft: access.aircraft,
     membership: access.membership,
     flight: {
-      flight_id: flight.flight_id,
-      aircraft_id: flight.aircraft_id,
-      current_revision_id: flight.current_revision_id,
-      status: flight.status,
-      record_source: flight.record_source,
-      created_by_user_id: flight.flight_created_by_user_id,
-      created_at: flight.flight_created_at,
-      voided_at: flight.voided_at,
-      voided_by_user_id: flight.voided_by_user_id,
-      void_reason: flight.void_reason,
-      import_batch_id: flight.import_batch_id,
-      import_row_number: flight.import_row_number,
+      flight_id: flight.flight_id, aircraft_id: flight.aircraft_id,
+      current_revision_id: flight.current_revision_id, status: flight.status,
+      record_source: flight.record_source, created_by_user_id: flight.flight_created_by_user_id,
+      created_at: flight.flight_created_at, voided_at: flight.voided_at,
+      voided_by_user_id: flight.voided_by_user_id, void_reason: flight.void_reason,
+      import_batch_id: flight.import_batch_id, import_row_number: flight.import_row_number,
     },
     revision: {
-      flight_revision_id: flight.flight_revision_id,
-      revision_number: flight.revision_number,
-      flight_date: flight.flight_date,
-      departure_location: flight.departure_location,
-      arrival_location: flight.arrival_location,
-      pilot_person_id: flight.pilot_person_id,
-      pilot_name: flight.pilot_name,
-      utilization_owner_party_id: flight.utilization_owner_party_id,
-      utilization_owner_name: flight.utilization_owner_name,
-      flight_purpose_id: flight.flight_purpose_id,
-      flight_purpose_name: flight.flight_purpose_name,
-      capture_method: flight.capture_method,
-      flight_time_hours: flight.flight_time_hours,
-      time_in_service_hours: flight.time_in_service_hours,
-      tach_start: flight.tach_start,
-      tach_end: flight.tach_end,
-      movement_start_at: flight.movement_start_at,
-      takeoff_at: flight.takeoff_at,
-      landing_at: flight.landing_at,
-      final_stop_at: flight.final_stop_at,
-      remarks: flight.remarks,
-      created_by_user_id: flight.revision_created_by_user_id,
-      created_at: flight.revision_created_at,
-      correction_reason: flight.correction_reason,
+      flight_revision_id: flight.flight_revision_id, revision_number: flight.revision_number,
+      flight_date: flight.flight_date, departure_location: flight.departure_location,
+      arrival_location: flight.arrival_location, pilot_person_id: flight.pilot_person_id,
+      pilot_name: flight.pilot_name, utilization_owner_party_id: flight.utilization_owner_party_id,
+      utilization_owner_name: flight.utilization_owner_name, flight_purpose_id: flight.flight_purpose_id,
+      flight_purpose_name: flight.flight_purpose_name, capture_method: flight.capture_method,
+      flight_time_hours: flight.flight_time_hours, time_in_service_hours: flight.time_in_service_hours,
+      tach_start: flight.tach_start, tach_end: flight.tach_end,
+      movement_start_at: flight.movement_start_at, takeoff_at: flight.takeoff_at,
+      landing_at: flight.landing_at, final_stop_at: flight.final_stop_at,
+      remarks: flight.remarks, created_by_user_id: flight.revision_created_by_user_id,
+      created_at: flight.revision_created_at, correction_reason: flight.correction_reason,
     },
     snapshots: {
-      counters,
-      component_counters: componentCounters,
-      tank_readings: tankReadings,
-      component_consumables: componentConsumables,
-      component_runtime: componentRuntime,
+      counters, component_counters: componentCounters, tank_readings: tankReadings,
+      component_consumables: componentConsumables, component_runtime: componentRuntime,
     },
   };
 }
