@@ -68,3 +68,13 @@ export function resolvePostgresFlightWriteCapability(flightSource) {
   if (raw === "true") return { enabled: true, mode: "CANONICAL_REVISIONED" };
   throw capabilityError("POSTGRES_FLIGHT_WRITES_ENABLED debe ser true, false o estar ausente.", "FLIGHT_WRITE_FLAG_INVALID");
 }
+
+
+export function resolvePostgresOnboardingWriteCapability(aircraftSource) {
+  const normalizedSource = String(aircraftSource || "").trim().toUpperCase();
+  if (normalizedSource !== "POSTGRES") return { enabled: false, mode: "DISABLED" };
+  const raw = String(process.env.POSTGRES_ONBOARDING_WRITES_ENABLED || "").trim().toLowerCase();
+  if (!raw || raw === "false") return { enabled: false, mode: "DISABLED" };
+  if (raw === "true") return { enabled: true, mode: "ATOMIC_AIRCRAFT_BOOTSTRAP" };
+  throw capabilityError("POSTGRES_ONBOARDING_WRITES_ENABLED debe ser true, false o estar ausente.", "ONBOARDING_WRITE_FLAG_INVALID");
+}
