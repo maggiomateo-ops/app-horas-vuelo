@@ -819,10 +819,14 @@ function App() {
           : "Vuelo guardado correctamente."
       );
 
-      setUltimoInput({
+      const savedLastFlight = {
         ...payload,
         id: result.id ?? payload.id,
-      });
+      };
+      setUltimoInput(savedLastFlight);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("app-horas:last-flight", JSON.stringify(savedLastFlight));
+      }
       limpiarFormulario();
     } catch (error) {
       setMensajeError(error.message || "Hubo un error al guardar el vuelo.");
