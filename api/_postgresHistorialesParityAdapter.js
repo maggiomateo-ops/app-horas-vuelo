@@ -308,6 +308,7 @@ function commonLegacyRow(flight, provenanceByFlight) {
     hasta: text(flight.arrival_location),
     tiempoEnServicio: asNumber(flight.time_in_service_hours) ?? "",
     piloto: text(flight.pilot_name),
+    propietario: text(flight.utilization_owner_name),
     observaciones: text(flight.remarks),
   };
 }
