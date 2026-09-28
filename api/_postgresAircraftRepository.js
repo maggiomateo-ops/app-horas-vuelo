@@ -58,6 +58,24 @@ const CURRENT_REGISTRATION_JOIN = `
   ) current_registration ON true
 `;
 
+const CURRENT_OWNERSHIP_JOIN = `
+  LEFT JOIN LATERAL (
+    SELECT
+      count(*)::integer AS ownership_count,
+      COALESCE(
+        sum(ownership.ownership_share) FILTER (
+          WHERE ownership.effective_from_at <= now()
+            AND party.status = 'ACTIVE'
+        ),
+        0
+      )::numeric(7,2) AS active_ownership_total
+    FROM app.aircraft_ownership_interests ownership
+    JOIN app.parties party ON party.party_id = ownership.party_id
+    WHERE ownership.aircraft_id = aircraft.aircraft_id
+      AND ownership.effective_to_at IS NULL
+  ) current_ownership ON true
+`;
+
 export async function getAircraftsForUserFromPostgres(userId) {
   const user = await requireActiveUser(userId);
   const { rows } = await postgresQuery(
@@ -67,11 +85,14 @@ export async function getAircraftsForUserFromPostgres(userId) {
         COALESCE(current_registration.registration, '') AS matricula,
         aircraft.manufacturer AS fabricante,
         aircraft.model AS modelo,
-        membership.role AS rol
+        membership.role AS rol,
+        current_ownership.ownership_count > 0 AS "ownershipConfigured",
+        current_ownership.active_ownership_total = 100.00 AS "flightWritesReady"
       FROM app.aircraft_memberships membership
       JOIN app.aircraft aircraft
         ON aircraft.aircraft_id = membership.aircraft_id
       ${CURRENT_REGISTRATION_JOIN}
+      ${CURRENT_OWNERSHIP_JOIN}
       WHERE membership.user_id = $1::uuid
         AND membership.status = 'ACTIVE'
         AND aircraft.status = 'ACTIVE'

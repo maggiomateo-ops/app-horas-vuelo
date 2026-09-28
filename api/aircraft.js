@@ -9,7 +9,15 @@ import {
   resolvePostgresOwnershipWriteCapability,
 } from "./_settingsWriteCapability.js";
 
-const AIRCRAFT_RESPONSE_FIELDS = ["aircraft_id","matricula","fabricante","modelo","rol"];
+const AIRCRAFT_RESPONSE_FIELDS = [
+  "aircraft_id",
+  "matricula",
+  "fabricante",
+  "modelo",
+  "rol",
+  "ownershipConfigured",
+  "flightWritesReady",
+];
 
 function sanitizeAircraft(aircraft) {
   return AIRCRAFT_RESPONSE_FIELDS.reduce((result, field) => {

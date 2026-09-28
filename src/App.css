@@ -2051,6 +2051,187 @@ select {
   line-height: 1.5;
 }
 
+.ownership-onboarding {
+  width: min(100%, 860px);
+  margin: 32px auto;
+  padding: clamp(22px, 4vw, 34px);
+  box-sizing: border-box;
+  border: 1px solid var(--app-border);
+  border-radius: 22px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.ownership-onboarding-header {
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.ownership-onboarding-header h2 {
+  margin: 8px 0 10px;
+  color: var(--app-text);
+  font-size: clamp(23px, 4vw, 31px);
+}
+
+.ownership-onboarding-header > p:last-child {
+  margin: 0;
+  color: var(--app-text-muted);
+  line-height: 1.6;
+}
+
+.ownership-primary-action {
+  display: block;
+  min-width: 220px;
+  margin: 26px auto 0;
+}
+
+.ownership-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--app-border);
+}
+
+.ownership-form-heading,
+.ownership-form-heading > div,
+.ownership-submit-actions {
+  display: flex;
+  align-items: center;
+}
+
+.ownership-form-heading {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ownership-form-heading > div {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ownership-form-heading span,
+.ownership-owner-card legend {
+  color: var(--app-text);
+  font-weight: 800;
+}
+
+.ownership-form-heading strong {
+  color: var(--app-primary-strong);
+  font-size: 18px;
+}
+
+.ownership-owner-list {
+  display: grid;
+  gap: 14px;
+}
+
+.ownership-owner-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-surface-muted);
+}
+
+.ownership-owner-card legend {
+  padding: 0 7px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ownership-owner-card label {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.ownership-owner-card input,
+.ownership-owner-card select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+}
+
+.ownership-owner-card input:focus,
+.ownership-owner-card select:focus {
+  border-color: var(--app-primary);
+  outline: 3px solid color-mix(in srgb, var(--app-primary) 16%, transparent);
+}
+
+.ownership-field-wide,
+.ownership-owner-note {
+  grid-column: 1 / -1;
+}
+
+.ownership-owner-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--app-primary-soft);
+  color: var(--app-primary-strong);
+  font-size: 13px;
+}
+
+.ownership-field-error,
+.ownership-form-guidance {
+  color: var(--app-danger);
+}
+
+.ownership-field-error {
+  font-size: 11px;
+}
+
+.ownership-form-guidance {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
+
+.ownership-remove-button {
+  align-self: end;
+  justify-self: start;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-danger);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.ownership-submit-actions {
+  justify-content: center;
+  gap: 10px;
+}
+
+.ownership-success-message {
+  width: min(100%, 960px);
+  margin: 0 auto 18px;
+  padding: 13px 16px;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--app-success) 30%, var(--app-border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-success) 10%, var(--app-surface));
+  color: var(--app-success);
+  text-align: center;
+}
+
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2292,6 +2473,33 @@ select {
   }
 
   .first-aircraft-actions button {
+    width: 100%;
+  }
+
+  .ownership-onboarding {
+    margin-top: 20px;
+    padding: 20px 16px;
+    border-radius: 17px;
+  }
+
+  .ownership-form-heading,
+  .ownership-submit-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ownership-owner-card {
+    grid-template-columns: 1fr;
+    padding: 15px;
+  }
+
+  .ownership-field-wide,
+  .ownership-owner-note {
+    grid-column: auto;
+  }
+
+  .ownership-submit-actions .form-action-button,
+  .ownership-primary-action {
     width: 100%;
   }
 
