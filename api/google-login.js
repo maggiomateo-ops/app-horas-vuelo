@@ -2,7 +2,7 @@ import { OAuth2Client } from "google-auth-library";
 import { createSessionCookie } from "./_auth.js";
 import { getActiveUserByEmail, resolveGoogleUser } from "./_adminRepository.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
-import { resolveActiveUserByVerifiedEmailFromPostgres } from "./_postgresIdentityRepository.js";
+import { resolveOrCreateActiveUserByVerifiedGoogleIdentityFromPostgres } from "./_postgresIdentityRepository.js";
 
 const googleClient = new OAuth2Client();
 
@@ -38,9 +38,12 @@ async function resolveActiveUserFromSheets(email, googleSub) {
   return { userId, email: userEmail, name, isAdmin };
 }
 
-async function resolveActiveUserFromPostgres(email) {
+async function resolveActiveUserFromPostgres(email, displayName) {
   try {
-    const user = await resolveActiveUserByVerifiedEmailFromPostgres(email);
+    const user = await resolveOrCreateActiveUserByVerifiedGoogleIdentityFromPostgres({
+      email,
+      displayName,
+    });
     const userId = String(user?.user_id || "").trim();
     const userEmail = String(user?.email || "").trim().toLowerCase();
     const name = String(user?.nombre || "").trim();
@@ -70,11 +73,11 @@ async function resolveActiveUserFromPostgres(email) {
   }
 }
 
-async function resolveActiveUser(email, googleSub) {
+async function resolveActiveUser(email, googleSub, displayName) {
   const source = resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE");
 
   if (source === DATA_SOURCE.POSTGRES) {
-    return resolveActiveUserFromPostgres(email);
+    return resolveActiveUserFromPostgres(email, displayName);
   }
 
   return resolveActiveUserFromSheets(email, googleSub);
@@ -115,6 +118,7 @@ export default async function handler(req, res) {
 
   const email = String(payload?.email || "").trim().toLowerCase();
   const googleSub = String(payload?.sub || "").trim();
+  const displayName = String(payload?.name || "").trim();
 
   if (!email) {
     return res.status(401).json({ ok: false, error: "La cuenta de Google no informa un email." });
@@ -129,7 +133,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const user = await resolveActiveUser(email, googleSub);
+    const user = await resolveActiveUser(email, googleSub, displayName);
 
     res.setHeader("Set-Cookie", createSessionCookie(user));
 
