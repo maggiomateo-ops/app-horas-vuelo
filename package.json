@@ -18,6 +18,7 @@
     "migration:lv-mhz:test-readiness": "node scripts/migrations/2e3/lv-mhz-check-test-readiness.mjs"
   },
   "dependencies": {
+    "exceljs": "^4.4.0",
     "google-auth-library": "^11.0.2",
     "pg": "8.23.0",
     "react": "^19.2.4",
