@@ -298,7 +298,14 @@ function App() {
   const [mensajeError, setMensajeError] = useState("");
   const [formErrors, setFormErrors] = useState({});
   const [editingId, setEditingId] = useState(null);
-  const [ultimoInput, setUltimoInput] = useState(null);
+  const [ultimoInput, setUltimoInput] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return JSON.parse(window.sessionStorage.getItem("app-horas:last-flight") || "null");
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     let ignore = false;
