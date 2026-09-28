@@ -78,3 +78,12 @@ export function resolvePostgresOnboardingWriteCapability(aircraftSource) {
   if (raw === "true") return { enabled: true, mode: "ATOMIC_AIRCRAFT_BOOTSTRAP" };
   throw capabilityError("POSTGRES_ONBOARDING_WRITES_ENABLED debe ser true, false o estar ausente.", "ONBOARDING_WRITE_FLAG_INVALID");
 }
+
+export function resolvePostgresOwnershipWriteCapability(aircraftSource) {
+  const normalizedSource = String(aircraftSource || "").trim().toUpperCase();
+  if (normalizedSource !== "POSTGRES") return { enabled: false, mode: "DISABLED" };
+  const raw = String(process.env.POSTGRES_OWNERSHIP_WRITES_ENABLED || "").trim().toLowerCase();
+  if (!raw || raw === "false") return { enabled: false, mode: "DISABLED" };
+  if (raw === "true") return { enabled: true, mode: "INITIAL_CANONICAL_SETUP" };
+  throw capabilityError("POSTGRES_OWNERSHIP_WRITES_ENABLED debe ser true, false o estar ausente.", "OWNERSHIP_WRITE_FLAG_INVALID");
+}
