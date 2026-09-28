@@ -77,3 +77,5 @@ Do not perform a persistent TEST canary and do not enable the flag. Finish with 
 - Runtime INSERT privileges verified for all bootstrap tables and Audit.
 - Persistent onboarding canary remains pending; Preview gate must be enabled before the canary.
 - Production remains out of scope.
+
+- D-248: self-service Google identity bootstrap implementation preflight PASS; Preview-only gate enabled manually after preflight.
