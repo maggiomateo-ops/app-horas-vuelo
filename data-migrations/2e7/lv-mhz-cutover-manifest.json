@@ -1,0 +1,85 @@
+{
+  "snapshot_version": 1,
+  "stage": "2E.7",
+  "source": "PRODUCTION_SHEETS",
+  "historical_evidence": {
+    "source_manifest": "data-migrations/2e3/lv-mhz-manifest.json",
+    "target_manifest": "data-migrations/2e3/lv-mhz-target-manifest.json",
+    "preserved": true
+  },
+  "source_identity": {
+    "legacy_user_id": "U001",
+    "legacy_aircraft_id": "A001",
+    "registration": "LV-MHZ",
+    "required_user_status": "ACTIVO",
+    "required_permission_role": "OWNER",
+    "required_permission_status": "ACTIVO",
+    "required_aircraft_status": "ACTIVA"
+  },
+  "expected_source_counts": {
+    "users": 1,
+    "permissions": 1,
+    "aircraft": 1,
+    "computacionHoras": 274,
+    "historialAeronave": 346,
+    "historialMotor": 346,
+    "historialHelice": 346
+  },
+  "expected_utilization": {
+    "trackedTisHours": 405.6,
+    "aircraftClosingTisHours": 2707.8,
+    "engineClosingTisHours": 505.5,
+    "propellerClosingTisHours": 593.6
+  },
+  "known_corrections": [
+    {
+      "code": "2026-07-31-AGR-RAE",
+      "date": "2026-07-31",
+      "departure": "AGR",
+      "arrival": "RAE",
+      "aircraftHistory": {
+        "timeInServiceHours": 2.0,
+        "flightTimeHours": 2.1
+      },
+      "computacionHoras": {
+        "jpiHours": 2.1,
+        "garminHours": 2.0
+      }
+    }
+  ],
+  "expected_settings": {
+    "inspection100WarningHours": 15
+  },
+  "target_migrations": ["001", "002", "003", "004"],
+  "target_overrides": {
+    "migration_key": "lv-mhz-production-cutover-v1",
+    "per_flight_reason": "Canonical LV-MHZ Production cutover snapshot.",
+    "batch_summary_reason": "Deterministic LV-MHZ Production cutover bundle completed."
+  },
+  "canonical_bootstrap_required": [
+    {
+      "code": "LEGAL_OWNERSHIP",
+      "excludedFromLegacySnapshot": true,
+      "aircraftRegistration": "LV-MHZ",
+      "interests": [
+        {"partyName": "Christian Maggio", "percentage": 50},
+        {"partyName": "Facundo Alegre", "percentage": 50}
+      ],
+      "note": "Canonical legal ownership is explicit bootstrap state and is never inferred from legacy utilization owner labels."
+    }
+  ],
+  "excluded_test_only_state": [
+    "LV-TST",
+    "TEST_SELF_SERVICE_IDENTITIES",
+    "TEST_VOIDED_CANARY_FLIGHTS",
+    "TEST_EXPORT_RUNS",
+    "TEST_TEMPLATE_CANARY_STATE",
+    "TEST_SETTINGS_15_1"
+  ],
+  "write_policy": {
+    "googleSheets": "READ_ONLY",
+    "postgresConnectionsAllowed": false,
+    "postgresWritesAllowed": false,
+    "writesPerformed": 0
+  }
+}

@@ -3,10 +3,18 @@ import fs from "node:fs/promises";
 import { batchGetSpreadsheetValues } from "../../../api/_googleSheets.js";
 
 const sourceManifest = JSON.parse(
-  await fs.readFile(new URL("../../../data-migrations/2e3/lv-mhz-manifest.json", import.meta.url), "utf8")
+  await fs.readFile(
+    String(process.env.MIGRATION_SOURCE_MANIFEST_INPUT || "").trim()
+      || new URL("../../../data-migrations/2e3/lv-mhz-manifest.json", import.meta.url),
+    "utf8"
+  )
 );
 const targetManifest = JSON.parse(
-  await fs.readFile(new URL("../../../data-migrations/2e3/lv-mhz-target-manifest.json", import.meta.url), "utf8")
+  await fs.readFile(
+    String(process.env.MIGRATION_TARGET_MANIFEST_INPUT || "").trim()
+      || new URL("../../../data-migrations/2e3/lv-mhz-target-manifest.json", import.meta.url),
+    "utf8"
+  )
 );
 
 const TIMESTAMP = targetManifest.execution_metadata.timestamp_token;
@@ -120,14 +128,34 @@ const push = (table, row) => {
 const admin = sourceManifest.sources.admin_spreadsheet;
 const source = sourceManifest.sources.aircraft_spreadsheet;
 
-const [usersValues, permissionsValues, aircraftValues] = await batchGetSpreadsheetValues(
-  admin.spreadsheet_id,
-  ["USUARIOS!A:K", "PERMISOS!A:H", "AERONAVES!A:H"]
-);
-const [computacionValues, historyValues, settingsValues] = await batchGetSpreadsheetValues(
-  source.spreadsheet_id,
-  ["Computacion Horas!A:P", "Historial Aeronave!A:K", "CONFIGURACION!A:B"]
-);
+const sourceSnapshotInput = text(process.env.MIGRATION_SOURCE_SNAPSHOT_INPUT);
+let usersValues;
+let permissionsValues;
+let aircraftValues;
+let computacionValues;
+let historyValues;
+let settingsValues;
+
+if (sourceSnapshotInput) {
+  const sourceSnapshot = JSON.parse(await fs.readFile(sourceSnapshotInput, "utf8"));
+  ({
+    usersValues,
+    permissionsValues,
+    aircraftValues,
+    computacionValues,
+    historyValues,
+    settingsValues,
+  } = sourceSnapshot);
+} else {
+  [usersValues, permissionsValues, aircraftValues] = await batchGetSpreadsheetValues(
+    admin.spreadsheet_id,
+    ["USUARIOS!A:K", "PERMISOS!A:H", "AERONAVES!A:H"]
+  );
+  [computacionValues, historyValues, settingsValues] = await batchGetSpreadsheetValues(
+    source.spreadsheet_id,
+    ["Computacion Horas!A:P", "Historial Aeronave!A:K", "CONFIGURACION!A:B"]
+  );
+}
 
 const legacyUserRow = usersValues.slice(1).find((row) => text(row[0]) === targetManifest.source_identity_mapping.legacy_user_id);
 if (!legacyUserRow) fail("Legacy U001 user row missing.");
@@ -476,7 +504,8 @@ for (const item of historyRows) {
     action_code: "MIGRATION_CREATED",
     before_state: null,
     after_state: { flight_id: flightId, flight_revision_id: revisionId, status: "ACTIVE" },
-    reason: "Initial LV-MHZ legacy migration into Neon TEST.",
+    reason: targetManifest.audit_transform.per_flight_reason
+      || "Initial LV-MHZ legacy migration into Neon TEST.",
     metadata: {
       authoritative_source: { sheet: "Historial Aeronave", row: item.rowNumber },
       pilot_source_label: pilotLabel || null,
@@ -537,7 +566,8 @@ push("audit.audit_events", {
     target_counts: targetCountsForSummary,
     utilization_reconciliation: sourceManifest.reconciliation,
   },
-  reason: "Initial deterministic LV-MHZ migration bundle completed.",
+  reason: targetManifest.audit_transform.batch_summary_reason
+    || "Initial deterministic LV-MHZ migration bundle completed.",
   metadata: {
     registration_provenance: {
       effective_from_at: targetManifest.aircraft_transform.registration_effective_from,
