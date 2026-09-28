@@ -38,7 +38,7 @@ Transaction requirements:
 7. Insert ACTIVE creator `app.aircraft_memberships` role OWNER, activated_at now. OWNER is app access only.
 8. Insert active `MANAGE_OWNERSHIP` in `app.aircraft_membership_capabilities`, granted by creator.
 9. Insert `app.aircraft_settings` using validated/default capture method and oil unit.
-10. Insert `app.aircraft_utilization_baselines`: nullable opening TIS, required effective date, source MANUAL, creator. Do not invent first_tracked_flight_id.
+10. Insert `app.aircraft_utilization_baselines`: nullable opening TIS, required effective date, source OWNER_ENTRY, creator. Do not invent first_tracked_flight_id.
 11. DO NOT insert `aircraft_ownership_interests`. Ownership readiness must remain false until separately configured and total active shares = 100%.
 12. Insert append-only `audit.audit_events` in the SAME transaction: USER/MANUAL, entity AIRCRAFT, action `AIRCRAFT_CREATED`, actor creator, aircraft/entity IDs, request UUID, after_state containing canonical created state and metadata with contract `D-242/D-244`. Audit metadata is evidence, not business state.
 13. Return only after commit.
