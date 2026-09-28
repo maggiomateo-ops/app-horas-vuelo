@@ -564,6 +564,47 @@ function App() {
     setMensajeError("");
   };
 
+  const cargarVueloDesdeHistorial = (row) => {
+    if (!row?.id) return;
+    const editable = {
+      id: row.id,
+      dia: row.dia ?? "",
+      mes: row.mes ?? "",
+      anio: row.anio ?? "",
+      desde: row.desde ?? "",
+      hasta: row.hasta ?? "",
+      tiempoVueloJPI: row.tiempoDeVuelo ?? "",
+      tiempoEnServicioGarmin: row.tiempoEnServicio ?? "",
+      piloto: row.piloto ?? "",
+      propietario: row.propietario ?? "",
+      aceiteAgregado: row.aceiteAgregado ?? "",
+      combustibleTanqueIzquierdo: row.combustibleTanqueIzquierdo ?? "",
+      combustibleTanqueDerecho: row.combustibleTanqueDerecho ?? "",
+      observaciones: row.observaciones ?? "",
+    };
+    setUltimoInput(editable);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("app-horas:last-flight", JSON.stringify(editable));
+    }
+    const fechaReconstruida = `${editable.anio}-${String(editable.mes).padStart(2, "0")}-${String(editable.dia).padStart(2, "0")}`;
+    setFecha(fechaReconstruida);
+    setDesde(editable.desde);
+    setHasta(editable.hasta);
+    setTiempoVueloJPI(String(editable.tiempoVueloJPI ?? ""));
+    setTiempoEnServicioGarmin(String(editable.tiempoEnServicioGarmin ?? ""));
+    setPiloto(editable.piloto);
+    setPropietario(normalizarPropietarioSelect(editable.propietario));
+    setAceiteAgregado(String(editable.aceiteAgregado ?? ""));
+    setCombustibleTanqueIzquierdo(String(editable.combustibleTanqueIzquierdo ?? ""));
+    setCombustibleTanqueDerecho(String(editable.combustibleTanqueDerecho ?? ""));
+    setObservaciones(editable.observaciones);
+    setEditingId(editable.id);
+    setFormErrors({});
+    setMensajeExito("");
+    setMensajeError("");
+    setActiveMainTab("registro");
+  };
+
   const cargarUltimoInputParaEditar = () => {
     if (!ultimoInput) return;
 
@@ -1363,6 +1404,8 @@ function App() {
           aircraftId={selectedAircraft.aircraft_id}
           aircraftRegistration={selectedAircraft.matricula}
           onUnauthorized={handleUnauthorized}
+          canMutateFlights={canUseFlightWrites}
+          onEditFlight={cargarVueloDesdeHistorial}
         />
       ) : effectiveActiveMainTab === "dashboards" ? (
         <DashboardPanel
