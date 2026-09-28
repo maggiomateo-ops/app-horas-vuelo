@@ -1,9 +1,13 @@
 ﻿import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import DashboardPanel from "./components/DashboardPanel";
+import FirstAircraftOnboarding from "./components/FirstAircraftOnboarding";
 import HistorialesPanel from "./components/HistorialesPanel";
 import SettingsPanel from "./components/SettingsPanel";
-import { fetchAircrafts } from "./services/aircraftService";
+import {
+  createFirstAircraftAndRefresh,
+  fetchAircrafts,
+} from "./services/aircraftService";
 import { DEFAULT_SETTINGS, fetchSettings, saveSettings } from "./services/settingsService";
 import {
   getAllowedMainTabIds,
@@ -280,6 +284,7 @@ function App() {
   const [selectedAircraftId, setSelectedAircraftId] = useState("");
   const [aircraftsLoading, setAircraftsLoading] = useState(true);
   const [aircraftsError, setAircraftsError] = useState("");
+  const [aircraftOnboardingById, setAircraftOnboardingById] = useState({});
   const [activeMainTab, setActiveMainTab] = useState("registro");
   const [fecha, setFecha] = useState(getTodayInputValue);
   const [desde, setDesde] = useState("");
@@ -414,6 +419,11 @@ function App() {
     : preferredMainTab;
   const canEditAircraft =
     isGlobalAdmin || selectedAircraftRole === "OWNER" || selectedAircraftRole === "ADMIN";
+  const selectedAircraftOnboarding = selectedAircraft
+    ? aircraftOnboardingById[selectedAircraft.aircraft_id]
+    : null;
+  const canMutateFlights =
+    canEditAircraft && selectedAircraftOnboarding?.flightWritesReady !== false;
 
   useEffect(() => {
     if (selectedAircraft && !allowedMainTabIds.includes(activeMainTab)) {
@@ -977,6 +987,7 @@ function App() {
       setAircrafts([]);
       setSelectedAircraftId("");
       setAircraftsError("");
+      setAircraftOnboardingById({});
     }
   };
 
@@ -1021,6 +1032,19 @@ function App() {
     setMensajeError("");
     setMensajeExito("");
     setSelectedAircraftId(nextAircraftId);
+  };
+
+  const handleCreateFirstAircraft = async (values) => {
+    const result = await createFirstAircraftAndRefresh(values);
+
+    setAircrafts(result.aircrafts);
+    setSelectedAircraftId(result.selectedAircraftId);
+    setAircraftsError("");
+    setAircraftOnboardingById((current) => ({
+      ...current,
+      [result.selectedAircraftId]: result.onboarding,
+    }));
+    setActiveMainTab("registro");
   };
 
   const resolvedTheme = themeMode === THEME_MODE.auto
@@ -1103,20 +1127,30 @@ function App() {
     );
   }
 
-  if (aircraftsError || !selectedAircraft) {
+  if (aircraftsError || (!selectedAircraft && aircrafts.length > 0)) {
     return (
       <main className="app-shell app-auth-shell">
         <section className="login-card">
           <p className="login-eyebrow">Aeronaves</p>
           <h1 className="login-title">App Horas de Vuelo</h1>
           <p className={aircraftsError ? "login-error" : "login-copy"}>
-            {aircraftsError || "No tenés aeronaves habilitadas."}
+            {aircraftsError || "No se pudo seleccionar una aeronave válida."}
           </p>
           <button type="button" className="login-button" onClick={handleLogout}>
             Cerrar sesion
           </button>
         </section>
       </main>
+    );
+  }
+
+  if (!selectedAircraft) {
+    return (
+      <FirstAircraftOnboarding
+        onCreate={handleCreateFirstAircraft}
+        onLogout={handleLogout}
+        onUnauthorized={handleUnauthorized}
+      />
     );
   }
 
@@ -1191,7 +1225,7 @@ function App() {
       </nav>
 
       <div className="app-content">
-      {effectiveActiveMainTab === "registro" ? canEditAircraft ? (
+      {effectiveActiveMainTab === "registro" ? canEditAircraft ? canMutateFlights ? (
         <>
           <form onSubmit={handleSubmit} className="flight-form" noValidate>
             <header className="flight-form-header">
@@ -1393,6 +1427,15 @@ function App() {
         </>
       ) : (
         <section className="read-only-access" role="status">
+          <p className="dashboard-eyebrow">Configuración inicial</p>
+          <h2>Aeronave creada correctamente</h2>
+          <p>
+            La aeronave ya está disponible. La carga de vuelos permanecerá deshabilitada
+            hasta completar la configuración de propiedad legal.
+          </p>
+        </section>
+      ) : (
+        <section className="read-only-access" role="status">
           <p className="dashboard-eyebrow">PILOT</p>
           <h2>Carga de vuelos pendiente</h2>
           <p>
@@ -1404,7 +1447,7 @@ function App() {
           aircraftId={selectedAircraft.aircraft_id}
           aircraftRegistration={selectedAircraft.matricula}
           onUnauthorized={handleUnauthorized}
-          canMutateFlights={canEditAircraft}
+          canMutateFlights={canMutateFlights}
           onEditFlight={cargarVueloDesdeHistorial}
         />
       ) : effectiveActiveMainTab === "dashboards" ? (

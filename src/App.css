@@ -395,6 +395,133 @@
   font-size: 14px;
 }
 
+.first-aircraft-card {
+  width: min(100%, 720px);
+  padding: clamp(24px, 5vw, 40px);
+  box-sizing: border-box;
+  border: 1px solid var(--app-border);
+  border-radius: 28px;
+  background: linear-gradient(
+    180deg,
+    var(--app-surface) 0%,
+    color-mix(in srgb, var(--app-surface) 90%, var(--app-primary-soft) 10%) 100%
+  );
+  box-shadow: var(--app-shadow);
+}
+
+.first-aircraft-copy {
+  margin: 0 0 24px;
+  color: var(--app-text-muted);
+  line-height: 1.55;
+  text-transform: none;
+}
+
+.first-aircraft-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.first-aircraft-actions .login-button {
+  margin-top: 0;
+}
+
+.first-aircraft-secondary-button {
+  min-height: 43px;
+  padding: 11px 16px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 12px;
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.first-aircraft-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.first-aircraft-form {
+  margin-top: 22px;
+}
+
+.first-aircraft-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.first-aircraft-grid label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.first-aircraft-grid input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 13px;
+  box-sizing: border-box;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 11px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.first-aircraft-grid input:focus-visible {
+  border-color: var(--app-primary);
+  outline: 2px solid color-mix(in srgb, var(--app-primary) 28%, transparent);
+  outline-offset: 1px;
+}
+
+.first-aircraft-grid label.has-error span,
+.first-aircraft-grid label.has-error small {
+  color: var(--app-danger);
+}
+
+.first-aircraft-grid label.has-error input {
+  border-color: var(--app-danger);
+}
+
+.first-aircraft-grid small {
+  color: var(--app-danger);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.first-aircraft-date {
+  grid-column: 1 / -1;
+}
+
+.first-aircraft-error {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--app-danger-border);
+  border-radius: 11px;
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-transform: none;
+}
+
+.first-aircraft-form-actions {
+  margin-top: 22px;
+}
+
 input[type="date"] {
   min-width: 0;
   appearance: none;
@@ -2073,6 +2200,10 @@ select {
     padding: 24px;
   }
 
+  .first-aircraft-card {
+    padding: 26px;
+  }
+
   .flight-form-header,
   .flight-form-section {
     padding-right: 20px;
@@ -2145,6 +2276,23 @@ select {
     min-height: 38px;
     padding: 8px 10px;
     font-size: 12px;
+  }
+
+  .first-aircraft-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .first-aircraft-date {
+    grid-column: auto;
+  }
+
+  .first-aircraft-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .first-aircraft-actions button {
+    width: 100%;
   }
 
   .history-topbar {
