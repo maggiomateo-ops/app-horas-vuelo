@@ -6,7 +6,7 @@ import {
   createPostgresOwnershipRepository,
   normalizeOwnershipSetupInput,
 } from "../api/_postgresOwnershipRepository.js";
-import ownershipHandler from "../api/aircraft-ownership.js";
+import aircraftHandler from "../api/aircraft.js";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const AIRCRAFT_ID = "22222222-2222-4222-8222-222222222222";
@@ -349,7 +349,7 @@ test("readiness se deriva del total canonico y falla si Postgres no devuelve 100
   );
 });
 
-test("POST /api/aircraft-ownership queda bloqueado por defecto", async () => {
+test("PATCH /api/aircraft ownership queda bloqueado por defecto", async () => {
   const previousSessionSecret = process.env.SESSION_SECRET;
   const previousAircraftSource = process.env.AIRCRAFT_DATA_SOURCE;
   const previousFlag = process.env.POSTGRES_OWNERSHIP_WRITES_ENABLED;
@@ -359,12 +359,12 @@ test("POST /api/aircraft-ownership queda bloqueado por defecto", async () => {
     process.env.AIRCRAFT_DATA_SOURCE = "postgres";
     delete process.env.POSTGRES_OWNERSHIP_WRITES_ENABLED;
     const req = {
-      method: "POST",
+      method: "PATCH",
       headers: { cookie: createSessionCookie({ userId: USER_ID }).split(";")[0] },
       body: validInput([{ kind: "CREATOR_PERSON", ownershipShare: 100 }]),
     };
     const res = createResponse();
-    await ownershipHandler(req, res);
+    await aircraftHandler(req, res);
 
     assert.equal(res.statusCode, 503);
     assert.equal(res.payload.code, "POSTGRES_OWNERSHIP_WRITES_NOT_ENABLED");
