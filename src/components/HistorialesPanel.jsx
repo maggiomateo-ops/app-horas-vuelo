@@ -43,7 +43,7 @@ const HISTORIAL_COLUMNS = {
   ],
 };
 
-function HistorialesPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
+function HistorialesPanel({ aircraftId, aircraftRegistration, onUnauthorized, canMutateFlights = false, onEditFlight }) {
   const [activeHistorial, setActiveHistorial] = useState("aeronave");
   const [recordsLimit, setRecordsLimit] = useState(HISTORIAL_LIMIT_OPTIONS[0]);
   const [printMode, setPrintMode] = useState(null);
@@ -217,11 +217,24 @@ function HistorialesPanel({ aircraftId, aircraftRegistration, onUnauthorized }) 
         {loading ? <p className="history-status">Cargando historiales...</p> : null}
         {!loading && error ? <p className="history-status history-status-error">{error}</p> : null}
         {!loading && !error ? (
-          <HistorialTable
-            columns={HISTORIAL_COLUMNS[activeHistorial]}
-            rows={currentRows}
-            emptyMessage="Sin datos"
-          />
+          <>
+            <HistorialTable
+              columns={HISTORIAL_COLUMNS[activeHistorial]}
+              rows={currentRows}
+              emptyMessage="Sin datos"
+            />
+            {activeHistorial === "aeronave" && canMutateFlights && currentRows[0] ? (
+              <div className="history-edit-actions">
+                <button
+                  type="button"
+                  className="history-print-button is-secondary"
+                  onClick={() => onEditFlight?.(currentRows[0])}
+                >
+                  Editar último vuelo
+                </button>
+              </div>
+            ) : null}
+          </>
         ) : null}
       </div>
 
