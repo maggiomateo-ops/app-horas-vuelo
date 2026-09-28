@@ -70,3 +70,10 @@ Add focused automated tests if the repo test harness supports them. At minimum e
 - no secrets or connection strings.
 
 Do not perform a persistent TEST canary and do not enable the flag. Finish with code/build/tests only; the technical lead will independently review diff, runtime grants, transaction/Audit and then authorize the canary gate.
+
+
+## Preflight status
+- D-246: backend implementation preflight PASS for commit eab01de60dbd42ec3dc01417361f64a7976906c2.
+- Runtime INSERT privileges verified for all bootstrap tables and Audit.
+- Persistent onboarding canary remains pending; Preview gate must be enabled before the canary.
+- Production remains out of scope.
