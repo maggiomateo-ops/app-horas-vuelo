@@ -1,6 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import HistorialTable from "./HistorialTable";
-import { fetchHistoriales } from "../services/historialesService";
+import {
+  EXPORT_PERIOD_TYPES,
+  createExportSubmissionGuard,
+  createInitialExportState,
+  exportAndDownloadFlightHistory,
+  fetchHistoriales,
+  flightHistoryExportReducer,
+} from "../services/historialesService";
 import { getLatestRecords } from "../utils/historiales";
 
 const HISTORIAL_TABS = [
@@ -43,7 +50,14 @@ const HISTORIAL_COLUMNS = {
   ],
 };
 
-function HistorialesPanel({ aircraftId, aircraftRegistration, onUnauthorized, canMutateFlights = false, onEditFlight }) {
+function HistorialesPanel({
+  aircraftId,
+  aircraftRegistration,
+  onUnauthorized,
+  canMutateFlights = false,
+  canExport = false,
+  onEditFlight,
+}) {
   const [activeHistorial, setActiveHistorial] = useState("aeronave");
   const [recordsLimit, setRecordsLimit] = useState(HISTORIAL_LIMIT_OPTIONS[0]);
   const [printMode, setPrintMode] = useState(null);
@@ -54,6 +68,20 @@ function HistorialesPanel({ aircraftId, aircraftRegistration, onUnauthorized, ca
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [exportState, dispatchExport] = useReducer(
+    flightHistoryExportReducer,
+    "es",
+    createInitialExportState
+  );
+  const exportGuardRef = useRef(null);
+
+  if (!exportGuardRef.current) {
+    exportGuardRef.current = createExportSubmissionGuard();
+  }
+
+  useEffect(() => {
+    dispatchExport({ type: "close" });
+  }, [aircraftId, canExport]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -158,6 +186,35 @@ function HistorialesPanel({ aircraftId, aircraftRegistration, onUnauthorized, ca
     setPrintMode("all");
   };
 
+  const handleExportSubmit = async (event) => {
+    event.preventDefault();
+    if (!exportGuardRef.current.tryStart()) return;
+
+    dispatchExport({ type: "submit-start" });
+    try {
+      await exportAndDownloadFlightHistory({
+        aircraftId,
+        periodType: exportState.periodType,
+        periodStartDate: exportState.periodStartDate,
+        periodEndDate: exportState.periodEndDate,
+        locale: exportState.locale,
+      });
+      dispatchExport({ type: "submit-success" });
+    } catch (exportRequestError) {
+      if (exportRequestError?.code === "UNAUTHORIZED") {
+        onUnauthorized?.();
+        return;
+      }
+      dispatchExport({
+        type: "submit-error",
+        error: exportRequestError?.message || "No se pudo generar el archivo Excel.",
+      });
+    } finally {
+      exportGuardRef.current.finish();
+      dispatchExport({ type: "submit-finish" });
+    }
+  };
+
   return (
     <section className="history-panel">
       <div className="history-screen">
@@ -179,6 +236,17 @@ function HistorialesPanel({ aircraftId, aircraftRegistration, onUnauthorized, ca
 
           <div className="history-toolbar-group">
             <div className="history-print-actions">
+              {canExport ? (
+                <button
+                  type="button"
+                  className="history-export-button"
+                  aria-expanded={exportState.isOpen}
+                  aria-controls="flight-history-export-panel"
+                  onClick={() => dispatchExport({ type: "open", locale: "es" })}
+                >
+                  Exportar Excel
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="history-print-button"
@@ -213,6 +281,135 @@ function HistorialesPanel({ aircraftId, aircraftRegistration, onUnauthorized, ca
             </label>
           </div>
         </div>
+
+        {canExport && exportState.isOpen ? (
+          <form
+            id="flight-history-export-panel"
+            className="history-export-panel"
+            onSubmit={handleExportSubmit}
+            noValidate
+          >
+            <div className="history-export-heading">
+              <div>
+                <p className="history-export-eyebrow">Exportación XLSX</p>
+                <h2>Exportar historial</h2>
+              </div>
+              <button
+                type="button"
+                className="history-export-close"
+                onClick={() => dispatchExport({ type: "close" })}
+                disabled={exportState.submitting}
+                aria-label="Cerrar exportación"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="history-export-description">
+              El archivo incluirá un resumen de la aeronave y el historial de vuelos.
+            </p>
+
+            <div className="history-export-grid">
+              <label>
+                <span>Período</span>
+                <select
+                  value={exportState.periodType}
+                  onChange={(event) =>
+                    dispatchExport({
+                      type: "change",
+                      field: "periodType",
+                      value: event.target.value,
+                    })
+                  }
+                  disabled={exportState.submitting}
+                >
+                  <option value={EXPORT_PERIOD_TYPES.allHistory}>Todo el historial</option>
+                  <option value={EXPORT_PERIOD_TYPES.yearToDate}>Año en curso</option>
+                  <option value={EXPORT_PERIOD_TYPES.custom}>Personalizado</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Idioma</span>
+                <select
+                  value={exportState.locale}
+                  onChange={(event) =>
+                    dispatchExport({
+                      type: "change",
+                      field: "locale",
+                      value: event.target.value,
+                    })
+                  }
+                  disabled={exportState.submitting}
+                >
+                  <option value="es">Español</option>
+                  <option value="en">English</option>
+                </select>
+              </label>
+
+              {exportState.periodType === EXPORT_PERIOD_TYPES.custom ? (
+                <>
+                  <label>
+                    <span>Desde</span>
+                    <input
+                      type="date"
+                      value={exportState.periodStartDate}
+                      onChange={(event) =>
+                        dispatchExport({
+                          type: "change",
+                          field: "periodStartDate",
+                          value: event.target.value,
+                        })
+                      }
+                      required
+                      disabled={exportState.submitting}
+                    />
+                  </label>
+                  <label>
+                    <span>Hasta</span>
+                    <input
+                      type="date"
+                      value={exportState.periodEndDate}
+                      onChange={(event) =>
+                        dispatchExport({
+                          type: "change",
+                          field: "periodEndDate",
+                          value: event.target.value,
+                        })
+                      }
+                      required
+                      disabled={exportState.submitting}
+                    />
+                  </label>
+                </>
+              ) : null}
+            </div>
+
+            {exportState.error ? (
+              <p className="history-export-error" role="alert">
+                {exportState.error}
+              </p>
+            ) : null}
+
+            <div className="history-export-actions">
+              <button
+                type="submit"
+                className="history-export-button"
+                disabled={exportState.submitting}
+              >
+                {exportState.submitting ? "Generando Excel..." : "Descargar Excel"}
+              </button>
+              <button
+                type="button"
+                className="history-print-button is-secondary"
+                onClick={() => dispatchExport({ type: "close" })}
+                disabled={exportState.submitting}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        ) : null}
 
         {loading ? <p className="history-status">Cargando historiales...</p> : null}
         {!loading && error ? <p className="history-status history-status-error">{error}</p> : null}
