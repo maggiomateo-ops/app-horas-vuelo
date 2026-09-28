@@ -1404,7 +1404,7 @@ function App() {
           aircraftId={selectedAircraft.aircraft_id}
           aircraftRegistration={selectedAircraft.matricula}
           onUnauthorized={handleUnauthorized}
-          canMutateFlights={canUseFlightWrites}
+          canMutateFlights={canEditAircraft}
           onEditFlight={cargarVueloDesdeHistorial}
         />
       ) : effectiveActiveMainTab === "dashboards" ? (
