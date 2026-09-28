@@ -32,4 +32,10 @@ export default defineConfig([
       globals: globals.node,
     },
   },
+  {
+    files: ['test/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

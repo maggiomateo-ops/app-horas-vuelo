@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test",
     "preview": "vite preview",
     "postgres:check": "node scripts/check-postgres-runtime.mjs",
     "postgres:schema-check": "node scripts/check-postgres-repository-schema.mjs",
