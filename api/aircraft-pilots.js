@@ -3,6 +3,7 @@ import { getAircraftPilotsForManager } from "./_adminRepository.js";
 import { DATA_SOURCE } from "./_dataSource.js";
 import {
   getBody,
+  getPilotManagementCapabilities,
   managementErrorResponse,
   optionalString,
   requiredEmail,
@@ -78,13 +79,20 @@ export default async function handler(req, res) {
       const result = source === DATA_SOURCE.POSTGRES
         ? await getAircraftPilotsForMemberFromPostgres(userId, aircraftId)
         : await getAircraftPilotsForManager(userId, aircraftId);
+      const capabilities = getPilotManagementCapabilities({
+        source,
+        canManagePilots: result.canManagePilots,
+      });
+      const publicResult = { ...result };
+      delete publicResult.canManagePilots;
       return res.status(200).json({
         ok: true,
-        ...result,
+        ...publicResult,
         writes_enabled: userManagementWritesEnabled(),
         management_mode: source === DATA_SOURCE.POSTGRES
           ? "POSTGRES_CANONICAL"
           : "SHEETS_LEGACY",
+        ...(capabilities ? { capabilities } : {}),
       });
     } catch (error) {
       const status = getErrorStatus(error);

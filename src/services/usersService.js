@@ -63,6 +63,7 @@ export async function fetchAircraftPilots(aircraftId, signal) {
     aircraft: result.aircraft ?? null,
     pilots: result.pilots,
     writesEnabled: result.writes_enabled === true,
+    canCreatePilot: result.capabilities?.can_create_pilot === true,
     managementMode: result.management_mode === "POSTGRES_CANONICAL"
       ? "POSTGRES_CANONICAL"
       : "SHEETS_LEGACY",

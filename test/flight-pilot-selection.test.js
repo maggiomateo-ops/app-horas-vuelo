@@ -3,6 +3,9 @@ import fs from "node:fs/promises";
 import test from "node:test";
 
 import { resolveAircraftPilotForFlight } from "../api/_postgresFlightRepository.js";
+import { DATA_SOURCE } from "../api/_dataSource.js";
+import { getPilotManagementCapabilities } from "../api/_managementHttp.js";
+import { fetchAircraftPilots } from "../src/services/usersService.js";
 import {
   buildPilotOptions,
   findSameNamePilotCandidates,
@@ -58,10 +61,60 @@ test("resolver canonico rechaza un person_id que no esta ACTIVE para esa aeronav
   );
 });
 
+test("capability de alta exige Postgres OWNER activo y write gate habilitado", async () => {
+  const previous = process.env.USER_MANAGEMENT_WRITES_ENABLED;
+  try {
+    process.env.USER_MANAGEMENT_WRITES_ENABLED = "true";
+    assert.deepEqual(
+      getPilotManagementCapabilities({ source: DATA_SOURCE.POSTGRES, canManagePilots: true }),
+      { can_create_pilot: true }
+    );
+    assert.deepEqual(
+      getPilotManagementCapabilities({ source: DATA_SOURCE.POSTGRES, canManagePilots: false }),
+      { can_create_pilot: false }
+    );
+    assert.equal(
+      getPilotManagementCapabilities({ source: DATA_SOURCE.SHEETS, canManagePilots: true }),
+      null
+    );
+
+    process.env.USER_MANAGEMENT_WRITES_ENABLED = "false";
+    assert.deepEqual(
+      getPilotManagementCapabilities({ source: DATA_SOURCE.POSTGRES, canManagePilots: true }),
+      { can_create_pilot: false }
+    );
+  } finally {
+    if (previous === undefined) delete process.env.USER_MANAGEMENT_WRITES_ENABLED;
+    else process.env.USER_MANAGEMENT_WRITES_ENABLED = previous;
+  }
+});
+
+test("servicio entrega capability Postgres OWNER al selector", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      ok: true,
+      pilots: [],
+      writes_enabled: true,
+      management_mode: "POSTGRES_CANONICAL",
+      capabilities: { can_create_pilot: true },
+    }),
+  });
+  try {
+    const result = await fetchAircraftPilots(AIRCRAFT_ID);
+    assert.equal(result.canCreatePilot, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("UI conserva identidad separada, alta OWNER explicita y Sheets legacy", async () => {
-  const [appSource, selectorSource, flightSource, historySource, handlerSource] = await Promise.all([
+  const [appSource, selectorSource, settingsSource, flightSource, historySource, handlerSource] = await Promise.all([
     fs.readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../src/components/FlightPilotSelector.jsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../src/components/SettingsUsersPanel.jsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../api/_postgresFlightRepository.js", import.meta.url), "utf8"),
     fs.readFile(new URL("../api/_postgresHistorialesParityAdapter.js", import.meta.url), "utf8"),
     fs.readFile(new URL("../api/guardar-vuelo.js", import.meta.url), "utf8"),
@@ -71,8 +124,9 @@ test("UI conserva identidad separada, alta OWNER explicita y Sheets legacy", asy
   assert.match(appSource, /pilot_person_id: pilotPersonId/);
   assert.match(appSource, /setPilotPersonId\(editable\.pilotPersonId\)/);
   assert.match(appSource, /setPilotPersonId\(ultimoInput\.pilotPersonId \?\? ultimoInput\.pilot_person_id/);
-  assert.match(appSource, /selectedAircraftRole === "OWNER"/);
-  assert.match(selectorSource, /canCreate && writesEnabled/);
+  assert.doesNotMatch(appSource, /canCreate=\{selectedAircraftRole === "OWNER"\}/);
+  assert.match(selectorSource, /canCreatePilot \? \(/);
+  assert.match(settingsSource, /result\.managementMode === "POSTGRES_CANONICAL"[\s\S]*?result\.canCreatePilot/);
   assert.match(selectorSource, /person_id: pilot\.person_id/);
   assert.match(selectorSource, /Es una persona distinta/);
   assert.match(flightSource, /p\.person_id=\$2::uuid/);

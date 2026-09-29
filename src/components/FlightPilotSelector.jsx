@@ -105,7 +105,6 @@ export default function FlightPilotSelector({
   aircraftId,
   selectedPersonId,
   selectedName,
-  canCreate,
   disabled,
   onChange,
   onUnauthorized,
@@ -114,7 +113,7 @@ export default function FlightPilotSelector({
   const [query, setQuery] = useState(selectedName || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [writesEnabled, setWritesEnabled] = useState(false);
+  const [canCreatePilot, setCanCreatePilot] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState(false);
@@ -122,10 +121,11 @@ export default function FlightPilotSelector({
   const loadPilots = useCallback(async (signal) => {
     setLoading(true);
     setError("");
+    setCanCreatePilot(false);
     try {
       const result = await fetchAircraftPilots(aircraftId, signal);
       setPilots(result.pilots);
-      setWritesEnabled(result.writesEnabled);
+      setCanCreatePilot(result.canCreatePilot);
       return result.pilots;
     } catch (loadError) {
       if (loadError.name === "AbortError") return [];
@@ -215,7 +215,7 @@ export default function FlightPilotSelector({
       ) : null}
       {selectedOption ? <span className="flight-pilot-selected">Piloto seleccionado</span> : null}
       {error ? <p className="flight-pilot-error" role="alert">{error}</p> : null}
-      {canCreate && writesEnabled ? (
+      {canCreatePilot ? (
         <button type="button" className="flight-pilot-add" onClick={() => setShowCreate((visible) => !visible)} disabled={disabled}>
           + Agregar piloto
         </button>

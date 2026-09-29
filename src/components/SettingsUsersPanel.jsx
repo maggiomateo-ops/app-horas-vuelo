@@ -217,7 +217,9 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
     const result = activeTab === "users" ? await fetchPlatformUsers(signal) : await fetchAircraftPilots(aircraftId, signal);
     return {
       records: activeTab === "users" ? result.users : result.pilots,
-      writesEnabled: result.writesEnabled,
+      writesEnabled: activeTab === "pilots" && result.managementMode === "POSTGRES_CANONICAL"
+        ? result.canCreatePilot
+        : result.writesEnabled,
       managementMode: activeTab === "users"
         ? "SHEETS_LEGACY"
         : result.managementMode,

@@ -1421,7 +1421,6 @@ function App() {
                       aircraftId={selectedAircraft.aircraft_id}
                       selectedPersonId={pilotPersonId}
                       selectedName={piloto}
-                      canCreate={selectedAircraftRole === "OWNER"}
                       disabled={loading}
                       onUnauthorized={handleUnauthorized}
                       onChange={({ personId, name }) => {

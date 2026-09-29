@@ -36,11 +36,16 @@ function localizedStatus(status) {
   return status === "ACTIVE" ? "ACTIVO" : "INACTIVO";
 }
 
+function isOwnerManagerRole(role) {
+  return normalizeText(role).toUpperCase() === "OWNER";
+}
+
 async function requireOwnerManager(query, actorUserId, aircraftId, { lock = false } = {}) {
   const { rows } = await query(
     `SELECT
        actor.user_id,
        membership.membership_id,
+       membership.role,
        aircraft.aircraft_id,
        COALESCE(registration.registration, '') AS registration
      FROM app.users actor
@@ -61,12 +66,11 @@ async function requireOwnerManager(query, actorUserId, aircraftId, { lock = fals
        AND actor.status = 'ACTIVE'
        AND aircraft.status = 'ACTIVE'
        AND membership.status = 'ACTIVE'
-       AND membership.role = 'OWNER'
      ${lock ? "FOR UPDATE OF membership" : ""}`,
     [actorUserId, aircraftId]
   );
 
-  if (rows.length !== 1) {
+  if (rows.length !== 1 || !isOwnerManagerRole(rows[0].role)) {
     throw repositoryError(
       "Se requiere ser Owner activo de la aeronave.",
       "AIRCRAFT_ACCESS_DENIED",
@@ -81,6 +85,7 @@ async function requireAircraftMember(query, actorUserId, aircraftId) {
     `SELECT
        actor.user_id,
        membership.membership_id,
+       membership.role,
        aircraft.aircraft_id,
        COALESCE(registration.registration, '') AS registration
      FROM app.users actor
@@ -223,6 +228,7 @@ export function createPostgresPilotManagementRepository({
         matricula: normalizeText(aircraft.registration),
       },
       pilots: rows.map(mapPilot),
+      canManagePilots: isOwnerManagerRole(aircraft.role),
     };
   }
 

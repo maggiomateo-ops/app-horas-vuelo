@@ -81,7 +81,6 @@ function createMockRepository(overrides = {}) {
       const membership = state.memberships.find((item) =>
         item.user_id === actorUserId
         && item.aircraft_id === aircraftId
-        && (!text.includes("membership.role = 'OWNER'") || item.role === "OWNER")
         && item.status === "ACTIVE"
       );
       return {
@@ -89,6 +88,7 @@ function createMockRepository(overrides = {}) {
           ? [{
               user_id: actorUserId,
               membership_id: membership.membership_id,
+              role: membership.role,
               aircraft_id: aircraftId,
               registration: aircraft.registration,
             }]
@@ -297,6 +297,7 @@ test("lectura Postgres lista asociaciones canonical y mantiene login opcional", 
   const result = await mock.repository.listAircraftPilotsForMember(OWNER_ID, AIRCRAFT_ID);
 
   assert.equal(result.aircraft.matricula, "LV-MHZ");
+  assert.equal(result.canManagePilots, true);
   assert.deepEqual(result.pilots[0], {
     person_id: EXISTING_PERSON_ID,
     user_id: LINKED_USER_ID,
@@ -319,6 +320,10 @@ test("members activos pueden leer, pero solo OWNER puede gestionar pilotos", asy
   });
   const readable = await mock.repository.listAircraftPilotsForMember(LINKED_USER_ID, AIRCRAFT_ID);
   assert.deepEqual(readable.pilots, []);
+  assert.equal(readable.canManagePilots, false);
+  mock.state.memberships.find((membership) => membership.user_id === LINKED_USER_ID).role = "VIEWER";
+  const viewerReadable = await mock.repository.listAircraftPilotsForMember(LINKED_USER_ID, AIRCRAFT_ID);
+  assert.equal(viewerReadable.canManagePilots, false);
   await assert.rejects(
     mock.repository.authorizeAircraftPilot(LINKED_USER_ID, pilotInput()),
     (error) => error.code === "AIRCRAFT_ACCESS_DENIED" && error.statusCode === 403

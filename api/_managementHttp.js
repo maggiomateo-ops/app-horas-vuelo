@@ -33,6 +33,14 @@ export function userManagementWritesEnabled() {
   return process.env.USER_MANAGEMENT_WRITES_ENABLED === "true";
 }
 
+export function getPilotManagementCapabilities({ source, canManagePilots }) {
+  if (source !== DATA_SOURCE.POSTGRES) return null;
+  return {
+    can_create_pilot:
+      canManagePilots === true && userManagementWritesEnabled(),
+  };
+}
+
 export function resolveUserManagementDataSource() {
   const identitySource = resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE");
   const aircraftSource = resolveDataSource("AIRCRAFT_DATA_SOURCE");
