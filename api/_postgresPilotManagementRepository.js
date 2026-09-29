@@ -76,6 +76,43 @@ async function requireOwnerManager(query, actorUserId, aircraftId, { lock = fals
   return rows[0];
 }
 
+async function requireAircraftMember(query, actorUserId, aircraftId) {
+  const { rows } = await query(
+    `SELECT
+       actor.user_id,
+       membership.membership_id,
+       aircraft.aircraft_id,
+       COALESCE(registration.registration, '') AS registration
+     FROM app.users actor
+     JOIN app.aircraft_memberships membership
+       ON membership.user_id = actor.user_id
+      AND membership.aircraft_id = $2::uuid
+     JOIN app.aircraft aircraft
+       ON aircraft.aircraft_id = membership.aircraft_id
+     LEFT JOIN LATERAL (
+       SELECT current_registration.registration
+       FROM app.aircraft_registrations current_registration
+       WHERE current_registration.aircraft_id = aircraft.aircraft_id
+         AND current_registration.effective_to_at IS NULL
+       ORDER BY current_registration.effective_from_at DESC
+       LIMIT 1
+     ) registration ON true
+     WHERE actor.user_id = $1::uuid
+       AND actor.status = 'ACTIVE'
+       AND aircraft.status = 'ACTIVE'
+       AND membership.status = 'ACTIVE'`,
+    [actorUserId, aircraftId]
+  );
+  if (rows.length !== 1) {
+    throw repositoryError(
+      "Se requiere acceso activo a la aeronave.",
+      "AIRCRAFT_ACCESS_DENIED",
+      403
+    );
+  }
+  return rows[0];
+}
+
 async function listPilotRows(query, aircraftId) {
   const { rows } = await query(
     `SELECT
@@ -171,10 +208,10 @@ export function createPostgresPilotManagementRepository({
   transaction = withPostgresTransaction,
   randomUUID = crypto.randomUUID,
 } = {}) {
-  async function listAircraftPilotsForOwner(actorUserId, aircraftId) {
+  async function listAircraftPilotsForMember(actorUserId, aircraftId) {
     const normalizedActorUserId = normalizeUuid(actorUserId, "actorUserId");
     const normalizedAircraftId = normalizeUuid(aircraftId, "aircraftId");
-    const aircraft = await requireOwnerManager(
+    const aircraft = await requireAircraftMember(
       query,
       normalizedActorUserId,
       normalizedAircraftId
@@ -432,7 +469,7 @@ export function createPostgresPilotManagementRepository({
   }
 
   return {
-    listAircraftPilotsForOwner,
+    listAircraftPilotsForMember,
     authorizeAircraftPilot,
     revokeAircraftPilot,
   };
@@ -440,8 +477,8 @@ export function createPostgresPilotManagementRepository({
 
 const postgresPilotManagementRepository = createPostgresPilotManagementRepository();
 
-export const getAircraftPilotsForOwnerFromPostgres =
-  postgresPilotManagementRepository.listAircraftPilotsForOwner;
+export const getAircraftPilotsForMemberFromPostgres =
+  postgresPilotManagementRepository.listAircraftPilotsForMember;
 export const authorizeAircraftPilotInPostgres =
   postgresPilotManagementRepository.authorizeAircraftPilot;
 export const revokeAircraftPilotInPostgres =

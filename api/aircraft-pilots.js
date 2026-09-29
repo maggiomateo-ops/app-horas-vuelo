@@ -12,7 +12,7 @@ import {
 } from "./_managementHttp.js";
 import {
   authorizeAircraftPilotInPostgres,
-  getAircraftPilotsForOwnerFromPostgres,
+  getAircraftPilotsForMemberFromPostgres,
   revokeAircraftPilotInPostgres,
 } from "./_postgresPilotManagementRepository.js";
 import {
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
     try {
       const result = source === DATA_SOURCE.POSTGRES
-        ? await getAircraftPilotsForOwnerFromPostgres(userId, aircraftId)
+        ? await getAircraftPilotsForMemberFromPostgres(userId, aircraftId)
         : await getAircraftPilotsForManager(userId, aircraftId);
       return res.status(200).json({
         ok: true,

@@ -321,11 +321,17 @@ async function requireFlightOwnerInTransaction(client, userId, aircraftId) {
   }
 }
 
-export async function resolveAircraftPilotForFlight(client, aircraftId, pilotName) {
+export async function resolveAircraftPilotForFlight(client, aircraftId, pilotPersonId) {
+  const normalizedPilotPersonId = normalizeUuid(pilotPersonId, "pilotPersonId");
   const { rows } = await client.query(
-    `SELECT p.person_id FROM app.aircraft_persons ap JOIN app.persons p ON p.person_id=ap.person_id
-      WHERE ap.aircraft_id=$1::uuid AND ap.status='ACTIVE' AND p.status='ACTIVE' AND lower(p.full_name)=lower($2)`,
-    [aircraftId, pilotName]
+    `SELECT p.person_id, p.full_name
+       FROM app.aircraft_persons ap
+       JOIN app.persons p ON p.person_id=ap.person_id
+      WHERE ap.aircraft_id=$1::uuid
+        AND p.person_id=$2::uuid
+        AND ap.status='ACTIVE'
+        AND p.status='ACTIVE'`,
+    [aircraftId, normalizedPilotPersonId]
   );
   if (rows.length !== 1) {
     throw repositoryError(
@@ -338,14 +344,14 @@ export async function resolveAircraftPilotForFlight(client, aircraftId, pilotNam
 }
 
 async function resolveManualReferences(client, aircraftId, payload, flightDate) {
-  const pilotName = String(payload.piloto || "").trim();
+  const pilotPersonIdInput = String(payload.pilot_person_id || "").trim();
   const ownerName = String(payload.propietario || "").trim();
-  if (!pilotName || !ownerName) throw repositoryError("Piloto y propietario son obligatorios.", "FLIGHT_INVALID_PAYLOAD", 422);
+  if (!pilotPersonIdInput || !ownerName) throw repositoryError("Piloto y propietario son obligatorios.", "FLIGHT_INVALID_PAYLOAD", 422);
 
   const pilotPersonId = await resolveAircraftPilotForFlight(
     client,
     aircraftId,
-    pilotName
+    pilotPersonIdInput
   );
 
   const { rows: owners } = await client.query(

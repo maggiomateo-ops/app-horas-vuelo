@@ -51,6 +51,7 @@ export default async function handler(req, res) {
     delete payload.spreadsheetId;
     delete payload.aircraft_id;
     delete payload.aircraftId;
+    delete payload.pilot_person_id;
 
     const data = await saveFlightFromSheets({ userId, aircraftId, payload });
     return res.status(200).json(data);

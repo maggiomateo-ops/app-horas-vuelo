@@ -71,6 +71,7 @@ function flightPayload(overrides = {}) {
     desde: "AGR",
     hasta: "RAE",
     piloto: "Pilot One",
+    pilot_person_id: PILOT_ID,
     propietario: "Owner One",
     tiempoVueloJPI: 1.1,
     tiempoEnServicioGarmin: 1,
@@ -219,6 +220,20 @@ test("aceite singular falla cerrado para una configuracion multimotor", async ()
   );
   assert.equal(mock.getCommitted(), false);
   assert.equal(mock.consumables.length, 0);
+});
+
+test("texto de piloto sin pilot_person_id canonico falla antes de persistir", async () => {
+  const mock = createMockFlightRepository();
+  await assert.rejects(
+    mock.saveFlight({
+      userId: USER_ID,
+      aircraftId: AIRCRAFT_ID,
+      payload: flightPayload({ pilot_person_id: "", piloto: "Typo Pilot" }),
+    }),
+    (error) => error.code === "FLIGHT_INVALID_PAYLOAD" && error.statusCode === 422
+  );
+  assert.equal(mock.getCommitted(), false);
+  assert.equal(mock.queries.some(({ text }) => text.includes("INSERT INTO app.flight_records")), false);
 });
 
 test("aceite singular monomotor conserva el flujo y usa la instalacion vigente", async () => {

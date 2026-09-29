@@ -4,6 +4,7 @@ import DashboardPanel from "./components/DashboardPanel";
 import AircraftOwnershipOnboarding from "./components/AircraftOwnershipOnboarding";
 import AircraftConfigurationOnboarding from "./components/AircraftConfigurationOnboarding";
 import FirstAircraftOnboarding from "./components/FirstAircraftOnboarding";
+import FlightPilotSelector from "./components/FlightPilotSelector";
 import HistorialesPanel from "./components/HistorialesPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import {
@@ -299,6 +300,7 @@ function App() {
   const [tiempoVueloJPI, setTiempoVueloJPI] = useState("");
   const [tiempoEnServicioGarmin, setTiempoEnServicioGarmin] = useState("");
   const [piloto, setPiloto] = useState("");
+  const [pilotPersonId, setPilotPersonId] = useState("");
   const [propietario, setPropietario] = useState("");
   const [aceiteAgregado, setAceiteAgregado] = useState("");
   const [combustibleTanqueIzquierdo, setCombustibleTanqueIzquierdo] = useState("");
@@ -413,6 +415,7 @@ function App() {
     aircrafts.find((aircraft) => aircraft.aircraft_id === selectedAircraftId) ?? null;
   const selectedAircraftRole = String(selectedAircraft?.rol || "").trim().toUpperCase();
   const isGlobalAdmin = currentUser?.isAdmin === true;
+  const usesCanonicalPilotSelection = currentUser?.legacyUserManagementEnabled === false;
   const allowedMainTabIds = getAllowedMainTabIds({
     isAdmin: isGlobalAdmin,
     aircraftRole: selectedAircraftRole,
@@ -572,6 +575,7 @@ function App() {
     setTiempoVueloJPI(String(operationalConfig.defaultFlightTimeJPI ?? ""));
     setTiempoEnServicioGarmin(String(operationalConfig.defaultServiceTimeGarmin ?? ""));
     setPiloto("");
+    setPilotPersonId("");
     setPropietario("");
     setAceiteAgregado("");
     setCombustibleTanqueIzquierdo("");
@@ -608,6 +612,7 @@ function App() {
       tiempoVueloJPI: row.tiempoDeVuelo ?? "",
       tiempoEnServicioGarmin: row.tiempoEnServicio ?? "",
       piloto: row.piloto ?? "",
+      pilotPersonId: row.pilot_person_id ?? "",
       propietario: row.propietario ?? "",
       aceiteAgregado: row.aceiteAgregado ?? "",
       combustibleTanqueIzquierdo: row.combustibleTanqueIzquierdo ?? "",
@@ -625,6 +630,7 @@ function App() {
     setTiempoVueloJPI(String(editable.tiempoVueloJPI ?? ""));
     setTiempoEnServicioGarmin(String(editable.tiempoEnServicioGarmin ?? ""));
     setPiloto(editable.piloto);
+    setPilotPersonId(editable.pilotPersonId);
     setPropietario(normalizarPropietarioSelect(editable.propietario));
     setAceiteAgregado(String(editable.aceiteAgregado ?? ""));
     setCombustibleTanqueIzquierdo(String(editable.combustibleTanqueIzquierdo ?? ""));
@@ -656,6 +662,7 @@ function App() {
         : String(ultimoInput.tiempoEnServicioGarmin)
     );
     setPiloto(ultimoInput.piloto ?? "");
+    setPilotPersonId(ultimoInput.pilotPersonId ?? ultimoInput.pilot_person_id ?? "");
     setPropietario(normalizarPropietarioSelect(ultimoInput.propietario));
     setAceiteAgregado(
       ultimoInput.aceiteAgregado === "" || ultimoInput.aceiteAgregado == null
@@ -698,6 +705,7 @@ function App() {
         : String(ultimoInput.tiempoEnServicioGarmin)
     );
     setPiloto(ultimoInput.piloto ?? "");
+    setPilotPersonId(ultimoInput.pilotPersonId ?? ultimoInput.pilot_person_id ?? "");
     setPropietario(normalizarPropietarioSelect(ultimoInput.propietario));
     setAceiteAgregado(
       ultimoInput.aceiteAgregado === "" || ultimoInput.aceiteAgregado == null
@@ -815,7 +823,11 @@ function App() {
     ) {
       nextErrors.tiempoEnServicioGarmin = "Ingresá un tiempo válido.";
     }
-    if (!piloto.trim()) nextErrors.piloto = "Ingresá el piloto.";
+    if (usesCanonicalPilotSelection ? !pilotPersonId : !piloto.trim()) {
+      nextErrors.piloto = usesCanonicalPilotSelection
+        ? "Seleccioná un piloto autorizado."
+        : "Ingresá el piloto.";
+    }
     if (!propietario.trim()) nextErrors.propietario = "Seleccioná el propietario.";
 
     const optionalNumericFields = [
@@ -859,6 +871,7 @@ function App() {
       tiempoVueloJPI: Number(tiempoVueloJPI),
       tiempoEnServicioGarmin: Number(tiempoEnServicioGarmin),
       piloto: piloto.trim(),
+      ...(usesCanonicalPilotSelection ? { pilot_person_id: pilotPersonId } : {}),
       propietario: propietario.trim(),
       aceiteAgregado: aceiteAgregado === "" ? "" : Number(aceiteAgregado),
       combustibleTanqueIzquierdo:
@@ -1403,7 +1416,23 @@ function App() {
               <div className="flight-field-grid flight-field-grid-two">
                 <div className={`flight-field ${formErrors.piloto ? "has-error" : ""}`}>
                   <FieldLabel htmlFor="piloto" title="Piloto" required />
-                  <input id="piloto" type="text" value={piloto} onChange={(e) => { setPiloto(e.target.value); clearFieldError("piloto"); }} placeholder="Nombre y apellido" className={placeholderClassName} />
+                  {usesCanonicalPilotSelection ? (
+                    <FlightPilotSelector
+                      aircraftId={selectedAircraft.aircraft_id}
+                      selectedPersonId={pilotPersonId}
+                      selectedName={piloto}
+                      canCreate={selectedAircraftRole === "OWNER"}
+                      disabled={loading}
+                      onUnauthorized={handleUnauthorized}
+                      onChange={({ personId, name }) => {
+                        setPilotPersonId(personId);
+                        setPiloto(name);
+                        clearFieldError("piloto");
+                      }}
+                    />
+                  ) : (
+                    <input id="piloto" type="text" value={piloto} onChange={(e) => { setPiloto(e.target.value); clearFieldError("piloto"); }} placeholder="Nombre y apellido" className={placeholderClassName} />
+                  )}
                   <FieldError name="piloto" />
                 </div>
                 <div className={`flight-field ${formErrors.propietario ? "has-error" : ""}`}>

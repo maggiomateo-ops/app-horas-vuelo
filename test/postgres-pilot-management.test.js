@@ -81,7 +81,7 @@ function createMockRepository(overrides = {}) {
       const membership = state.memberships.find((item) =>
         item.user_id === actorUserId
         && item.aircraft_id === aircraftId
-        && item.role === "OWNER"
+        && (!text.includes("membership.role = 'OWNER'") || item.role === "OWNER")
         && item.status === "ACTIVE"
       );
       return {
@@ -205,18 +205,18 @@ function createMockRepository(overrides = {}) {
       return { rows: [] };
     }
 
-    if (text.includes("SELECT p.person_id FROM app.aircraft_persons ap")) {
-      const [aircraftId, pilotName] = params;
+    if (text.includes("FROM app.aircraft_persons ap") && text.includes("p.person_id=$2::uuid")) {
+      const [aircraftId, personId] = params;
       return {
         rows: state.associations
           .filter((association) => association.aircraft_id === aircraftId && association.status === "ACTIVE")
           .map((association) => state.persons.find((person) =>
             person.person_id === association.person_id
             && person.status === "ACTIVE"
-            && person.full_name.toLowerCase() === pilotName.toLowerCase()
+            && person.person_id === personId
           ))
           .filter(Boolean)
-          .map((person) => ({ person_id: person.person_id })),
+          .map((person) => ({ person_id: person.person_id, full_name: person.full_name })),
       };
     }
 
@@ -294,7 +294,7 @@ test("lectura Postgres lista asociaciones canonical y mantiene login opcional", 
   const mock = createMockRepository({
     associations: [{ aircraft_id: AIRCRAFT_ID, person_id: EXISTING_PERSON_ID, status: "ACTIVE" }],
   });
-  const result = await mock.repository.listAircraftPilotsForOwner(OWNER_ID, AIRCRAFT_ID);
+  const result = await mock.repository.listAircraftPilotsForMember(OWNER_ID, AIRCRAFT_ID);
 
   assert.equal(result.aircraft.matricula, "LV-MHZ");
   assert.deepEqual(result.pilots[0], {
@@ -311,10 +311,16 @@ test("lectura Postgres lista asociaciones canonical y mantiene login opcional", 
   });
 });
 
-test("solo OWNER activo puede leer y gestionar pilotos de su aeronave", async () => {
+test("members activos pueden leer, pero solo OWNER puede gestionar pilotos", async () => {
   const mock = createMockRepository();
+  mock.state.memberships.push({
+    membership_id: uuid(91), aircraft_id: AIRCRAFT_ID, user_id: LINKED_USER_ID,
+    role: "PILOT", status: "ACTIVE",
+  });
+  const readable = await mock.repository.listAircraftPilotsForMember(LINKED_USER_ID, AIRCRAFT_ID);
+  assert.deepEqual(readable.pilots, []);
   await assert.rejects(
-    mock.repository.listAircraftPilotsForOwner(LINKED_USER_ID, AIRCRAFT_ID),
+    mock.repository.authorizeAircraftPilot(LINKED_USER_ID, pilotInput()),
     (error) => error.code === "AIRCRAFT_ACCESS_DENIED" && error.statusCode === 403
   );
   await assert.rejects(
@@ -368,6 +374,25 @@ test("dos persons pueden compartir email sin auto-merge", async () => {
   assert.equal(mock.state.associations[0].person_id, result.person_id);
   const sql = mock.queries.map(({ text }) => text).join("\n");
   assert.doesNotMatch(sql, /WHERE lower\(email\)/i);
+});
+
+test("crear otra persona homonima es explicito y no auto-mergea", async () => {
+  const mock = createMockRepository();
+  const first = await mock.repository.authorizeAircraftPilot(OWNER_ID, pilotInput({
+    nombre: "Mismo Nombre",
+    email: "",
+    dni: "",
+    licencia: "LIC-1",
+  }));
+  const second = await mock.repository.authorizeAircraftPilot(OWNER_ID, pilotInput({
+    nombre: "Mismo Nombre",
+    email: "",
+    dni: "",
+    licencia: "LIC-2",
+  }));
+
+  assert.notEqual(first.person_id, second.person_id);
+  assert.equal(mock.state.persons.filter((person) => person.full_name === "Mismo Nombre").length, 2);
 });
 
 test("adapter UI revoca por person_id canonical y conserva user_id para Sheets", async () => {
@@ -439,7 +464,7 @@ test("piloto autorizado queda resoluble por el Flight Repository actual", async 
   const resolvedPersonId = await resolveAircraftPilotForFlight(
     { query: mock.query },
     AIRCRAFT_ID,
-    "New Pilot"
+    result.person_id
   );
 
   assert.equal(resolvedPersonId, result.person_id);

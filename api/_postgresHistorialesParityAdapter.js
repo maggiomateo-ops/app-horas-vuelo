@@ -307,6 +307,7 @@ function commonLegacyRow(flight, provenanceByFlight) {
     desde: text(flight.departure_location),
     hasta: text(flight.arrival_location),
     tiempoEnServicio: asNumber(flight.time_in_service_hours) ?? "",
+    pilot_person_id: flight.pilot_person_id ? String(flight.pilot_person_id) : "",
     piloto: text(flight.pilot_name),
     propietario: text(flight.utilization_owner_name),
     observaciones: text(flight.remarks),
@@ -368,6 +369,7 @@ function buildComputacionRows(
         tiempoVuelo: provenance?.rawFlightTime ?? asNumber(flight.flight_time_hours) ?? "",
         tiempoEnServicio:
           provenance?.rawServiceTime ?? asNumber(flight.time_in_service_hours) ?? "",
+        pilot_person_id: flight.pilot_person_id ? String(flight.pilot_person_id) : "",
         piloto: text(flight.pilot_name),
         propietario: canonicalOwner || provenance?.legacyOwnerLabel || "",
         aceiteAgregado: oil?.enteredValue ?? "",
