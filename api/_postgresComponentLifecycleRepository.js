@@ -275,7 +275,6 @@ async function lockOwnerAndConfiguration(client, userId, aircraftId) {
       SELECT aircraft_id, engine_count, propeller_count
       FROM app.aircraft_configuration
       WHERE aircraft_id = $1::uuid
-      FOR UPDATE
     `,
     [aircraftId]
   );
