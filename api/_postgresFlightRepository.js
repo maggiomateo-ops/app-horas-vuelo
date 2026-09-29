@@ -397,8 +397,7 @@ async function resolveLegacyOilTarget(client, aircraftId, flightDate) {
        FROM app.aircraft_configuration configuration
        JOIN app.aircraft_settings settings
          ON settings.aircraft_id = configuration.aircraft_id
-      WHERE configuration.aircraft_id = $1::uuid
-      FOR SHARE OF configuration, settings`,
+      WHERE configuration.aircraft_id = $1::uuid`,
     [aircraftId]
   );
   const configuration = rows[0];
