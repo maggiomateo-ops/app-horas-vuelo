@@ -352,3 +352,159 @@ export function getAircraftOnboardingErrorMessage(error) {
 
   return "No se pudo crear la aeronave. Intentá nuevamente.";
 }
+
+const AIRCRAFT_PROPULSION_TYPES = new Set([
+  "PISTON",
+  "TURBOPROP",
+  "TURBOJET",
+  "TURBOFAN",
+  "ELECTRIC",
+  "OTHER",
+]);
+
+function configurationCount(value) {
+  const normalized = Number(value);
+  return Number.isInteger(normalized) && normalized >= 0 ? normalized : null;
+}
+
+export function validateAircraftConfiguration(values) {
+  const propulsionType = String(values?.propulsionType || "").trim().toUpperCase();
+  const engineCount = configurationCount(values?.engineCount);
+  const propellerCount = configurationCount(values?.propellerCount);
+  const installedOn = String(values?.installedOn || "").trim();
+  const errors = {};
+
+  if (!AIRCRAFT_PROPULSION_TYPES.has(propulsionType)) {
+    errors.propulsionType = "Seleccioná un tipo de propulsión.";
+  }
+  if (engineCount === null) errors.engineCount = "Ingresá una cantidad válida.";
+  if (propellerCount === null) errors.propellerCount = "Ingresá una cantidad válida.";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(installedOn)) {
+    errors.installedOn = "Ingresá la fecha efectiva de instalación.";
+  }
+  if (
+    ["PISTON", "TURBOPROP"].includes(propulsionType)
+    && (engineCount < 1 || propellerCount < 1)
+  ) {
+    errors.topology = "Esta propulsión requiere al menos un motor y una hélice.";
+  }
+  if (
+    ["TURBOJET", "TURBOFAN"].includes(propulsionType)
+    && (engineCount < 1 || propellerCount !== 0)
+  ) {
+    errors.topology = "Esta propulsión requiere al menos un motor y cero hélices.";
+  }
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors,
+    engineCount,
+    propellerCount,
+  };
+}
+
+function buildConfigurationComponents(values, componentType, count) {
+  const source = Array.isArray(values?.components) ? values.components : [];
+  return Array.from({ length: count }, (_, index) => {
+    const positionIndex = index + 1;
+    const component = source.find(
+      (candidate) =>
+        candidate.componentType === componentType
+        && Number(candidate.positionIndex) === positionIndex
+    ) || {};
+    const openingTis = String(component.openingTisHours ?? "").trim();
+    return {
+      componentType,
+      positionIndex,
+      manufacturer: String(component.manufacturer || "").trim() || null,
+      model: String(component.model || "").trim() || null,
+      serialNumber: String(component.serialNumber || "").trim() || null,
+      notes: null,
+      openingTisHours: openingTis === "" ? null : Number(openingTis),
+      installedOn: String(values.installedOn || "").trim(),
+    };
+  });
+}
+
+export function buildAircraftConfigurationPayload(aircraftId, values) {
+  const engineCount = Number(values?.engineCount);
+  const propellerCount = Number(values?.propellerCount);
+  return {
+    action: "setup-configuration",
+    aircraftId: String(aircraftId || "").trim(),
+    propulsionType: String(values?.propulsionType || "").trim().toUpperCase(),
+    engineCount,
+    propellerCount,
+    components: [
+      ...buildConfigurationComponents(values, "ENGINE", engineCount),
+      ...buildConfigurationComponents(values, "PROPELLER", propellerCount),
+    ],
+  };
+}
+
+export async function configureAircraftTopology(aircraftId, values) {
+  const response = await fetch("/api/aircraft", {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(buildAircraftConfigurationPayload(aircraftId, values)),
+  });
+  const data = await response.json().catch(() => null);
+
+  if (response.status === 401) {
+    const error = new Error("Tu sesion expiro. Vuelve a iniciar sesion.");
+    error.code = "UNAUTHORIZED";
+    error.statusCode = 401;
+    throw error;
+  }
+  if (!response.ok || !data?.ok) {
+    const error = new Error(data?.error || "No se pudo configurar la aeronave.");
+    error.code = data?.code || "AIRCRAFT_CONFIGURATION_FAILED";
+    error.statusCode = response.status;
+    throw error;
+  }
+  return data;
+}
+
+export async function configureAircraftTopologyAndRefresh(
+  aircraftId,
+  values,
+  {
+    configureRequest = configureAircraftTopology,
+    loadAircrafts = fetchAircrafts,
+    currentAircrafts = [],
+  } = {}
+) {
+  const result = await configureRequest(aircraftId, values);
+  let aircrafts;
+  try {
+    aircrafts = await loadAircrafts();
+  } catch (error) {
+    if (error?.code === "UNAUTHORIZED" || error?.message === "UNAUTHORIZED") throw error;
+    aircrafts = currentAircrafts.map((aircraft) =>
+      aircraft.aircraft_id === aircraftId
+        ? {
+            ...aircraft,
+            configurationConfigured: true,
+            configuration: result.configuration,
+            componentInstallations: result.componentInstallations,
+          }
+        : aircraft
+    );
+  }
+  return { ...result, aircrafts };
+}
+
+export function getAircraftConfigurationErrorMessage(error) {
+  if (error?.statusCode === 403) {
+    return "Sólo un Owner puede configurar esta aeronave.";
+  }
+  if (error?.statusCode === 409) {
+    return "La configuración inicial ya existe. Recargá la aeronave.";
+  }
+  if ([400, 422].includes(error?.statusCode)) return error.message;
+  if (error?.statusCode === 503) {
+    return "La configuración aeronáutica está temporalmente deshabilitada.";
+  }
+  return "No se pudo configurar la aeronave. Intentá nuevamente.";
+}

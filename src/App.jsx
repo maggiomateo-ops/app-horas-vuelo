@@ -2,11 +2,13 @@
 import "./App.css";
 import DashboardPanel from "./components/DashboardPanel";
 import AircraftOwnershipOnboarding from "./components/AircraftOwnershipOnboarding";
+import AircraftConfigurationOnboarding from "./components/AircraftConfigurationOnboarding";
 import FirstAircraftOnboarding from "./components/FirstAircraftOnboarding";
 import HistorialesPanel from "./components/HistorialesPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import {
   createFirstAircraftAndRefresh,
+  configureAircraftTopologyAndRefresh,
   configureOwnershipAndRefresh,
   fetchAircrafts,
 } from "./services/aircraftService";
@@ -288,6 +290,7 @@ function App() {
   const [aircraftsError, setAircraftsError] = useState("");
   const [aircraftOnboardingById, setAircraftOnboardingById] = useState({});
   const [ownershipConfirmation, setOwnershipConfirmation] = useState("");
+  const [configurationJustCompleted, setConfigurationJustCompleted] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState("registro");
   const [fecha, setFecha] = useState(getTodayInputValue);
   const [desde, setDesde] = useState("");
@@ -433,6 +436,12 @@ function App() {
     : null;
   const canMutateFlights =
     canEditAircraft && selectedAircraftOnboarding?.flightWritesReady !== false;
+  const hasCanonicalConfigurationState =
+    typeof selectedAircraft?.configurationConfigured === "boolean";
+  const configurationConfigured = selectedAircraft?.configurationConfigured === true;
+  const canConfigureAircraft =
+    selectedAircraftRole === "OWNER"
+    && selectedAircraft?.configurationSetupAvailable === true;
 
   useEffect(() => {
     if (selectedAircraft && !allowedMainTabIds.includes(activeMainTab)) {
@@ -1042,6 +1051,7 @@ function App() {
     setMensajeError("");
     setMensajeExito("");
     setOwnershipConfirmation("");
+    setConfigurationJustCompleted(false);
     setSelectedAircraftId(nextAircraftId);
   };
 
@@ -1077,6 +1087,19 @@ function App() {
         ? "La propiedad legal ya estaba configurada y se actualizó el estado de la aeronave."
         : "Propiedad legal configurada correctamente. Ya podés registrar vuelos."
     );
+  };
+
+  const handleConfigureAircraft = async (values) => {
+    if (!selectedAircraft) {
+      throw new Error("Seleccioná una aeronave antes de configurarla.");
+    }
+    const result = await configureAircraftTopologyAndRefresh(
+      selectedAircraft.aircraft_id,
+      values,
+      { currentAircrafts: aircrafts }
+    );
+    setAircrafts(result.aircrafts);
+    setConfigurationJustCompleted(true);
   };
 
   const resolvedTheme = themeMode === THEME_MODE.auto
@@ -1257,8 +1280,37 @@ function App() {
       </nav>
 
       <div className="app-content">
-      {effectiveActiveMainTab === "registro" ? canEditAircraft ? canMutateFlights ? (
+      {effectiveActiveMainTab === "registro" ? hasCanonicalConfigurationState && !configurationConfigured ? (
+        canConfigureAircraft ? (
+          <AircraftConfigurationOnboarding
+            configurationConfigured={false}
+            configuration={null}
+            componentInstallations={[]}
+            onComplete={handleConfigureAircraft}
+            onUnauthorized={handleUnauthorized}
+          />
+        ) : (
+          <section className="read-only-access" role="status">
+            <p className="dashboard-eyebrow">Configuración inicial</p>
+            <h2>Configuración aeronáutica pendiente</h2>
+            <p>
+              {selectedAircraftRole === "OWNER"
+                ? "La configuración inicial está temporalmente deshabilitada."
+                : "Un Owner debe definir la topología y los componentes instalados."}
+            </p>
+          </section>
+        )
+      ) : canEditAircraft ? canMutateFlights ? (
         <>
+          {configurationJustCompleted ? (
+            <AircraftConfigurationOnboarding
+              configurationConfigured
+              configuration={selectedAircraft.configuration}
+              componentInstallations={selectedAircraft.componentInstallations}
+              onComplete={handleConfigureAircraft}
+              onUnauthorized={handleUnauthorized}
+            />
+          ) : null}
           {ownershipConfirmation ? (
             <p className="ownership-success-message" role="status">
               {ownershipConfirmation}
@@ -1463,11 +1515,22 @@ function App() {
           )}
         </>
       ) : (
-        <AircraftOwnershipOnboarding
-          ownershipConfigured={selectedAircraftOnboarding?.ownershipConfigured === true}
-          onComplete={handleConfigureOwnership}
-          onUnauthorized={handleUnauthorized}
-        />
+        <>
+          {hasCanonicalConfigurationState && configurationConfigured ? (
+            <AircraftConfigurationOnboarding
+              configurationConfigured
+              configuration={selectedAircraft.configuration}
+              componentInstallations={selectedAircraft.componentInstallations}
+              onComplete={handleConfigureAircraft}
+              onUnauthorized={handleUnauthorized}
+            />
+          ) : null}
+          <AircraftOwnershipOnboarding
+            ownershipConfigured={selectedAircraftOnboarding?.ownershipConfigured === true}
+            onComplete={handleConfigureOwnership}
+            onUnauthorized={handleUnauthorized}
+          />
+        </>
       ) : (
         <section className="read-only-access" role="status">
           <p className="dashboard-eyebrow">PILOT</p>

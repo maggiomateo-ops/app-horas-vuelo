@@ -2,11 +2,13 @@ import { requireAuth } from "./_auth.js";
 import { getAircraftsForUser } from "./_adminRepository.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { getAircraftsForUserFromPostgres } from "./_postgresAircraftRepository.js";
+import { setupInitialAircraftConfigurationInPostgres } from "./_postgresAircraftConfigurationRepository.js";
 import { createAircraftOnboardingInPostgres } from "./_postgresOnboardingRepository.js";
 import { setupInitialAircraftOwnershipInPostgres } from "./_postgresOwnershipRepository.js";
 import {
   resolvePostgresOnboardingWriteCapability,
   resolvePostgresOwnershipWriteCapability,
+  resolvePostgresAircraftConfigurationWriteCapability,
 } from "./_settingsWriteCapability.js";
 
 const AIRCRAFT_RESPONSE_FIELDS = [
@@ -17,6 +19,10 @@ const AIRCRAFT_RESPONSE_FIELDS = [
   "rol",
   "ownershipConfigured",
   "flightWritesReady",
+  "configurationConfigured",
+  "configuration",
+  "componentInstallations",
+  "configurationSetupAvailable",
 ];
 
 function sanitizeAircraft(aircraft) {
@@ -28,9 +34,13 @@ function sanitizeAircraft(aircraft) {
 
 async function loadAircrafts(userId) {
   const source = resolveDataSource("AIRCRAFT_DATA_SOURCE");
-  return source === DATA_SOURCE.POSTGRES
-    ? getAircraftsForUserFromPostgres(userId)
-    : getAircraftsForUser(userId);
+  if (source !== DATA_SOURCE.POSTGRES) return getAircraftsForUser(userId);
+  const capability = resolvePostgresAircraftConfigurationWriteCapability(source);
+  const aircrafts = await getAircraftsForUserFromPostgres(userId);
+  return aircrafts.map((aircraft) => ({
+    ...aircraft,
+    configurationSetupAvailable: capability.enabled,
+  }));
 }
 
 export default async function handler(req, res) {
@@ -62,6 +72,46 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "PATCH") {
+    const action = String(req.body?.action || "").trim();
+
+    if (action === "setup-configuration") {
+      let capability;
+      try {
+        capability = resolvePostgresAircraftConfigurationWriteCapability(source);
+      } catch {
+        return res.status(500).json({
+          ok: false,
+          error: "La capacidad de configuracion aeronautica no esta configurada correctamente.",
+        });
+      }
+      if (source !== DATA_SOURCE.POSTGRES || !capability.enabled) {
+        return res.status(503).json({
+          ok: false,
+          code: "POSTGRES_AIRCRAFT_CONFIGURATION_WRITES_NOT_ENABLED",
+          error: "La configuracion aeronautica permanece deshabilitada.",
+        });
+      }
+      const configurationInput = { ...(req.body || {}) };
+      delete configurationInput.action;
+      try {
+        const result = await setupInitialAircraftConfigurationInPostgres({
+          userId,
+          input: configurationInput,
+        });
+        return res.status(201).json(result);
+      } catch (error) {
+        const statusCode = error.statusCode || 502;
+        const exposeError = [400, 403, 409, 422].includes(statusCode);
+        return res.status(statusCode).json({
+          ok: false,
+          error: exposeError
+            ? error.message
+            : "No se pudo configurar la aeronave.",
+          code: exposeError ? error.code : undefined,
+        });
+      }
+    }
+
     let capability;
     try {
       capability = resolvePostgresOwnershipWriteCapability(source);

@@ -6,6 +6,11 @@ const REVISION_ID = "00000000-0000-4000-8000-000000000002";
 
 const checks = [
   {
+    name: "aircraft-configuration",
+    sql: `SELECT aircraft_id, propulsion_type, engine_count, propeller_count, created_at, updated_at FROM app.aircraft_configuration WHERE aircraft_id = $1::uuid LIMIT 0`,
+    params: [AIRCRAFT_ID],
+  },
+  {
     name: "settings-aircraft",
     sql: `SELECT aircraft_id, default_capture_method, default_oil_unit, capture_engine_runtime, created_at, updated_at FROM app.aircraft_settings WHERE aircraft_id = $1::uuid LIMIT 0`,
     params: [AIRCRAFT_ID],

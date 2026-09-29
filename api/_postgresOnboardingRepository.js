@@ -471,6 +471,9 @@ export function createPostgresOnboardingRepository({
             fabricante: normalizedInput.manufacturer,
             modelo: normalizedInput.model,
             rol: "OWNER",
+            configurationConfigured: false,
+            configuration: null,
+            componentInstallations: [],
           },
           onboarding: {
             ownershipConfigured: false,

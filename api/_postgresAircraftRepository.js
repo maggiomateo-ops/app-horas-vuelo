@@ -76,6 +76,49 @@ const CURRENT_OWNERSHIP_JOIN = `
   ) current_ownership ON true
 `;
 
+const CURRENT_CONFIGURATION_JOIN = `
+  LEFT JOIN app.aircraft_configuration aircraft_configuration
+    ON aircraft_configuration.aircraft_id = aircraft.aircraft_id
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'componentInstallationId', installation.component_installation_id,
+          'componentId', component.component_id,
+          'componentType', component.component_type,
+          'positionIndex', installation.position_index,
+          'manufacturer', component.manufacturer,
+          'model', component.model,
+          'serialNumber', component.serial_number,
+          'installedOn', installation.installed_on,
+          'openingTisHours', installation.opening_tis_hours
+        )
+        ORDER BY component.component_type, installation.position_index
+      ),
+      '[]'::jsonb
+    ) AS installations
+    FROM app.component_installations installation
+    JOIN app.components component
+      ON component.component_id = installation.component_id
+    WHERE installation.aircraft_id = aircraft.aircraft_id
+      AND installation.removed_on IS NULL
+      AND component.status = 'ACTIVE'
+  ) active_components ON true
+`;
+
+export function mapPostgresAircraftRow(row) {
+  return {
+    ...row,
+    configurationConfigured: row?.configurationConfigured === true,
+    configuration: row?.configurationConfigured === true
+      ? row.configuration ?? null
+      : null,
+    componentInstallations: Array.isArray(row?.componentInstallations)
+      ? row.componentInstallations
+      : [],
+  };
+}
+
 export async function getAircraftsForUserFromPostgres(userId) {
   const user = await requireActiveUser(userId);
   const { rows } = await postgresQuery(
@@ -87,12 +130,23 @@ export async function getAircraftsForUserFromPostgres(userId) {
         aircraft.model AS modelo,
         membership.role AS rol,
         current_ownership.ownership_count > 0 AS "ownershipConfigured",
-        current_ownership.active_ownership_total = 100.00 AS "flightWritesReady"
+        current_ownership.active_ownership_total = 100.00 AS "flightWritesReady",
+        aircraft_configuration.aircraft_id IS NOT NULL AS "configurationConfigured",
+        CASE
+          WHEN aircraft_configuration.aircraft_id IS NULL THEN NULL
+          ELSE jsonb_build_object(
+            'propulsionType', aircraft_configuration.propulsion_type,
+            'engineCount', aircraft_configuration.engine_count,
+            'propellerCount', aircraft_configuration.propeller_count
+          )
+        END AS configuration,
+        active_components.installations AS "componentInstallations"
       FROM app.aircraft_memberships membership
       JOIN app.aircraft aircraft
         ON aircraft.aircraft_id = membership.aircraft_id
       ${CURRENT_REGISTRATION_JOIN}
       ${CURRENT_OWNERSHIP_JOIN}
+      ${CURRENT_CONFIGURATION_JOIN}
       WHERE membership.user_id = $1::uuid
         AND membership.status = 'ACTIVE'
         AND aircraft.status = 'ACTIVE'
@@ -105,7 +159,7 @@ export async function getAircraftsForUserFromPostgres(userId) {
     [user.user_id]
   );
 
-  return rows;
+  return rows.map(mapPostgresAircraftRow);
 }
 
 export async function getValidatedAircraftAccessFromPostgres(userId, aircraftId) {

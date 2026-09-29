@@ -30,6 +30,7 @@ const migrationsDir = path.join(__dirname, 'migrations');
 
 const expectedTables = [
   'app.aircraft',
+  'app.aircraft_configuration',
   'app.aircraft_flight_field_settings',
   'app.aircraft_flight_purposes',
   'app.aircraft_membership_capabilities',
