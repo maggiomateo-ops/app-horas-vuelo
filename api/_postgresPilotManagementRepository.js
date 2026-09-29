@@ -24,12 +24,12 @@ function normalizeText(value) {
   return String(value ?? "").trim();
 }
 
-function normalizeEmail(value) {
+function normalizeOptionalEmail(value) {
   const normalized = normalizeText(value).toLowerCase();
-  if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+  if (normalized && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
     throw repositoryError("El email no es valido.", "VALIDATION_ERROR", 400);
   }
-  return normalized;
+  return normalized || null;
 }
 
 function localizedStatus(status) {
@@ -192,22 +192,22 @@ export function createPostgresPilotManagementRepository({
   async function authorizeAircraftPilot(actorUserId, input) {
     const normalizedActorUserId = normalizeUuid(actorUserId, "actorUserId");
     const aircraftId = normalizeUuid(input.aircraft_id, "aircraftId");
-    const email = normalizeEmail(input.email);
+    const requestedPersonId = input.person_id
+      ? normalizeUuid(input.person_id, "personId")
+      : null;
+    const email = normalizeOptionalEmail(input.email);
     const name = normalizeText(input.nombre);
     const phone = normalizeText(input.telefono) || null;
     const dni = normalizeText(input.dni);
     const licenseNumber = normalizeText(input.licencia) || null;
 
-    if (!name) {
+    if (!requestedPersonId && !name) {
       throw repositoryError("El nombre es obligatorio.", "VALIDATION_ERROR", 400);
     }
 
     return transaction(async (client) => {
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
         `app-horas:pilot-management:${aircraftId}`,
-      ]);
-      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
-        `app-horas:pilot-email:${email}`,
       ]);
       if (dni) {
         await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
@@ -221,30 +221,31 @@ export function createPostgresPilotManagementRepository({
         { lock: true }
       );
 
-      const { rows: personRows } = await client.query(
-        `SELECT person_id, full_name, email, phone, license_number, status
-           FROM app.persons
-          WHERE lower(email) = lower($1)
-          ORDER BY person_id
-          FOR UPDATE`,
-        [email]
-      );
-      if (personRows.length > 1) {
-        throw repositoryError(
-          "No se pudo resolver una unica persona para ese email.",
-          "PILOT_PERSON_AMBIGUOUS",
-          409
-        );
-      }
-
-      let person = personRows[0] || null;
+      let person = null;
       let createdPerson = false;
-      if (person && person.status !== "ACTIVE") {
-        throw repositoryError(
-          "La persona esta inactiva y no puede autorizarse como piloto.",
-          "PILOT_PERSON_INACTIVE",
-          409
+      if (requestedPersonId) {
+        const { rows: personRows } = await client.query(
+          `SELECT person_id, full_name, email, phone, license_number, status
+             FROM app.persons
+            WHERE person_id = $1::uuid
+            FOR UPDATE`,
+          [requestedPersonId]
         );
+        if (personRows.length !== 1) {
+          throw repositoryError(
+            "La persona seleccionada no existe.",
+            "PILOT_PERSON_NOT_FOUND",
+            404
+          );
+        }
+        person = personRows[0];
+        if (person.status !== "ACTIVE") {
+          throw repositoryError(
+            "La persona esta inactiva y no puede autorizarse como piloto.",
+            "PILOT_PERSON_INACTIVE",
+            409
+          );
+        }
       }
 
       if (!person) {

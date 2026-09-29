@@ -141,12 +141,10 @@ function createMockRepository(overrides = {}) {
       };
     }
 
-    if (text.includes("FROM app.persons") && text.includes("lower(email)")) {
-      const [email] = params;
+    if (text.includes("FROM app.persons") && text.includes("person_id = $1::uuid")) {
+      const [personId] = params;
       return {
-        rows: state.persons.filter((person) =>
-          String(person.email || "").toLowerCase() === String(email).toLowerCase()
-        ),
+        rows: state.persons.filter((person) => person.person_id === personId),
       };
     }
 
@@ -327,15 +325,24 @@ test("solo OWNER activo puede leer y gestionar pilotos de su aeronave", async ()
   assert.equal(mock.state.audits.length, 0);
 });
 
-test("autorizar crea persona y aircraft_person sin user, membership, ADMIN ni ownership", async () => {
+test("autorizar con solo nombre crea persona y aircraft_person sin identidad de login", async () => {
   const mock = createMockRepository();
-  const result = await mock.repository.authorizeAircraftPilot(OWNER_ID, pilotInput());
+  const result = await mock.repository.authorizeAircraftPilot(OWNER_ID, pilotInput({
+    email: "",
+    telefono: "",
+    dni: "",
+    licencia: "",
+  }));
 
   assert.equal(result.changed, true);
   assert.equal(result.user_id, null);
   assert.equal(mock.getCommitted(), true);
   assert.equal(mock.getTransactionOptions().isolationLevel, "SERIALIZABLE");
   assert.equal(mock.state.persons.length, 2);
+  assert.equal(mock.state.persons[1].full_name, "New Pilot");
+  assert.equal(mock.state.persons[1].email, null);
+  assert.equal(mock.state.persons[1].license_number, null);
+  assert.equal(mock.state.identifiers.length, 1);
   assert.equal(mock.state.associations.length, 1);
   assert.equal(mock.state.memberships.length, 1);
   assert.equal(mock.state.users.length, 2);
@@ -346,6 +353,21 @@ test("autorizar crea persona y aircraft_person sin user, membership, ADMIN ni ow
   assert.doesNotMatch(writeSql, /INSERT INTO app\.aircraft_memberships/i);
   assert.doesNotMatch(writeSql, /aircraft_ownership_interests/i);
   assert.doesNotMatch(writeSql, /is_admin|ADMIN/);
+});
+
+test("dos persons pueden compartir email sin auto-merge", async () => {
+  const mock = createMockRepository();
+  const result = await mock.repository.authorizeAircraftPilot(OWNER_ID, pilotInput({
+    email: "pilot@example.com",
+    nombre: "Different Pilot",
+    dni: "87654321",
+  }));
+
+  assert.notEqual(result.person_id, EXISTING_PERSON_ID);
+  assert.equal(mock.state.persons.filter((person) => person.email === "pilot@example.com").length, 2);
+  assert.equal(mock.state.associations[0].person_id, result.person_id);
+  const sql = mock.queries.map(({ text }) => text).join("\n");
+  assert.doesNotMatch(sql, /WHERE lower\(email\)/i);
 });
 
 test("adapter UI revoca por person_id canonical y conserva user_id para Sheets", async () => {
@@ -391,6 +413,7 @@ test("reactivar reutiliza la misma asociacion y preserva la persona", async () =
   const result = await mock.repository.authorizeAircraftPilot(
     OWNER_ID,
     pilotInput({
+      person_id: EXISTING_PERSON_ID,
       email: "pilot@example.com",
       nombre: "Ignored New Name",
       telefono: "999",
@@ -408,7 +431,11 @@ test("reactivar reutiliza la misma asociacion y preserva la persona", async () =
 
 test("piloto autorizado queda resoluble por el Flight Repository actual", async () => {
   const mock = createMockRepository();
-  const result = await mock.repository.authorizeAircraftPilot(OWNER_ID, pilotInput());
+  const result = await mock.repository.authorizeAircraftPilot(OWNER_ID, pilotInput({
+    email: "",
+    dni: "",
+    licencia: "",
+  }));
   const resolvedPersonId = await resolveAircraftPilotForFlight(
     { query: mock.query },
     AIRCRAFT_ID,
@@ -431,4 +458,5 @@ test("ruta Postgres global permanece separada y no introduce ADMIN legacy", asyn
   assert.doesNotMatch(repositorySource, /INSERT INTO app\.users/);
   assert.doesNotMatch(repositorySource, /INSERT INTO app\.aircraft_memberships/);
   assert.doesNotMatch(repositorySource, /is_admin/);
+  assert.doesNotMatch(repositorySource, /lower\(email\)/i);
 });

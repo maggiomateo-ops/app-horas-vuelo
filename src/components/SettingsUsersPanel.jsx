@@ -19,8 +19,9 @@ function StatusBadge({ children }) {
   return <span className={`settings-user-status ${active ? "is-active" : "is-inactive"}`}>{status || "SIN ESTADO"}</span>;
 }
 
-function ManagementForm({ kind, aircraftId, disabled, initialValues, submitting, onCancel, onSubmit }) {
+function ManagementForm({ kind, aircraftId, disabled, initialValues, managementMode, submitting, onCancel, onSubmit }) {
   const isUser = kind === "user";
+  const isCanonicalPilot = !isUser && managementMode === "POSTGRES_CANONICAL";
   const isPilotReauthorization = !isUser && Boolean(
     initialValues?.person_id || initialValues?.user_id
   );
@@ -48,16 +49,20 @@ function ManagementForm({ kind, aircraftId, disabled, initialValues, submitting,
   return (
     <form className="settings-management-form" onSubmit={(event) => {
       event.preventDefault();
-      onSubmit(isUser ? form : { aircraft_id: aircraftId, ...form });
+      onSubmit(isUser ? form : {
+        aircraft_id: aircraftId,
+        ...(initialValues?.person_id ? { person_id: initialValues.person_id } : {}),
+        ...form,
+      });
     }}>
       <h4 className="settings-management-form-title">{formTitle}</h4>
       <div className="settings-management-grid">
         {isUser ? <label><span>Nombre *</span><input required value={form.nombre} onChange={update("nombre")} /></label> : null}
-        <label><span>Email *</span><input required readOnly={isPilotReauthorization} type="email" value={form.email} onChange={update("email")} /></label>
+        <label><span>Email{isUser || !isCanonicalPilot ? " *" : ""}</span><input required={isUser || !isCanonicalPilot} readOnly={isPilotReauthorization} type="email" value={form.email} onChange={update("email")} /></label>
         {!isUser ? <label><span>Nombre y apellido *</span><input required readOnly={isPilotReauthorization && Boolean(initialValues?.nombre)} value={form.nombre} onChange={update("nombre")} /></label> : null}
-        <label><span>Telefono</span><input readOnly={isPilotReauthorization && Boolean(initialValues?.telefono)} value={form.telefono} onChange={update("telefono")} /></label>
-        <label><span>DNI{isUser ? "" : " *"}</span><input required={!isUser} readOnly={isPilotReauthorization && Boolean(initialValues?.dni)} value={form.dni} onChange={update("dni")} /></label>
-        <label><span>{isUser ? "Licencia" : "N.º de licencia *"}</span><input required={!isUser} readOnly={isPilotReauthorization && Boolean(initialValues?.licencia)} value={form.licencia} onChange={update("licencia")} /></label>
+        <label><span>Telefono</span><input readOnly={isPilotReauthorization && (isCanonicalPilot || Boolean(initialValues?.telefono))} value={form.telefono} onChange={update("telefono")} /></label>
+        <label><span>DNI{!isUser && !isCanonicalPilot ? " *" : ""}</span><input required={!isUser && !isCanonicalPilot} readOnly={isPilotReauthorization && (isCanonicalPilot || Boolean(initialValues?.dni))} value={form.dni} onChange={update("dni")} /></label>
+        <label><span>{isUser ? "Licencia" : `N.º de licencia${!isCanonicalPilot ? " *" : ""}`}</span><input required={!isUser && !isCanonicalPilot} readOnly={isPilotReauthorization && (isCanonicalPilot || Boolean(initialValues?.licencia))} value={form.licencia} onChange={update("licencia")} /></label>
         {isUser ? (
           <label className="settings-management-checkbox">
             <input type="checkbox" checked={form.is_admin} onChange={update("is_admin")} />
@@ -180,6 +185,7 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
   const [activeTab, setActiveTab] = useState(isGlobalAdmin ? "users" : "pilots");
   const [data, setData] = useState([]);
   const [writesEnabled, setWritesEnabled] = useState(false);
+  const [managementMode, setManagementMode] = useState("SHEETS_LEGACY");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -212,6 +218,9 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
     return {
       records: activeTab === "users" ? result.users : result.pilots,
       writesEnabled: result.writesEnabled,
+      managementMode: activeTab === "users"
+        ? "SHEETS_LEGACY"
+        : result.managementMode,
     };
   }, [activeTab, aircraftId]);
 
@@ -223,6 +232,7 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
       if (!ignore) {
         setData(result.records);
         setWritesEnabled(result.writesEnabled);
+        setManagementMode(result.managementMode);
       }
     }).catch((loadError) => {
       if (loadError.name === "AbortError" || ignore) return;
@@ -240,6 +250,7 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
       const result = await fetchData();
       setData(result.records);
       setWritesEnabled(result.writesEnabled);
+      setManagementMode(result.managementMode);
       setShowForm(false); setPilotInitialValues(null); setMessage(successMessage);
     } catch (mutationError) {
       if (mutationError.message === "UNAUTHORIZED") onUnauthorized();
@@ -262,7 +273,7 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
       {error ? <div className="settings-inline-alert is-error" role="alert" aria-live="assertive">{error}</div> : null}
       {showForm ? (
         <div ref={formRef} className="settings-management-form-container">
-          <ManagementForm key={`${activeTab}-${pilotInitialValues?.person_id || pilotInitialValues?.user_id || "new"}`} kind={activeTab === "users" ? "user" : "pilot"} aircraftId={aircraftId} disabled={!writesEnabled} initialValues={pilotInitialValues} submitting={mutating} onCancel={() => { setShowForm(false); setPilotInitialValues(null); }} onSubmit={(form) => runMutation(
+          <ManagementForm key={`${activeTab}-${pilotInitialValues?.person_id || pilotInitialValues?.user_id || "new"}`} kind={activeTab === "users" ? "user" : "pilot"} aircraftId={aircraftId} disabled={!writesEnabled} initialValues={pilotInitialValues} managementMode={managementMode} submitting={mutating} onCancel={() => { setShowForm(false); setPilotInitialValues(null); }} onSubmit={(form) => runMutation(
             () => activeTab === "users" ? createPlatformUser(form) : authorizeAircraftPilot(form),
             activeTab === "users"
               ? "Usuario creado correctamente."

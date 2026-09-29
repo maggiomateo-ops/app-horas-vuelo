@@ -82,6 +82,9 @@ export default async function handler(req, res) {
         ok: true,
         ...result,
         writes_enabled: userManagementWritesEnabled(),
+        management_mode: source === DATA_SOURCE.POSTGRES
+          ? "POSTGRES_CANONICAL"
+          : "SHEETS_LEGACY",
       });
     } catch (error) {
       const status = getErrorStatus(error);
@@ -105,21 +108,46 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "POST") {
-      const body = getBody(req, [
-        "aircraft_id",
-        "email",
-        "nombre",
-        "telefono",
-        "dni",
-        "licencia",
-      ]);
+      const body = getBody(
+        req,
+        source === DATA_SOURCE.POSTGRES
+          ? [
+              "aircraft_id",
+              "person_id",
+              "email",
+              "nombre",
+              "telefono",
+              "dni",
+              "licencia",
+            ]
+          : [
+              "aircraft_id",
+              "email",
+              "nombre",
+              "telefono",
+              "dni",
+              "licencia",
+            ]
+      );
+      const personId = source === DATA_SOURCE.POSTGRES
+        ? optionalString(body.person_id, "person_id", 80)
+        : "";
       const input = {
         aircraft_id: requiredString(body.aircraft_id, "aircraft_id", 80),
-        email: requiredEmail(body.email),
-        nombre: requiredString(body.nombre, "nombre"),
+        ...(personId ? { person_id: personId } : {}),
+        email: source === DATA_SOURCE.POSTGRES
+          ? optionalString(body.email, "email", 254)
+          : requiredEmail(body.email),
+        nombre: personId
+          ? optionalString(body.nombre, "nombre")
+          : requiredString(body.nombre, "nombre"),
         telefono: optionalString(body.telefono, "telefono", 80),
-        dni: requiredString(body.dni, "dni", 80),
-        licencia: requiredString(body.licencia, "licencia", 80),
+        dni: source === DATA_SOURCE.POSTGRES
+          ? optionalString(body.dni, "dni", 80)
+          : requiredString(body.dni, "dni", 80),
+        licencia: source === DATA_SOURCE.POSTGRES
+          ? optionalString(body.licencia, "licencia", 80)
+          : requiredString(body.licencia, "licencia", 80),
       };
       const result = source === DATA_SOURCE.POSTGRES
         ? await authorizeAircraftPilotInPostgres(userId, input)
