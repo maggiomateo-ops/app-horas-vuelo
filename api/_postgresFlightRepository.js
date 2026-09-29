@@ -357,7 +357,81 @@ async function resolveManualReferences(client, aircraftId, payload, flightDate) 
   return { pilotPersonId: pilots[0].person_id, ownerPartyId: owners[0].party_id };
 }
 
-async function insertLegacyChildSnapshots(client, aircraftId, revisionId, payload) {
+export async function resolveComponentInstallationForFlightDate(
+  client,
+  { aircraftId, componentType, positionIndex, flightDate }
+) {
+  const { rows } = await client.query(
+    `SELECT
+       installation.component_installation_id,
+       installation.component_id,
+       installation.position_index,
+       component.component_type
+     FROM app.component_installations installation
+     JOIN app.components component
+       ON component.component_id = installation.component_id
+     WHERE installation.aircraft_id = $1::uuid
+       AND component.component_type = $2
+       AND installation.position_index = $3
+       AND (installation.installed_on IS NULL OR installation.installed_on <= $4::date)
+       AND (installation.removed_on IS NULL OR $4::date < installation.removed_on)
+     ORDER BY installation.component_installation_id
+     FOR SHARE OF installation, component`,
+    [aircraftId, componentType, positionIndex, flightDate]
+  );
+
+  if (rows.length !== 1) {
+    throw repositoryError(
+      "No se pudo resolver una unica instalacion de componente para la fecha del vuelo.",
+      "FLIGHT_COMPONENT_INSTALLATION_NOT_RESOLVED",
+      409
+    );
+  }
+
+  return rows[0];
+}
+
+async function resolveLegacyOilTarget(client, aircraftId, flightDate) {
+  const { rows } = await client.query(
+    `SELECT configuration.engine_count, settings.default_oil_unit
+       FROM app.aircraft_configuration configuration
+       JOIN app.aircraft_settings settings
+         ON settings.aircraft_id = configuration.aircraft_id
+      WHERE configuration.aircraft_id = $1::uuid
+      FOR SHARE OF configuration, settings`,
+    [aircraftId]
+  );
+  const configuration = rows[0];
+
+  if (!configuration) {
+    throw repositoryError(
+      "La configuracion canonica de la aeronave no esta disponible.",
+      "FLIGHT_ENGINE_NOT_READY",
+      409
+    );
+  }
+  if (Number(configuration.engine_count) !== 1) {
+    throw repositoryError(
+      "El campo singular aceiteAgregado solo puede asignarse automaticamente en una aeronave monomotor.",
+      "FLIGHT_ENGINE_POSITION_AMBIGUOUS",
+      409
+    );
+  }
+
+  const installation = await resolveComponentInstallationForFlightDate(client, {
+    aircraftId,
+    componentType: "ENGINE",
+    positionIndex: 1,
+    flightDate,
+  });
+
+  return {
+    componentInstallationId: installation.component_installation_id,
+    defaultOilUnit: configuration.default_oil_unit,
+  };
+}
+
+async function insertLegacyChildSnapshots(client, aircraftId, revisionId, flightDate, payload) {
   const fuel = [
     ["LEFT", payload.combustibleTanqueIzquierdo],
     ["RIGHT", payload.combustibleTanqueDerecho],
@@ -381,23 +455,14 @@ async function insertLegacyChildSnapshots(client, aircraftId, revisionId, payloa
 
   if (payload.aceiteAgregado !== "" && payload.aceiteAgregado !== null && payload.aceiteAgregado !== undefined) {
     const value = decimal(payload.aceiteAgregado, "Aceite agregado");
-    const { rows } = await client.query(
-      `SELECT ci.component_installation_id,s.default_oil_unit
-         FROM app.component_installations ci
-         JOIN app.components c ON c.component_id=ci.component_id
-         JOIN app.aircraft_settings s ON s.aircraft_id=ci.aircraft_id
-        WHERE ci.aircraft_id=$1::uuid AND c.component_type='ENGINE' AND c.status='ACTIVE'
-          AND ci.removed_on IS NULL ORDER BY ci.position_index LIMIT 1`,
-      [aircraftId]
-    );
-    if (!rows[0]) throw repositoryError("No existe motor canonico activo para registrar aceite.", "FLIGHT_ENGINE_NOT_READY", 409);
-    const unit = rows[0].default_oil_unit;
+    const oilTarget = await resolveLegacyOilTarget(client, aircraftId, flightDate);
+    const unit = oilTarget.defaultOilUnit;
     const liters = unit === "US_QUART" ? value * 0.946352946 : value;
     await client.query(
       `INSERT INTO app.flight_component_consumables
        (flight_revision_id,component_installation_id,consumable_code,entered_value,entered_unit,canonical_liters)
        VALUES($1::uuid,$2::uuid,'OIL_ADDED',$3,$4,$5)`,
-      [revisionId, rows[0].component_installation_id, value, unit, liters]
+      [revisionId, oilTarget.componentInstallationId, value, unit, liters]
     );
   }
 }
@@ -416,8 +481,16 @@ function revisionState(payload, refs) {
   };
 }
 
-async function insertRevision(client, flightId, revisionNumber, userId, state, correctionReason = null) {
-  const revisionId = crypto.randomUUID();
+async function insertRevision(
+  client,
+  flightId,
+  revisionNumber,
+  userId,
+  state,
+  correctionReason = null,
+  randomUUID = crypto.randomUUID
+) {
+  const revisionId = randomUUID();
   await client.query(
     `INSERT INTO app.flight_record_revisions(
        flight_revision_id,flight_id,revision_number,flight_date,departure_location,arrival_location,
@@ -431,13 +504,17 @@ async function insertRevision(client, flightId, revisionNumber, userId, state, c
   return revisionId;
 }
 
-export async function saveLegacyFlightToPostgres({ userId, aircraftId, payload }) {
-  const normalizedUserId=normalizeUuid(userId,"userId");
-  const normalizedAircraftId=normalizeUuid(aircraftId,"aircraftId");
-  const mode=String(payload?.modo || "create").trim().toLowerCase();
-  if (!["create","update","delete"].includes(mode)) throw repositoryError("Modo de vuelo no valido.","FLIGHT_INVALID_MODE",400);
+export function createPostgresFlightRepository({
+  transaction = withPostgresTransaction,
+  randomUUID = crypto.randomUUID,
+} = {}) {
+  return async function saveFlight({ userId, aircraftId, payload }) {
+    const normalizedUserId=normalizeUuid(userId,"userId");
+    const normalizedAircraftId=normalizeUuid(aircraftId,"aircraftId");
+    const mode=String(payload?.modo || "create").trim().toLowerCase();
+    if (!["create","update","delete"].includes(mode)) throw repositoryError("Modo de vuelo no valido.","FLIGHT_INVALID_MODE",400);
 
-  return withPostgresTransaction(async(client)=>{
+    return transaction(async(client)=>{
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[`app-horas:flight:${normalizedAircraftId}`]);
     await requireFlightOwnerInTransaction(client,normalizedUserId,normalizedAircraftId);
 
@@ -457,7 +534,7 @@ export async function saveLegacyFlightToPostgres({ userId, aircraftId, payload }
       await client.query(
         `INSERT INTO audit.audit_events(request_id,actor_type,actor_user_id,operation_source,aircraft_id,entity_type,entity_id,entity_key,action_code,before_state,after_state,reason,metadata,payload_version)
          VALUES($1::uuid,'USER',$2::uuid,'MANUAL',$3::uuid,'FLIGHT_RECORD',$4::uuid,$5::jsonb,'FLIGHT_VOIDED',$6::jsonb,$7::jsonb,$8,$9::jsonb,1)`,
-        [crypto.randomUUID(),normalizedUserId,normalizedAircraftId,flightId,JSON.stringify({flight_id:flightId}),
+        [randomUUID(),normalizedUserId,normalizedAircraftId,flightId,JSON.stringify({flight_id:flightId}),
          JSON.stringify({status:"ACTIVE",current_revision_id:rows[0].current_revision_id}),
          JSON.stringify({status:"VOIDED",current_revision_id:rows[0].current_revision_id}),reason,JSON.stringify({contract:"D-237"})]
       );
@@ -468,8 +545,8 @@ export async function saveLegacyFlightToPostgres({ userId, aircraftId, payload }
     const state=revisionState(payload,refs);
 
     if(mode==="create"){
-      const flightId=crypto.randomUUID();
-      const revisionId=crypto.randomUUID();
+      const flightId=randomUUID();
+      const revisionId=randomUUID();
       await client.query(
         `INSERT INTO app.flight_records(flight_id,aircraft_id,current_revision_id,status,record_source,created_by_user_id)
          VALUES($1::uuid,$2::uuid,$3::uuid,'ACTIVE','MANUAL',$4::uuid)`,
@@ -483,11 +560,11 @@ export async function saveLegacyFlightToPostgres({ userId, aircraftId, payload }
         [revisionId,flightId,state.flight_date,state.departure_location,state.arrival_location,state.pilot_person_id,
          state.utilization_owner_party_id,state.flight_time_hours,state.time_in_service_hours,state.remarks,normalizedUserId]
       );
-      await insertLegacyChildSnapshots(client,normalizedAircraftId,revisionId,payload);
+      await insertLegacyChildSnapshots(client,normalizedAircraftId,revisionId,state.flight_date,payload);
       await client.query(
         `INSERT INTO audit.audit_events(request_id,actor_type,actor_user_id,operation_source,aircraft_id,entity_type,entity_id,entity_key,action_code,before_state,after_state,reason,metadata,payload_version)
          VALUES($1::uuid,'USER',$2::uuid,'MANUAL',$3::uuid,'FLIGHT_RECORD',$4::uuid,$5::jsonb,'FLIGHT_CREATED',NULL,$6::jsonb,'Manual Flight Record create',$7::jsonb,1)`,
-        [crypto.randomUUID(),normalizedUserId,normalizedAircraftId,flightId,JSON.stringify({flight_id:flightId}),JSON.stringify({...state,revision_number:1}),JSON.stringify({contract:"D-237"})]
+        [randomUUID(),normalizedUserId,normalizedAircraftId,flightId,JSON.stringify({flight_id:flightId}),JSON.stringify({...state,revision_number:1}),JSON.stringify({contract:"D-237"})]
       );
       return {ok:true,modo:"create",id:flightId,flight_revision_id:revisionId,message:"Vuelo guardado correctamente"};
     }
@@ -503,16 +580,19 @@ export async function saveLegacyFlightToPostgres({ userId, aircraftId, payload }
     );
     if(!rows[0]) throw repositoryError("No se encontro el vuelo.","FLIGHT_NOT_FOUND",404);
     if(rows[0].status!=="ACTIVE") throw repositoryError("Solo se puede corregir un vuelo ACTIVE.","FLIGHT_NOT_ACTIVE",409);
-    const revisionId=await insertRevision(client,flightId,Number(rows[0].revision_number)+1,normalizedUserId,state,correctionReason);
-    await insertLegacyChildSnapshots(client,normalizedAircraftId,revisionId,payload);
+    const revisionId=await insertRevision(client,flightId,Number(rows[0].revision_number)+1,normalizedUserId,state,correctionReason,randomUUID);
+    await insertLegacyChildSnapshots(client,normalizedAircraftId,revisionId,state.flight_date,payload);
     await client.query("UPDATE app.flight_records SET current_revision_id=$2::uuid WHERE flight_id=$1::uuid",[flightId,revisionId]);
     await client.query(
       `INSERT INTO audit.audit_events(request_id,actor_type,actor_user_id,operation_source,aircraft_id,entity_type,entity_id,entity_key,action_code,before_state,after_state,reason,metadata,payload_version)
        VALUES($1::uuid,'USER',$2::uuid,'MANUAL',$3::uuid,'FLIGHT_RECORD',$4::uuid,$5::jsonb,'FLIGHT_CORRECTED',$6::jsonb,$7::jsonb,$8,$9::jsonb,1)`,
-      [crypto.randomUUID(),normalizedUserId,normalizedAircraftId,flightId,JSON.stringify({flight_id:flightId}),
+      [randomUUID(),normalizedUserId,normalizedAircraftId,flightId,JSON.stringify({flight_id:flightId}),
        JSON.stringify(rows[0]),JSON.stringify({...state,revision_number:Number(rows[0].revision_number)+1,flight_revision_id:revisionId}),
        correctionReason,JSON.stringify({contract:"D-237",previous_revision_id:rows[0].current_revision_id})]
     );
     return {ok:true,modo:"update",id:flightId,flight_revision_id:revisionId,message:"Vuelo actualizado correctamente"};
-  },{isolationLevel:"SERIALIZABLE"});
+    },{isolationLevel:"SERIALIZABLE"});
+  };
 }
+
+export const saveLegacyFlightToPostgres = createPostgresFlightRepository();
