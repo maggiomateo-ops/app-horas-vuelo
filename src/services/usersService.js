@@ -107,10 +107,14 @@ export async function authorizeAircraftPilot(payload) {
   }, "No se pudo autorizar el piloto.");
 }
 
-export async function revokeAircraftPilot(userId, aircraftId) {
+export async function revokeAircraftPilot(pilot, aircraftId) {
+  const pilotIdentity = pilot?.person_id
+    ? { person_id: pilot.person_id }
+    : { user_id: pilot?.user_id };
+
   return requestJson("/api/aircraft-pilots", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ aircraft_id: aircraftId, user_id: userId, action: "revoke" }),
+    body: JSON.stringify({ aircraft_id: aircraftId, ...pilotIdentity, action: "revoke" }),
   }, "No se pudo revocar el piloto.");
 }

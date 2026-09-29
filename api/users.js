@@ -1,5 +1,6 @@
 import { getSessionUserId, requireAuth } from "./_auth.js";
 import { getPlatformUsersForAdmin } from "./_adminRepository.js";
+import { DATA_SOURCE } from "./_dataSource.js";
 import {
   getBody,
   managementErrorResponse,
@@ -7,6 +8,7 @@ import {
   optionalString,
   requiredEmail,
   requiredString,
+  resolveUserManagementDataSource,
   userManagementWritesEnabled,
 } from "./_managementHttp.js";
 import {
@@ -39,6 +41,23 @@ export default async function handler(req, res) {
 
   if (!userId) {
     return res.status(401).json({ ok: false, error: "Sesion no valida." });
+  }
+
+  let source;
+  try {
+    source = resolveUserManagementDataSource();
+  } catch {
+    return res.status(500).json({
+      ok: false,
+      error: "La fuente de gestion de usuarios no esta configurada correctamente.",
+    });
+  }
+
+  if (source === DATA_SOURCE.POSTGRES) {
+    return res.status(403).json({
+      ok: false,
+      error: "La gestion global de usuarios no esta habilitada en Postgres.",
+    });
   }
 
   if (req.method === "GET") {

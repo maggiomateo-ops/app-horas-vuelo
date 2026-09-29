@@ -321,17 +321,32 @@ async function requireFlightOwnerInTransaction(client, userId, aircraftId) {
   }
 }
 
+export async function resolveAircraftPilotForFlight(client, aircraftId, pilotName) {
+  const { rows } = await client.query(
+    `SELECT p.person_id FROM app.aircraft_persons ap JOIN app.persons p ON p.person_id=ap.person_id
+      WHERE ap.aircraft_id=$1::uuid AND ap.status='ACTIVE' AND p.status='ACTIVE' AND lower(p.full_name)=lower($2)`,
+    [aircraftId, pilotName]
+  );
+  if (rows.length !== 1) {
+    throw repositoryError(
+      "El piloto debe coincidir con una persona canonica activa de la aeronave.",
+      "FLIGHT_PILOT_NOT_RESOLVED",
+      409
+    );
+  }
+  return rows[0].person_id;
+}
+
 async function resolveManualReferences(client, aircraftId, payload, flightDate) {
   const pilotName = String(payload.piloto || "").trim();
   const ownerName = String(payload.propietario || "").trim();
   if (!pilotName || !ownerName) throw repositoryError("Piloto y propietario son obligatorios.", "FLIGHT_INVALID_PAYLOAD", 422);
 
-  const { rows: pilots } = await client.query(
-    `SELECT p.person_id FROM app.aircraft_persons ap JOIN app.persons p ON p.person_id=ap.person_id
-      WHERE ap.aircraft_id=$1::uuid AND ap.status='ACTIVE' AND p.status='ACTIVE' AND lower(p.full_name)=lower($2)`,
-    [aircraftId, pilotName]
+  const pilotPersonId = await resolveAircraftPilotForFlight(
+    client,
+    aircraftId,
+    pilotName
   );
-  if (pilots.length !== 1) throw repositoryError("El piloto debe coincidir con una persona canonica activa de la aeronave.", "FLIGHT_PILOT_NOT_RESOLVED", 409);
 
   const { rows: owners } = await client.query(
     `SELECT oi.party_id FROM app.aircraft_ownership_interests oi
@@ -354,7 +369,7 @@ async function resolveManualReferences(client, aircraftId, payload, flightDate) 
   if (!shares[0] || Number(shares[0].total_share) !== 100 || Number(shares[0].owner_count) < 1) {
     throw repositoryError("Ownership canonico no esta configurado al 100%.", "FLIGHT_OWNERSHIP_NOT_READY", 409);
   }
-  return { pilotPersonId: pilots[0].person_id, ownerPartyId: owners[0].party_id };
+  return { pilotPersonId, ownerPartyId: owners[0].party_id };
 }
 
 export async function resolveComponentInstallationForFlightDate(

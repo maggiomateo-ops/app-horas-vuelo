@@ -1,3 +1,5 @@
+import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
+
 const ERROR_STATUS_BY_CODE = {
   VALIDATION_ERROR: 400,
   USER_NOT_AUTHORIZED: 403,
@@ -13,6 +15,12 @@ const ERROR_STATUS_BY_CODE = {
   SELF_PERMISSION_REVOKE: 409,
   INTEGRITY_ERROR: 409,
   WRITE_VERIFICATION_FAILED: 500,
+  AIRCRAFT_ACCESS_DENIED: 403,
+  PILOT_PERSON_NOT_FOUND: 404,
+  PILOT_PERSON_INACTIVE: 409,
+  PILOT_PERSON_AMBIGUOUS: 409,
+  PILOT_ASSOCIATION_NOT_FOUND: 404,
+  USER_MANAGEMENT_SOURCE_MISMATCH: 500,
 };
 
 function validationError(message) {
@@ -23,6 +31,24 @@ function validationError(message) {
 
 export function userManagementWritesEnabled() {
   return process.env.USER_MANAGEMENT_WRITES_ENABLED === "true";
+}
+
+export function resolveUserManagementDataSource() {
+  const identitySource = resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE");
+  const aircraftSource = resolveDataSource("AIRCRAFT_DATA_SOURCE");
+
+  if (identitySource !== aircraftSource) {
+    const error = new Error(
+      "Las fuentes de identidad y aeronaves no coinciden para gestionar usuarios."
+    );
+    error.code = "USER_MANAGEMENT_SOURCE_MISMATCH";
+    error.statusCode = 500;
+    throw error;
+  }
+
+  return identitySource === DATA_SOURCE.POSTGRES
+    ? DATA_SOURCE.POSTGRES
+    : DATA_SOURCE.SHEETS;
 }
 
 export function getBody(req, allowedFields) {

@@ -1,19 +1,29 @@
 import { getSessionUserId, requireAuth } from "./_auth.js";
 import { getAircraftPilotsForManager } from "./_adminRepository.js";
+import { DATA_SOURCE } from "./_dataSource.js";
 import {
   getBody,
   managementErrorResponse,
   optionalString,
   requiredEmail,
   requiredString,
+  resolveUserManagementDataSource,
   userManagementWritesEnabled,
 } from "./_managementHttp.js";
+import {
+  authorizeAircraftPilotInPostgres,
+  getAircraftPilotsForOwnerFromPostgres,
+  revokeAircraftPilotInPostgres,
+} from "./_postgresPilotManagementRepository.js";
 import {
   addAircraftPilot,
   revokeAircraftPilot,
 } from "./_userManagementRepository.js";
 
 function getErrorStatus(error) {
+  if (error?.statusCode) {
+    return error.statusCode;
+  }
   if (["FORBIDDEN", "USER_NOT_AUTHORIZED"].includes(error?.code)) {
     return 403;
   }
@@ -47,6 +57,16 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, error: "Sesion no valida." });
   }
 
+  let source;
+  try {
+    source = resolveUserManagementDataSource();
+  } catch {
+    return res.status(500).json({
+      ok: false,
+      error: "La fuente de gestion de pilotos no esta configurada correctamente.",
+    });
+  }
+
   if (req.method === "GET") {
     const aircraftId = String(req.query?.aircraft_id || "").trim();
 
@@ -55,7 +75,9 @@ export default async function handler(req, res) {
     }
 
     try {
-      const result = await getAircraftPilotsForManager(userId, aircraftId);
+      const result = source === DATA_SOURCE.POSTGRES
+        ? await getAircraftPilotsForOwnerFromPostgres(userId, aircraftId)
+        : await getAircraftPilotsForManager(userId, aircraftId);
       return res.status(200).json({
         ok: true,
         ...result,
@@ -91,18 +113,26 @@ export default async function handler(req, res) {
         "dni",
         "licencia",
       ]);
-      const result = await addAircraftPilot(userId, {
+      const input = {
         aircraft_id: requiredString(body.aircraft_id, "aircraft_id", 80),
         email: requiredEmail(body.email),
         nombre: requiredString(body.nombre, "nombre"),
         telefono: optionalString(body.telefono, "telefono", 80),
         dni: requiredString(body.dni, "dni", 80),
         licencia: requiredString(body.licencia, "licencia", 80),
-      });
+      };
+      const result = source === DATA_SOURCE.POSTGRES
+        ? await authorizeAircraftPilotInPostgres(userId, input)
+        : await addAircraftPilot(userId, input);
       return res.status(200).json({ ok: true, pilot: result });
     }
 
-    const body = getBody(req, ["aircraft_id", "user_id", "action"]);
+    const body = getBody(
+      req,
+      source === DATA_SOURCE.POSTGRES
+        ? ["aircraft_id", "person_id", "action"]
+        : ["aircraft_id", "user_id", "action"]
+    );
     const action = requiredString(body.action, "action", 20).toLowerCase();
 
     if (action !== "revoke") {
@@ -111,10 +141,16 @@ export default async function handler(req, res) {
       throw invalidAction;
     }
 
-    const result = await revokeAircraftPilot(userId, {
-      aircraft_id: requiredString(body.aircraft_id, "aircraft_id", 80),
-      user_id: requiredString(body.user_id, "user_id", 40),
-    });
+    const aircraft_id = requiredString(body.aircraft_id, "aircraft_id", 80);
+    const result = source === DATA_SOURCE.POSTGRES
+      ? await revokeAircraftPilotInPostgres(userId, {
+          aircraft_id,
+          person_id: requiredString(body.person_id, "person_id", 80),
+        })
+      : await revokeAircraftPilot(userId, {
+          aircraft_id,
+          user_id: requiredString(body.user_id, "user_id", 40),
+        });
     return res.status(200).json({ ok: true, pilot: result });
   } catch (error) {
     const failure = managementErrorResponse(error, "No se pudo actualizar el piloto.");

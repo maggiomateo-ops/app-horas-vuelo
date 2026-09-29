@@ -1,8 +1,10 @@
 import { getSessionUserId, requireAuth } from "./_auth.js";
+import { DATA_SOURCE } from "./_dataSource.js";
 import {
   getBody,
   managementErrorResponse,
   requiredString,
+  resolveUserManagementDataSource,
   userManagementWritesEnabled,
 } from "./_managementHttp.js";
 import {
@@ -29,6 +31,23 @@ export default async function handler(req, res) {
 
   if (!actorUserId) {
     return res.status(401).json({ ok: false, error: "Sesion no valida." });
+  }
+
+  let source;
+  try {
+    source = resolveUserManagementDataSource();
+  } catch {
+    return res.status(500).json({
+      ok: false,
+      error: "La fuente de gestion de permisos no esta configurada correctamente.",
+    });
+  }
+
+  if (source === DATA_SOURCE.POSTGRES) {
+    return res.status(403).json({
+      ok: false,
+      error: "La gestion global de memberships no esta habilitada en Postgres.",
+    });
   }
 
   if (!userManagementWritesEnabled()) {

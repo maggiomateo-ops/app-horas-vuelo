@@ -21,7 +21,9 @@ function StatusBadge({ children }) {
 
 function ManagementForm({ kind, aircraftId, disabled, initialValues, submitting, onCancel, onSubmit }) {
   const isUser = kind === "user";
-  const isPilotReauthorization = !isUser && Boolean(initialValues?.user_id);
+  const isPilotReauthorization = !isUser && Boolean(
+    initialValues?.person_id || initialValues?.user_id
+  );
   const formTitle = isUser
     ? "NUEVO USUARIO"
     : isPilotReauthorization
@@ -150,7 +152,7 @@ function AircraftPilotsTable({ aircraftId, busy, currentUserId, pilots, writesEn
           const permissionActive = String(pilot.permiso_estado).toUpperCase() === "ACTIVO";
           const isCurrentUser = pilot.user_id === currentUserId;
           return (
-            <tr key={pilot.user_id}>
+            <tr key={pilot.person_id || pilot.user_id}>
               <td><strong>{pilot.nombre || "Sin nombre"}</strong><span>{pilot.email || "Sin email"}</span></td>
               <td>{pilot.telefono || "—"}</td><td>{pilot.dni || "—"}</td><td>{pilot.licencia || "—"}</td>
               <td>
@@ -161,7 +163,7 @@ function AircraftPilotsTable({ aircraftId, busy, currentUserId, pilots, writesEn
                 <div className="settings-pilot-actions">
                   {permissionActive && !isCurrentUser ? <button type="button" className="settings-row-action is-danger" disabled={!writesEnabled || busy} onClick={() => {
                   if (window.confirm(`¿Revocar a ${pilot.nombre || pilot.email} como piloto?`)) {
-                    onMutation(() => revokeAircraftPilot(pilot.user_id, aircraftId), "Piloto revocado.");
+                    onMutation(() => revokeAircraftPilot(pilot, aircraftId), "Piloto revocado.");
                   }
                   }}>Revocar</button> : permissionActive && isCurrentUser ? <span className="settings-users-self">Tu usuario</span> : userActive ? <button type="button" className="settings-row-action" disabled={!writesEnabled || busy} onClick={() => onPreparePilot(pilot)}>Reautorizar</button> : <span className="settings-users-warning">Requiere Admin</span>}
                 </div>
@@ -260,7 +262,7 @@ function SettingsUsersPanel({ aircraftId, aircraftRegistration, isGlobalAdmin, c
       {error ? <div className="settings-inline-alert is-error" role="alert" aria-live="assertive">{error}</div> : null}
       {showForm ? (
         <div ref={formRef} className="settings-management-form-container">
-          <ManagementForm key={`${activeTab}-${pilotInitialValues?.user_id || "new"}`} kind={activeTab === "users" ? "user" : "pilot"} aircraftId={aircraftId} disabled={!writesEnabled} initialValues={pilotInitialValues} submitting={mutating} onCancel={() => { setShowForm(false); setPilotInitialValues(null); }} onSubmit={(form) => runMutation(
+          <ManagementForm key={`${activeTab}-${pilotInitialValues?.person_id || pilotInitialValues?.user_id || "new"}`} kind={activeTab === "users" ? "user" : "pilot"} aircraftId={aircraftId} disabled={!writesEnabled} initialValues={pilotInitialValues} submitting={mutating} onCancel={() => { setShowForm(false); setPilotInitialValues(null); }} onSubmit={(form) => runMutation(
             () => activeTab === "users" ? createPlatformUser(form) : authorizeAircraftPilot(form),
             activeTab === "users"
               ? "Usuario creado correctamente."
