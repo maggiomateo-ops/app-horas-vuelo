@@ -372,6 +372,7 @@ export function validateAircraftConfiguration(values) {
   const engineCount = configurationCount(values?.engineCount);
   const propellerCount = configurationCount(values?.propellerCount);
   const installedOn = String(values?.installedOn || "").trim();
+  const adoptExisting = values?.adoptExisting === true;
   const errors = {};
 
   if (!AIRCRAFT_PROPULSION_TYPES.has(propulsionType)) {
@@ -379,7 +380,7 @@ export function validateAircraftConfiguration(values) {
   }
   if (engineCount === null) errors.engineCount = "Ingresá una cantidad válida.";
   if (propellerCount === null) errors.propellerCount = "Ingresá una cantidad válida.";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(installedOn)) {
+  if (!adoptExisting && !/^\d{4}-\d{2}-\d{2}$/.test(installedOn)) {
     errors.installedOn = "Ingresá la fecha efectiva de instalación.";
   }
   if (
@@ -435,10 +436,12 @@ export function buildAircraftConfigurationPayload(aircraftId, values) {
     propulsionType: String(values?.propulsionType || "").trim().toUpperCase(),
     engineCount,
     propellerCount,
-    components: [
-      ...buildConfigurationComponents(values, "ENGINE", engineCount),
-      ...buildConfigurationComponents(values, "PROPELLER", propellerCount),
-    ],
+    components: values?.adoptExisting === true
+      ? []
+      : [
+          ...buildConfigurationComponents(values, "ENGINE", engineCount),
+          ...buildConfigurationComponents(values, "PROPELLER", propellerCount),
+        ],
   };
 }
 
@@ -498,6 +501,9 @@ export async function configureAircraftTopologyAndRefresh(
 export function getAircraftConfigurationErrorMessage(error) {
   if (error?.statusCode === 403) {
     return "Sólo un Owner puede configurar esta aeronave.";
+  }
+  if (error?.code === "AIRCRAFT_COMPONENT_TOPOLOGY_MISMATCH") {
+    return "Los componentes existentes no coinciden con la topología seleccionada.";
   }
   if (error?.statusCode === 409) {
     return "La configuración inicial ya existe. Recargá la aeronave.";

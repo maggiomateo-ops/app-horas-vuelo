@@ -2842,6 +2842,20 @@ select {
   gap: 14px;
 }
 
+.aircraft-existing-components {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface-muted);
+}
+
+.aircraft-existing-components > strong {
+  color: var(--app-primary-strong);
+}
+
 .aircraft-component-card,
 .aircraft-installation-summary article {
   margin: 0;

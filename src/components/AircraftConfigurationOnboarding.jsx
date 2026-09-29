@@ -97,6 +97,7 @@ export default function AircraftConfigurationOnboarding({
   onComplete,
   onUnauthorized,
 }) {
+  const adoptingExisting = componentInstallations.length > 0;
   const [showForm, setShowForm] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [values, setValues] = useState({
@@ -105,6 +106,7 @@ export default function AircraftConfigurationOnboarding({
     propellerCount: "",
     installedOn: "",
     components: [],
+    adoptExisting: adoptingExisting,
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -119,7 +121,9 @@ export default function AircraftConfigurationOnboarding({
       const propellerCount = Math.max(0, Number.parseInt(next.propellerCount, 10) || 0);
       return {
         ...next,
-        components: syncComponents(current.components, engineCount, propellerCount),
+        components: adoptingExisting
+          ? []
+          : syncComponents(current.components, engineCount, propellerCount),
       };
     });
     setReviewing(false);
@@ -198,8 +202,31 @@ export default function AircraftConfigurationOnboarding({
       <header>
         <p className="dashboard-eyebrow">Configuración inicial</p>
         <h2 id="aircraft-configuration-title">Configurar aeronave</h2>
-        <p>Definí la topología y los componentes instalados antes de operar la aeronave.</p>
+        <p>
+          {adoptingExisting
+            ? "Definí la topología para vincular los componentes existentes."
+            : "Definí la topología y los componentes instalados antes de operar la aeronave."}
+        </p>
       </header>
+
+      {adoptingExisting ? (
+        <div className="aircraft-existing-components" role="status">
+          <strong>Componentes existentes que se vincularán</strong>
+          <div className="aircraft-installation-summary">
+            {componentInstallations.map((installation) => (
+              <article key={installation.componentInstallationId}>
+                <strong>
+                  {installation.componentType === "ENGINE" ? "Motor" : "Hélice"} {installation.positionIndex}
+                </strong>
+                <span>{[installation.manufacturer, installation.model].filter(Boolean).join(" ") || "Identidad física desconocida"}</span>
+                <small>
+                  Instalado: {installation.installedOn || "—"} · TIS inicial: {installation.openingTisHours ?? "Desconocido"}
+                </small>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {!showForm ? (
         <button
@@ -254,40 +281,46 @@ export default function AircraftConfigurationOnboarding({
               />
               {errors.propellerCount ? <small>{errors.propellerCount}</small> : null}
             </label>
-            <label>
-              <span>Fecha de instalación efectiva *</span>
-              <input
-                type="date"
-                value={values.installedOn}
-                onChange={(event) => {
-                  setValues((current) => ({ ...current, installedOn: event.target.value }));
-                  setReviewing(false);
-                  setErrors({});
-                }}
-                disabled={submitting}
-              />
-              {errors.installedOn ? <small>{errors.installedOn}</small> : null}
-            </label>
+            {!adoptingExisting ? (
+              <label>
+                <span>Fecha de instalación efectiva *</span>
+                <input
+                  type="date"
+                  value={values.installedOn}
+                  onChange={(event) => {
+                    setValues((current) => ({ ...current, installedOn: event.target.value }));
+                    setReviewing(false);
+                    setErrors({});
+                  }}
+                  disabled={submitting}
+                />
+                {errors.installedOn ? <small>{errors.installedOn}</small> : null}
+              </label>
+            ) : null}
           </div>
 
           {errors.topology ? <p className="flight-form-message is-error">{errors.topology}</p> : null}
 
-          <div className="aircraft-component-list">
-            {values.components.map((component) => (
-              <ComponentFields
-                key={componentKey(component.componentType, component.positionIndex)}
-                component={component}
-                disabled={submitting}
-                onChange={(field, value) => updateComponent(component, field, value)}
-              />
-            ))}
-          </div>
+          {!adoptingExisting ? (
+            <div className="aircraft-component-list">
+              {values.components.map((component) => (
+                <ComponentFields
+                  key={componentKey(component.componentType, component.positionIndex)}
+                  component={component}
+                  disabled={submitting}
+                  onChange={(field, value) => updateComponent(component, field, value)}
+                />
+              ))}
+            </div>
+          ) : null}
 
           {reviewing ? (
             <div className="aircraft-configuration-confirmation" role="status">
               <strong>Confirmá la configuración inicial</strong>
               <p>
-                Se crearán {values.engineCount} motor(es) y {values.propellerCount} hélice(s). Esta etapa no permite reemplazar ni remover componentes posteriormente.
+                {adoptingExisting
+                  ? `Se vincularán los componentes existentes a una topología de ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s). No se modificarán sus datos físicos.`
+                  : `Se crearán ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s). Esta etapa no permite reemplazar ni remover componentes posteriormente.`}
               </p>
               <button
                 type="button"

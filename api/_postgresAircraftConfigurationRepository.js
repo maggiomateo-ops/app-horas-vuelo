@@ -232,16 +232,70 @@ export function normalizeAircraftConfigurationInput(input) {
     );
   }
   const components = input.components.map(normalizeComponent);
-  if (components.length !== engineCount + propellerCount) {
+  if (components.length > 0) {
+    if (components.length !== engineCount + propellerCount) {
+      throw repositoryError(
+        "La cantidad de componentes no coincide con la topologia declarada.",
+        "INVALID_AIRCRAFT_TOPOLOGY",
+        422
+      );
+    }
+    assertComponentPositions(components, "ENGINE", engineCount);
+    assertComponentPositions(components, "PROPELLER", propellerCount);
+  }
+  return { aircraftId, propulsionType, engineCount, propellerCount, components };
+}
+
+function assertCreateComponents(input) {
+  if (input.components.length !== input.engineCount + input.propellerCount) {
     throw repositoryError(
-      "La cantidad de componentes no coincide con la topologia declarada.",
-      "INVALID_AIRCRAFT_TOPOLOGY",
+      "La identidad fisica de todos los componentes es obligatoria para crear la topologia.",
+      "AIRCRAFT_COMPONENT_DETAILS_REQUIRED",
       422
     );
   }
-  assertComponentPositions(components, "ENGINE", engineCount);
-  assertComponentPositions(components, "PROPELLER", propellerCount);
-  return { aircraftId, propulsionType, engineCount, propellerCount, components };
+  assertComponentPositions(input.components, "ENGINE", input.engineCount);
+  assertComponentPositions(input.components, "PROPELLER", input.propellerCount);
+}
+
+function mapExistingInstallation(row) {
+  return {
+    componentInstallationId: row.component_installation_id,
+    componentId: row.component_id,
+    componentType: row.component_type,
+    positionIndex: Number(row.position_index),
+    manufacturer: row.manufacturer ?? null,
+    model: row.model ?? null,
+    serialNumber: row.serial_number ?? null,
+    installedOn: row.installed_on instanceof Date
+      ? row.installed_on.toISOString().slice(0, 10)
+      : String(row.installed_on || "") || null,
+    openingTisHours: row.opening_tis_hours === null || row.opening_tis_hours === undefined
+      ? null
+      : Number(row.opening_tis_hours),
+  };
+}
+
+function assertExistingTopology(rows, input) {
+  if (rows.some((row) => row.component_status !== "ACTIVE")) {
+    throw repositoryError(
+      "Los componentes existentes no coinciden con una topologia activa valida.",
+      "AIRCRAFT_COMPONENT_TOPOLOGY_MISMATCH",
+      409
+    );
+  }
+  const installations = rows.map(mapExistingInstallation);
+  try {
+    assertComponentPositions(installations, "ENGINE", input.engineCount);
+    assertComponentPositions(installations, "PROPELLER", input.propellerCount);
+  } catch {
+    throw repositoryError(
+      "Los componentes existentes no coinciden exactamente con la topologia solicitada.",
+      "AIRCRAFT_COMPONENT_TOPOLOGY_MISMATCH",
+      409
+    );
+  }
+  return installations;
 }
 
 export function createPostgresAircraftConfigurationRepository({
@@ -297,6 +351,42 @@ export function createPostgresAircraftConfigurationRepository({
         );
       }
 
+      const { rows: existingInstallationRows } = await client.query(
+        `
+          SELECT
+            installation.component_installation_id,
+            installation.component_id,
+            component.component_type,
+            installation.position_index,
+            component.manufacturer,
+            component.model,
+            component.serial_number,
+            installation.installed_on,
+            installation.opening_tis_hours,
+            component.status AS component_status
+          FROM app.component_installations installation
+          JOIN app.components component
+            ON component.component_id = installation.component_id
+          WHERE installation.aircraft_id = $1::uuid
+            AND installation.removed_on IS NULL
+            AND component.component_type IN ('ENGINE', 'PROPELLER')
+          ORDER BY component.component_type, installation.position_index
+          FOR UPDATE OF installation, component
+        `,
+        [normalizedInput.aircraftId]
+      );
+
+      const bootstrapMode = existingInstallationRows.length > 0
+        ? "ADOPT_EXISTING"
+        : "CREATE_COMPONENTS";
+      let installations;
+      if (bootstrapMode === "ADOPT_EXISTING") {
+        installations = assertExistingTopology(existingInstallationRows, normalizedInput);
+      } else {
+        assertCreateComponents(normalizedInput);
+        installations = [];
+      }
+
       await client.query(
         `
           INSERT INTO app.aircraft_configuration (
@@ -315,8 +405,9 @@ export function createPostgresAircraftConfigurationRepository({
         ]
       );
 
-      const installations = [];
-      for (const component of normalizedInput.components) {
+      for (const component of bootstrapMode === "CREATE_COMPONENTS"
+        ? normalizedInput.components
+        : []) {
         const componentId = randomUUID();
         const componentInstallationId = randomUUID();
         await client.query(
@@ -395,7 +486,7 @@ export function createPostgresAircraftConfigurationRepository({
             jsonb_build_object('aircraft_id', $4::uuid),
             'AIRCRAFT_CONFIGURATION_CREATED', NULL, $5::jsonb,
             'Initial aircraft topology and component installations configured.',
-            '{}'::jsonb, 1
+            $6::jsonb, 1
           )
         `,
         [
@@ -404,12 +495,14 @@ export function createPostgresAircraftConfigurationRepository({
           normalizedUserId,
           normalizedInput.aircraftId,
           JSON.stringify({ topology: configuration, installations }),
+          JSON.stringify({ bootstrap_mode: bootstrapMode }),
         ]
       );
 
       return {
         ok: true,
         aircraftId: normalizedInput.aircraftId,
+        bootstrapMode,
         configurationConfigured: true,
         configuration,
         componentInstallations: installations,

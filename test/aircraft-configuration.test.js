@@ -54,9 +54,26 @@ function validInput(overrides = {}) {
   };
 }
 
+function existingInstallation(componentType, positionIndex, overrides = {}) {
+  return {
+    component_installation_id: uuid(100 + positionIndex),
+    component_id: uuid(200 + positionIndex),
+    component_type: componentType,
+    position_index: positionIndex,
+    manufacturer: componentType === "ENGINE" ? "Lycoming" : "Hartzell",
+    model: componentType === "ENGINE" ? "IO-360" : "HC-C2YK",
+    serial_number: `${componentType}-${positionIndex}`,
+    installed_on: "2020-01-02",
+    opening_tis_hours: "123.4",
+    component_status: "ACTIVE",
+    ...overrides,
+  };
+}
+
 function createMockRepository({
   ownerAllowed = true,
   existingConfiguration = false,
+  existingInstallations = [],
   failOnComponentInsert = false,
 } = {}) {
   const queries = [];
@@ -72,6 +89,9 @@ function createMockRepository({
       }
       if (text.includes("FROM app.aircraft_configuration")) {
         return { rows: existingConfiguration ? [{ aircraft_id: AIRCRAFT_ID }] : [] };
+      }
+      if (text.includes("FROM app.component_installations installation")) {
+        return { rows: existingInstallations };
       }
       if (text.includes("INSERT INTO app.components")) {
         componentInsertCount += 1;
@@ -235,6 +255,7 @@ test("setup OWNER crea exactamente N componentes/installations y Audit dentro de
     ]
   );
   assert.equal(result.configurationConfigured, true);
+  assert.equal(result.bootstrapMode, "CREATE_COMPONENTS");
   const allSql = mock.queries.map((query) => query.text).join("\n");
   assert.doesNotMatch(allSql, /UPDATE\s+app\.flight_record|INSERT INTO app\.flight_record/i);
   const firstComponentInsert = mock.queries.find((query) =>
@@ -245,6 +266,150 @@ test("setup OWNER crea exactamente N componentes/installations y Audit dentro de
     query.text.includes("INSERT INTO app.component_installations")
   );
   assert.equal(firstInstallationInsert.params[5], null);
+  assert.deepEqual(JSON.parse(audit.params[5]), { bootstrap_mode: "CREATE_COMPONENTS" });
+});
+
+test("adopta topologia existente exacta 1/1 sin insertar ni alterar componentes", async () => {
+  const existing = [
+    existingInstallation("ENGINE", 1, {
+      component_installation_id: uuid(301),
+      component_id: uuid(401),
+    }),
+    existingInstallation("PROPELLER", 1, {
+      component_installation_id: uuid(302),
+      component_id: uuid(402),
+      installed_on: "2019-04-05",
+      opening_tis_hours: null,
+    }),
+  ];
+  const mock = createMockRepository({ existingInstallations: existing });
+  const result = await mock.setup({
+    userId: USER_ID,
+    input: validInput({
+      propulsionType: "TURBOPROP",
+      engineCount: 1,
+      propellerCount: 1,
+      components: [],
+    }),
+  });
+
+  assert.equal(result.bootstrapMode, "ADOPT_EXISTING");
+  assert.equal(result.configuration.propulsionType, "TURBOPROP");
+  assert.deepEqual(
+    result.componentInstallations.map((installation) => ({
+      componentInstallationId: installation.componentInstallationId,
+      componentId: installation.componentId,
+    })),
+    [
+      { componentInstallationId: uuid(301), componentId: uuid(401) },
+      { componentInstallationId: uuid(302), componentId: uuid(402) },
+    ]
+  );
+  const mutationSql = mock.queries
+    .filter((query) => /\b(?:INSERT|UPDATE|DELETE)\b/i.test(query.text))
+    .map((query) => query.text)
+    .join("\n");
+  assert.doesNotMatch(mutationSql, /INSERT INTO app\.components|INSERT INTO app\.component_installations/);
+  assert.doesNotMatch(mutationSql, /UPDATE\s+app\.(?:components|component_installations)/i);
+  assert.equal(result.componentInstallations[0].manufacturer, "Lycoming");
+  assert.equal(result.componentInstallations[0].installedOn, "2020-01-02");
+  assert.equal(result.componentInstallations[0].openingTisHours, 123.4);
+  assert.equal(result.componentInstallations[1].installedOn, "2019-04-05");
+  assert.equal(result.componentInstallations[1].openingTisHours, null);
+  const audit = mock.queries.find((query) => query.text.includes("INSERT INTO audit.audit_events"));
+  assert.deepEqual(JSON.parse(audit.params[5]), { bootstrap_mode: "ADOPT_EXISTING" });
+  assert.deepEqual(
+    JSON.parse(audit.params[4]).installations.map((installation) => installation.componentId),
+    [uuid(401), uuid(402)]
+  );
+});
+
+test("adopta topologia existente exacta multi-engine/multi-prop", async () => {
+  const existing = [
+    existingInstallation("ENGINE", 1),
+    existingInstallation("ENGINE", 2, {
+      component_installation_id: uuid(102),
+      component_id: uuid(202),
+    }),
+    existingInstallation("PROPELLER", 1, {
+      component_installation_id: uuid(103),
+      component_id: uuid(203),
+    }),
+    existingInstallation("PROPELLER", 2, {
+      component_installation_id: uuid(104),
+      component_id: uuid(204),
+    }),
+  ];
+  const mock = createMockRepository({ existingInstallations: existing });
+  const result = await mock.setup({
+    userId: USER_ID,
+    input: validInput({ components: [] }),
+  });
+  assert.equal(result.bootstrapMode, "ADOPT_EXISTING");
+  assert.equal(result.componentInstallations.length, 4);
+  assert.equal(
+    mock.queries.filter((query) => query.text.includes("INSERT INTO app.components")).length,
+    0
+  );
+});
+
+test("rechaza adopcion por counts, posiciones faltantes o posiciones extra sin writes", async () => {
+  const cases = [
+    [
+      existingInstallation("ENGINE", 1),
+      existingInstallation("PROPELLER", 1),
+    ],
+    [
+      existingInstallation("ENGINE", 1),
+      existingInstallation("ENGINE", 3),
+      existingInstallation("PROPELLER", 1),
+      existingInstallation("PROPELLER", 2),
+    ],
+    [
+      existingInstallation("ENGINE", 1),
+      existingInstallation("ENGINE", 2),
+      existingInstallation("ENGINE", 3),
+      existingInstallation("PROPELLER", 1),
+      existingInstallation("PROPELLER", 2),
+    ],
+  ];
+  for (const existingInstallations of cases) {
+    const mock = createMockRepository({ existingInstallations });
+    await assert.rejects(
+      mock.setup({ userId: USER_ID, input: validInput({ components: [] }) }),
+      (error) => error.code === "AIRCRAFT_COMPONENT_TOPOLOGY_MISMATCH"
+        && error.statusCode === 409
+    );
+    assert.equal(mock.getCommitted(), false);
+    assert.equal(mock.queries.some((query) => /\bINSERT\b/i.test(query.text)), false);
+  }
+});
+
+test("installations removidas no cuentan y componente abierto inactivo bloquea adopcion", async () => {
+  const removedOnly = createMockRepository({ existingInstallations: [] });
+  const created = await removedOnly.setup({ userId: USER_ID, input: validInput() });
+  assert.equal(created.bootstrapMode, "CREATE_COMPONENTS");
+  const source = await fs.readFile(
+    new URL("../api/_postgresAircraftConfigurationRepository.js", import.meta.url),
+    "utf8"
+  );
+  assert.match(source, /installation\.removed_on IS NULL/);
+
+  const inactive = createMockRepository({
+    existingInstallations: [
+      existingInstallation("ENGINE", 1, { component_status: "INACTIVE" }),
+      existingInstallation("PROPELLER", 1),
+    ],
+  });
+  await assert.rejects(
+    inactive.setup({
+      userId: USER_ID,
+      input: validInput({ engineCount: 1, propellerCount: 1, components: [] }),
+    }),
+    (error) => error.code === "AIRCRAFT_COMPONENT_TOPOLOGY_MISMATCH"
+      && error.statusCode === 409
+  );
+  assert.equal(inactive.queries.some((query) => /\bINSERT\b/i.test(query.text)), false);
 });
 
 test("rechaza no-OWNER y setup duplicado antes de cualquier INSERT", async () => {
@@ -390,6 +555,32 @@ test("UI genera componentes dinámicos, fecha explícita y unknown como NULL", (
   assert.equal(payload.components[0].openingTisHours, null);
   assert.equal(payload.components[0].installedOn, "2026-09-29");
   assert.equal(payload.components[1].openingTisHours, 5.5);
+});
+
+test("UI de adopcion envia solo topologia y no solicita identidad fisica/TIS", async () => {
+  const values = {
+    propulsionType: "PISTON",
+    engineCount: "1",
+    propellerCount: "1",
+    installedOn: "",
+    components: [],
+    adoptExisting: true,
+  };
+  assert.equal(validateAircraftConfiguration(values).valid, true);
+  assert.deepEqual(buildAircraftConfigurationPayload(AIRCRAFT_ID, values), {
+    action: "setup-configuration",
+    aircraftId: AIRCRAFT_ID,
+    propulsionType: "PISTON",
+    engineCount: 1,
+    propellerCount: 1,
+    components: [],
+  });
+  const source = await fs.readFile(
+    new URL("../src/components/AircraftConfigurationOnboarding.jsx", import.meta.url),
+    "utf8"
+  );
+  assert.match(source, /Componentes existentes que se vincularán/);
+  assert.match(source, /!adoptingExisting/);
 });
 
 test("UI usa PATCH consolidado con sesión y conserva compatibilidad Sheets legacy", async () => {

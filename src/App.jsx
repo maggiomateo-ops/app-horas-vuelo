@@ -1283,9 +1283,10 @@ function App() {
       {effectiveActiveMainTab === "registro" ? hasCanonicalConfigurationState && !configurationConfigured ? (
         canConfigureAircraft ? (
           <AircraftConfigurationOnboarding
+            key={selectedAircraft.aircraft_id}
             configurationConfigured={false}
             configuration={null}
-            componentInstallations={[]}
+            componentInstallations={selectedAircraft.componentInstallations}
             onComplete={handleConfigureAircraft}
             onUnauthorized={handleUnauthorized}
           />
