@@ -11,6 +11,7 @@ import {
   configureAircraftTopologyAndRefresh,
   configureOwnershipAndRefresh,
   fetchAircrafts,
+  mutateAircraftComponentAndRefresh,
 } from "./services/aircraftService";
 import { DEFAULT_SETTINGS, fetchSettings, saveSettings } from "./services/settingsService";
 import {
@@ -442,6 +443,9 @@ function App() {
   const canConfigureAircraft =
     selectedAircraftRole === "OWNER"
     && selectedAircraft?.configurationSetupAvailable === true;
+  const canManageComponents =
+    selectedAircraftRole === "OWNER"
+    && selectedAircraft?.componentLifecycleWritesAvailable === true;
 
   useEffect(() => {
     if (selectedAircraft && !allowedMainTabIds.includes(activeMainTab)) {
@@ -1102,6 +1106,20 @@ function App() {
     setConfigurationJustCompleted(true);
   };
 
+  const handleComponentLifecycle = async (action, input) => {
+    if (!selectedAircraft) {
+      throw new Error("Seleccioná una aeronave antes de gestionar componentes.");
+    }
+    const result = await mutateAircraftComponentAndRefresh(
+      action,
+      selectedAircraft.aircraft_id,
+      input,
+      { currentAircrafts: aircrafts }
+    );
+    setAircrafts(result.aircrafts);
+    return result;
+  };
+
   const resolvedTheme = themeMode === THEME_MODE.auto
     ? (systemPrefersDark ? THEME_MODE.dark : THEME_MODE.light)
     : themeMode;
@@ -1308,6 +1326,9 @@ function App() {
               configurationConfigured
               configuration={selectedAircraft.configuration}
               componentInstallations={selectedAircraft.componentInstallations}
+              componentInstallationHistory={selectedAircraft.componentInstallationHistory}
+              canManageComponents={canManageComponents}
+              onComponentMutate={handleComponentLifecycle}
               onComplete={handleConfigureAircraft}
               onUnauthorized={handleUnauthorized}
             />
@@ -1522,6 +1543,9 @@ function App() {
               configurationConfigured
               configuration={selectedAircraft.configuration}
               componentInstallations={selectedAircraft.componentInstallations}
+              componentInstallationHistory={selectedAircraft.componentInstallationHistory}
+              canManageComponents={canManageComponents}
+              onComponentMutate={handleComponentLifecycle}
               onComplete={handleConfigureAircraft}
               onUnauthorized={handleUnauthorized}
             />
@@ -1570,6 +1594,18 @@ function App() {
           error={settingsError}
           onSave={handleSaveSettings}
           onUnauthorized={handleUnauthorized}
+          aircraftConfigurationPanel={hasCanonicalConfigurationState && configurationConfigured ? (
+            <AircraftConfigurationOnboarding
+              configurationConfigured
+              configuration={selectedAircraft.configuration}
+              componentInstallations={selectedAircraft.componentInstallations}
+              componentInstallationHistory={selectedAircraft.componentInstallationHistory}
+              canManageComponents={canManageComponents}
+              onComponentMutate={handleComponentLifecycle}
+              onComplete={handleConfigureAircraft}
+              onUnauthorized={handleUnauthorized}
+            />
+          ) : null}
         />
       )}
       </div>

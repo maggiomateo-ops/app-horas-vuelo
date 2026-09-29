@@ -90,8 +90,12 @@ const CURRENT_CONFIGURATION_JOIN = `
           'manufacturer', component.manufacturer,
           'model', component.model,
           'serialNumber', component.serial_number,
+          'notes', component.notes,
           'installedOn', installation.installed_on,
-          'openingTisHours', installation.opening_tis_hours
+          'removedOn', installation.removed_on,
+          'openingTisHours', installation.opening_tis_hours,
+          'firstApplicableFlightId', installation.first_applicable_flight_id,
+          'lastApplicableFlightId', installation.last_applicable_flight_id
         )
         ORDER BY component.component_type, installation.position_index
       ),
@@ -104,6 +108,35 @@ const CURRENT_CONFIGURATION_JOIN = `
       AND installation.removed_on IS NULL
       AND component.status = 'ACTIVE'
   ) active_components ON true
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'componentInstallationId', installation.component_installation_id,
+          'componentId', component.component_id,
+          'componentType', component.component_type,
+          'positionIndex', installation.position_index,
+          'manufacturer', component.manufacturer,
+          'model', component.model,
+          'serialNumber', component.serial_number,
+          'notes', component.notes,
+          'componentStatus', component.status,
+          'installedOn', installation.installed_on,
+          'removedOn', installation.removed_on,
+          'openingTisHours', installation.opening_tis_hours,
+          'firstApplicableFlightId', installation.first_applicable_flight_id,
+          'lastApplicableFlightId', installation.last_applicable_flight_id
+        )
+        ORDER BY component.component_type, installation.position_index,
+          installation.installed_on DESC NULLS LAST, installation.created_at DESC
+      ),
+      '[]'::jsonb
+    ) AS installations
+    FROM app.component_installations installation
+    JOIN app.components component
+      ON component.component_id = installation.component_id
+    WHERE installation.aircraft_id = aircraft.aircraft_id
+  ) component_history ON true
 `;
 
 export function mapPostgresAircraftRow(row) {
@@ -115,6 +148,9 @@ export function mapPostgresAircraftRow(row) {
       : null,
     componentInstallations: Array.isArray(row?.componentInstallations)
       ? row.componentInstallations
+      : [],
+    componentInstallationHistory: Array.isArray(row?.componentInstallationHistory)
+      ? row.componentInstallationHistory
       : [],
   };
 }
@@ -140,7 +176,8 @@ export async function getAircraftsForUserFromPostgres(userId) {
             'propellerCount', aircraft_configuration.propeller_count
           )
         END AS configuration,
-        active_components.installations AS "componentInstallations"
+        active_components.installations AS "componentInstallations",
+        component_history.installations AS "componentInstallationHistory"
       FROM app.aircraft_memberships membership
       JOIN app.aircraft aircraft
         ON aircraft.aircraft_id = membership.aircraft_id

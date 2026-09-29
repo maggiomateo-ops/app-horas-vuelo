@@ -514,3 +514,98 @@ export function getAircraftConfigurationErrorMessage(error) {
   }
   return "No se pudo configurar la aeronave. Intentá nuevamente.";
 }
+
+export async function mutateAircraftComponent(action, aircraftId, input) {
+  const response = await fetch("/api/aircraft", {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action,
+      aircraftId: String(aircraftId || "").trim(),
+      ...input,
+    }),
+  });
+  const data = await response.json().catch(() => null);
+  if (response.status === 401) {
+    const error = new Error("Tu sesion expiro. Vuelve a iniciar sesion.");
+    error.code = "UNAUTHORIZED";
+    error.statusCode = 401;
+    throw error;
+  }
+  if (!response.ok || !data?.ok) {
+    const error = new Error(data?.error || "No se pudo actualizar el componente.");
+    error.code = data?.code || "COMPONENT_LIFECYCLE_FAILED";
+    error.statusCode = response.status;
+    throw error;
+  }
+  return data;
+}
+
+function applyComponentLifecycleResult(aircrafts, aircraftId, result) {
+  return aircrafts.map((aircraft) => {
+    if (aircraft.aircraft_id !== aircraftId) return aircraft;
+    const active = Array.isArray(aircraft.componentInstallations)
+      ? aircraft.componentInstallations
+      : [];
+    const history = Array.isArray(aircraft.componentInstallationHistory)
+      ? aircraft.componentInstallationHistory
+      : [];
+    const oldId = result.oldInstallation?.componentInstallationId
+      || (result.action === "remove-component"
+        ? result.installation?.componentInstallationId
+        : null);
+    const nextActive = active.filter(
+      (installation) => installation.componentInstallationId !== oldId
+    );
+    if (result.action !== "remove-component" && result.installation) {
+      nextActive.push(result.installation);
+    }
+    const nextHistory = history.filter(
+      (installation) => installation.componentInstallationId !== oldId
+        && installation.componentInstallationId
+          !== result.installation?.componentInstallationId
+    );
+    if (result.oldInstallation) nextHistory.push(result.oldInstallation);
+    if (result.installation) nextHistory.push(result.installation);
+    return {
+      ...aircraft,
+      componentInstallations: nextActive,
+      componentInstallationHistory: nextHistory,
+    };
+  });
+}
+
+export async function mutateAircraftComponentAndRefresh(
+  action,
+  aircraftId,
+  input,
+  {
+    mutateRequest = mutateAircraftComponent,
+    loadAircrafts = fetchAircrafts,
+    currentAircrafts = [],
+  } = {}
+) {
+  const result = await mutateRequest(action, aircraftId, input);
+  try {
+    const aircrafts = await loadAircrafts();
+    return { ...result, aircrafts };
+  } catch (error) {
+    if (error?.code === "UNAUTHORIZED" || error?.message === "UNAUTHORIZED") throw error;
+    return {
+      ...result,
+      aircrafts: applyComponentLifecycleResult(currentAircrafts, aircraftId, result),
+    };
+  }
+}
+
+export function getComponentLifecycleErrorMessage(error) {
+  if (error?.statusCode === 403) {
+    return "Sólo un Owner puede gestionar componentes.";
+  }
+  if (error?.statusCode === 503) {
+    return "La gestión de componentes está temporalmente deshabilitada.";
+  }
+  if ([400, 409, 422].includes(error?.statusCode)) return error.message;
+  return "No se pudo actualizar el componente. Intentá nuevamente.";
+}

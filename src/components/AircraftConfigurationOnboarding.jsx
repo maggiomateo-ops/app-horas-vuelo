@@ -5,6 +5,7 @@ import {
   getAircraftConfigurationErrorMessage,
   validateAircraftConfiguration,
 } from "../services/aircraftService";
+import AircraftComponentLifecyclePanel from "./AircraftComponentLifecyclePanel";
 
 const PROPULSION_OPTIONS = [
   ["PISTON", "Pistón"],
@@ -94,6 +95,9 @@ export default function AircraftConfigurationOnboarding({
   configurationConfigured,
   configuration,
   componentInstallations = [],
+  componentInstallationHistory = [],
+  canManageComponents = false,
+  onComponentMutate,
   onComplete,
   onUnauthorized,
 }) {
@@ -193,6 +197,14 @@ export default function AircraftConfigurationOnboarding({
             </article>
           ))}
         </div>
+        <AircraftComponentLifecyclePanel
+          configuration={configuration}
+          activeInstallations={componentInstallations}
+          installationHistory={componentInstallationHistory}
+          canManage={canManageComponents}
+          onMutate={onComponentMutate}
+          onUnauthorized={onUnauthorized}
+        />
       </section>
     );
   }

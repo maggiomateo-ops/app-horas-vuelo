@@ -101,3 +101,17 @@ export function resolvePostgresAircraftConfigurationWriteCapability(aircraftSour
     "AIRCRAFT_CONFIGURATION_WRITE_FLAG_INVALID"
   );
 }
+
+export function resolvePostgresComponentLifecycleWriteCapability(aircraftSource) {
+  const normalizedSource = String(aircraftSource || "").trim().toUpperCase();
+  if (normalizedSource !== "POSTGRES") return { enabled: false, mode: "DISABLED" };
+  const raw = String(
+    process.env.POSTGRES_COMPONENT_LIFECYCLE_WRITES_ENABLED || ""
+  ).trim().toLowerCase();
+  if (!raw || raw === "false") return { enabled: false, mode: "DISABLED" };
+  if (raw === "true") return { enabled: true, mode: "OWNER_COMPONENT_LIFECYCLE" };
+  throw capabilityError(
+    "POSTGRES_COMPONENT_LIFECYCLE_WRITES_ENABLED debe ser true, false o estar ausente.",
+    "COMPONENT_LIFECYCLE_WRITE_FLAG_INVALID"
+  );
+}

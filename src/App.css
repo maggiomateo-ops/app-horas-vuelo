@@ -2895,6 +2895,121 @@ select {
   color: var(--app-text-muted);
 }
 
+.aircraft-component-lifecycle {
+  display: grid;
+  gap: 18px;
+  margin-top: 26px;
+  padding-top: 24px;
+  border-top: 1px solid var(--app-border);
+}
+
+.aircraft-component-lifecycle > header h3,
+.aircraft-component-lifecycle > header p {
+  margin: 0;
+}
+
+.aircraft-component-lifecycle > header p {
+  margin-top: 6px;
+  color: var(--app-text-muted);
+}
+
+.aircraft-position-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.aircraft-position-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface-muted);
+}
+
+.aircraft-position-heading,
+.aircraft-lifecycle-form-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aircraft-position-heading > div:first-child,
+.aircraft-position-current,
+.aircraft-position-history > div {
+  display: grid;
+  gap: 4px;
+}
+
+.aircraft-position-heading span,
+.aircraft-position-current small,
+.aircraft-position-history small,
+.aircraft-lifecycle-form-heading p {
+  color: var(--app-text-muted);
+}
+
+.aircraft-position-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.aircraft-position-heading button,
+.aircraft-lifecycle-form-heading button {
+  padding: 8px 11px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 9px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.aircraft-position-history summary {
+  cursor: pointer;
+  color: var(--app-primary-strong);
+  font-weight: 750;
+}
+
+.aircraft-position-history > div {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border);
+}
+
+.aircraft-lifecycle-form {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--app-primary) 30%, var(--app-border));
+  border-radius: 16px;
+  background: var(--app-surface-muted);
+}
+
+.aircraft-lifecycle-form-heading p {
+  margin: 5px 0 0;
+}
+
+.aircraft-lifecycle-notes {
+  grid-column: 1 / -1;
+}
+
+.aircraft-lifecycle-notes textarea {
+  min-height: 84px;
+  resize: vertical;
+  padding: 12px 13px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+}
+
 @media (max-width: 640px) {
   .aircraft-configuration-onboarding,
   .aircraft-configuration-summary {
@@ -2903,8 +3018,14 @@ select {
   }
 
   .aircraft-configuration-grid,
-  .aircraft-component-grid {
+  .aircraft-component-grid,
+  .aircraft-position-list {
     grid-template-columns: 1fr;
+  }
+
+  .aircraft-position-heading,
+  .aircraft-lifecycle-form-heading {
+    flex-direction: column;
   }
 }
 

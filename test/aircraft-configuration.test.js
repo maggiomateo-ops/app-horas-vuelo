@@ -497,6 +497,7 @@ test("GET normaliza configuración ausente o configurada e instalaciones activas
     configurationConfigured: false,
     configuration: null,
     componentInstallations: [],
+    componentInstallationHistory: [],
   });
   const configured = mapPostgresAircraftRow({
     aircraft_id: AIRCRAFT_ID,
@@ -506,6 +507,7 @@ test("GET normaliza configuración ausente o configurada e instalaciones activas
   });
   assert.equal(configured.configuration.engineCount, 2);
   assert.equal(configured.componentInstallations.length, 1);
+  assert.deepEqual(configured.componentInstallationHistory, []);
 });
 
 test("lectura Postgres limita el resumen a installations activas", async () => {

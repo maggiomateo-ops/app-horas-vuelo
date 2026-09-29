@@ -104,6 +104,7 @@ function SettingsPanel({
   error,
   onSave,
   onUnauthorized,
+  aircraftConfigurationPanel = null,
 }) {
   const [activeSection, setActiveSection] = useState("aircraft");
   const [activeTab, setActiveTab] = useState("app");
@@ -297,6 +298,8 @@ function SettingsPanel({
               En Postgres TEST solo podés editar la unidad de aceite, la próxima fecha de inspección anual y los tres umbrales amarillos. El resto permanece de solo lectura en esta etapa.
             </p>
           ) : null}
+
+          {aircraftConfigurationPanel}
 
           <div className="settings-tabs" role="tablist" aria-label="Tabs de settings">
             {SETTINGS_TABS.map((tab) => (
