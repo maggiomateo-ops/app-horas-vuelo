@@ -211,7 +211,7 @@ export function createPostgresSquawkRepository({
          LEFT JOIN app.user_person_links link ON link.user_id = actor.user_id
          LEFT JOIN app.persons person ON person.person_id = link.person_id
         WHERE comment.squawk_id = ANY($1::uuid[])
-        ORDER BY comment.created_at, comment.squawk_comment_id`, [ids]
+        ORDER BY comment.created_at, comment.comment_id`, [ids]
     ) : { rows: [] };
     const { rows: flights } = await query(
       `SELECT flight.flight_id, flight.status, revision.flight_date,
