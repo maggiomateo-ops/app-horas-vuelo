@@ -9,7 +9,13 @@ import {
 } from "../api/_postgresSquawkRepository.js";
 import { resolvePostgresSquawkWriteCapability } from "../api/_settingsWriteCapability.js";
 import { buildSquawkPayload } from "../src/services/squawkService.js";
-import { getSquawkSummary, selectSquawks } from "../src/utils/squawkPresentation.js";
+import {
+  getSquawkActivityLabel,
+  getSquawkSummary,
+  getSquawkTransitionTargets,
+  selectSquawks,
+  SQUAWK_TRANSITION_ACTION_LABELS,
+} from "../src/utils/squawkPresentation.js";
 
 const USER = "00000000-0000-4000-8000-000000000001";
 const OTHER = "00000000-0000-4000-8000-000000000002";
@@ -222,7 +228,10 @@ test("read permissions and timeline composition are canonical", async () => {
 });
 
 test("client payload, search/filter/order and summary preserve canonical values", () => {
-  assert.deepEqual(buildSquawkPayload({ ...VALID_INPUT, title: "  Título  ", category: "FUEL" }), { ...VALID_INPUT, title: "Título", category: "FUEL" });
+  assert.deepEqual(
+    buildSquawkPayload({ ...VALID_INPUT, title: "  Título  ", category: "FUEL" }),
+    { ...VALID_INPUT, reported_at: "2026-09-30T12:00:00.000Z", title: "Título", category: "FUEL" }
+  );
   const items = [
     squawk({ squawk_id: nextUuid(), title: "Luz de cabina", description: "Intermitente", category: "LIGHTING", status: "OPEN", reported_at: "2026-09-29T00:00:00Z" }),
     squawk({ squawk_id: nextUuid(), title: "Indicador", description: "Revisión visual", category: "AVIONICS_INSTRUMENTS", status: "RESOLVED", reported_at: "2026-09-30T00:00:00Z" }),
@@ -249,4 +258,42 @@ test("routing keeps reads available with gate off and children append-only", () 
   assert.doesNotMatch(repositorySource, /squawk_attachments/);
   assert.match(uiSource, /flight\.status === "VOIDED"/);
   assert.equal(readdirSync(new URL("../api", import.meta.url)).filter((name) => name.endsWith(".js") && !name.startsWith("_")).length, 12);
+});
+
+test("D-295 presenta actividad y transiciones como acciones comprensibles", () => {
+  assert.equal(getSquawkActivityLabel({ type: "CREATED" }), "Novedad reportada");
+  assert.equal(getSquawkActivityLabel({ type: "COMMENT" }), "Comentario");
+  assert.equal(
+    getSquawkActivityLabel({ type: "STATUS_CHANGED", to_status: "SENT_TO_WORKSHOP" }),
+    "Enviada a taller"
+  );
+  assert.equal(
+    getSquawkActivityLabel({ type: "STATUS_CHANGED", to_status: "RESOLVED" }),
+    "Resuelta"
+  );
+  assert.equal(
+    getSquawkActivityLabel({ type: "STATUS_CHANGED", to_status: "OPEN" }),
+    "Reabierta"
+  );
+  assert.deepEqual(getSquawkTransitionTargets("OPEN"), ["SENT_TO_WORKSHOP", "RESOLVED"]);
+  assert.deepEqual(getSquawkTransitionTargets("SENT_TO_WORKSHOP"), ["OPEN", "RESOLVED"]);
+  assert.deepEqual(getSquawkTransitionTargets("RESOLVED"), ["OPEN"]);
+  assert.deepEqual(SQUAWK_TRANSITION_ACTION_LABELS, {
+    SENT_TO_WORKSHOP: "Enviar a taller",
+    RESOLVED: "Resolver novedad",
+    OPEN: "Reabrir novedad",
+  });
+});
+
+test("D-295 mantiene comentario y formularios de estado bajo interacción compacta", () => {
+  const uiSource = readFileSync(new URL("../src/components/SquawksPanel.jsx", import.meta.url), "utf8");
+  const cssSource = readFileSync(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(uiSource, /<h3>Actividad<\/h3>/);
+  assert.doesNotMatch(uiSource, />Timeline</);
+  assert.doesNotMatch(uiSource, /Cambiar a/);
+  assert.match(uiSource, /commentingSquawkId/);
+  assert.match(uiSource, /aria-expanded=\{showCommentForm\}/);
+  assert.match(uiSource, /squawk-action-bar/);
+  assert.match(cssSource, /\.squawk-row-detail[\s\S]*text-transform: none/);
+  assert.match(cssSource, /@media \(max-width: 760px\)[\s\S]*\.squawk-action-bar button/);
 });

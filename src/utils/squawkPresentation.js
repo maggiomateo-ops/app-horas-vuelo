@@ -4,6 +4,30 @@ export const SQUAWK_STATUS_LABELS = Object.freeze({
   RESOLVED: "Resuelta",
 });
 
+export const SQUAWK_TRANSITION_ACTION_LABELS = Object.freeze({
+  SENT_TO_WORKSHOP: "Enviar a taller",
+  RESOLVED: "Resolver novedad",
+  OPEN: "Reabrir novedad",
+});
+
+export function getSquawkActivityLabel(entry) {
+  if (entry?.type === "CREATED") return "Novedad reportada";
+  if (entry?.type === "COMMENT") return "Comentario";
+  if (entry?.type === "STATUS_CHANGED") {
+    if (entry.to_status === "SENT_TO_WORKSHOP") return "Enviada a taller";
+    if (entry.to_status === "RESOLVED") return "Resuelta";
+    if (entry.to_status === "OPEN") return "Reabierta";
+  }
+  return "Actividad registrada";
+}
+
+export function getSquawkTransitionTargets(currentStatus) {
+  if (currentStatus === "OPEN") return ["SENT_TO_WORKSHOP", "RESOLVED"];
+  if (currentStatus === "SENT_TO_WORKSHOP") return ["OPEN", "RESOLVED"];
+  if (currentStatus === "RESOLVED") return ["OPEN"];
+  return [];
+}
+
 export const SQUAWK_CATEGORY_LABELS = Object.freeze({
   POWERPLANT: "Planta motriz",
   ELECTRICAL: "Eléctrico",
