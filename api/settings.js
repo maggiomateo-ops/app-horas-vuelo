@@ -12,7 +12,14 @@ import {
   updateTrackingItemInPostgres,
 } from "./_postgresTrackingRepository.js";
 import {
-  resolvePostgresTrackingWriteCapability,
+  addSquawkCommentInPostgres,
+  changeSquawkStatusInPostgres,
+  createSquawkInPostgres,
+  getSquawksFromPostgres,
+  updateSquawkInPostgres,
+} from "./_postgresSquawkRepository.js";
+import {
+  resolvePostgresSquawkWriteCapability,
   resolveSettingsWriteCapability,
 } from "./_settingsWriteCapability.js";
 import {
@@ -36,7 +43,7 @@ function trackingErrorResponse(res, error) {
   });
 }
 
-async function handleTrackingResource(req, res, { userId, aircraftId, source }) {
+async function handleTrackingResource(req, res, { userId, aircraftId }) {
   try {
     if (req.method === "GET") {
       const tracking = await getTrackingItemsFromPostgres({
@@ -95,6 +102,68 @@ async function handleTrackingResource(req, res, { userId, aircraftId, source }) 
   }
 }
 
+function squawkErrorResponse(res, error) {
+  const statusCode = error?.statusCode || 502;
+  const exposeMessage = [400, 403, 404, 409, 422, 503].includes(statusCode);
+  return res.status(statusCode).json({
+    ok: false,
+    error: exposeMessage ? error.message : "No se pudieron procesar las novedades.",
+    code: exposeMessage ? error.code : undefined,
+  });
+}
+
+async function handleSquawkResource(req, res, { userId, aircraftId, source }) {
+  try {
+    const capability = resolvePostgresSquawkWriteCapability(source);
+    if (req.method === "GET") {
+      const squawks = await getSquawksFromPostgres({ userId, aircraftId });
+      return res.status(200).json({
+        ok: true,
+        squawks: { ...squawks, writes_enabled: capability.enabled },
+      });
+    }
+    if (!capability.enabled) {
+      return res.status(503).json({
+        ok: false,
+        error: "La gestion de novedades esta temporalmente deshabilitada.",
+        code: "SQUAWK_WRITES_DISABLED",
+      });
+    }
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const action = String(body.action || "").trim().toLowerCase();
+    if (req.method === "POST" && action === "create") {
+      const result = await createSquawkInPostgres({ userId, aircraftId, squawk: body.squawk });
+      return res.status(201).json({ ok: true, result });
+    }
+    if (req.method === "POST" && action === "comment") {
+      const result = await addSquawkCommentInPostgres({
+        userId, aircraftId, squawkId: body.squawk_id, body: body.comment,
+      });
+      return res.status(201).json({ ok: true, result });
+    }
+    if (req.method === "POST" && action === "transition") {
+      const result = await changeSquawkStatusInPostgres({
+        userId,
+        aircraftId,
+        squawkId: body.squawk_id,
+        fromStatus: body.from_status,
+        toStatus: body.to_status,
+        transition: body.transition,
+      });
+      return res.status(200).json({ ok: true, result });
+    }
+    if (req.method === "PATCH" && action === "update") {
+      const result = await updateSquawkInPostgres({
+        userId, aircraftId, squawkId: body.squawk_id, squawk: body.squawk,
+      });
+      return res.status(200).json({ ok: true, result });
+    }
+    return res.status(405).json({ ok: false, error: "Metodo no permitido." });
+  } catch (error) {
+    return squawkErrorResponse(res, error);
+  }
+}
+
 export default async function handler(req, res) {
   const session = requireAuth(req, res);
 
@@ -141,6 +210,13 @@ export default async function handler(req, res) {
       return res.status(404).json({ ok: false, error: "Recurso no disponible." });
     }
     return handleTrackingResource(req, res, { userId, aircraftId, source });
+  }
+
+  if (resource === "squawks") {
+    if (source !== DATA_SOURCE.POSTGRES) {
+      return res.status(404).json({ ok: false, error: "Recurso no disponible." });
+    }
+    return handleSquawkResource(req, res, { userId, aircraftId, source });
   }
 
   let settingsWriteCapability;

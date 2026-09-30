@@ -129,3 +129,17 @@ export function resolvePostgresTrackingWriteCapability(settingsSource) {
     "TRACKING_WRITE_FLAG_INVALID"
   );
 }
+
+export function resolvePostgresSquawkWriteCapability(settingsSource) {
+  const normalizedSource = String(settingsSource || "").trim().toUpperCase();
+  if (normalizedSource !== "POSTGRES") return { enabled: false, mode: "DISABLED" };
+  const raw = String(process.env.POSTGRES_SQUAWK_WRITES_ENABLED || "")
+    .trim()
+    .toLowerCase();
+  if (!raw || raw === "false") return { enabled: false, mode: "DISABLED" };
+  if (raw === "true") return { enabled: true, mode: "AIRCRAFT_SQUAWKS" };
+  throw capabilityError(
+    "POSTGRES_SQUAWK_WRITES_ENABLED debe ser true, false o estar ausente.",
+    "SQUAWK_WRITE_FLAG_INVALID"
+  );
+}

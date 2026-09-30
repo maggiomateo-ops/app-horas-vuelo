@@ -16,6 +16,7 @@ import {
   TRACKING_FILTERS,
   TRACKING_SORTS,
 } from "../utils/trackingPresentation";
+import SquawksPanel from "./SquawksPanel";
 
 const EMPTY_FORM = Object.freeze({
   concept: "",
@@ -291,7 +292,7 @@ function CompletionForm({ item, saving, onCancel, onSubmit }) {
   );
 }
 
-function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
+function RemindersPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
   const [tracking, setTracking] = useState(null);
   const [activeFilter, setActiveFilter] = useState(TRACKING_FILTERS.ACTIVE);
   const [searchQuery, setSearchQuery] = useState("");
@@ -667,4 +668,15 @@ function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
   );
 }
 
-export default TrackingPanel;
+export default function TrackingPanel(props) {
+  const [activeSection, setActiveSection] = useState("reminders");
+  return (
+    <section className="tracking-workspace">
+      <nav className="tracking-section-nav" aria-label="Secciones de seguimiento">
+        <button type="button" className={activeSection === "reminders" ? "is-active" : ""} onClick={() => setActiveSection("reminders")}>Recordatorios</button>
+        <button type="button" className={activeSection === "squawks" ? "is-active" : ""} onClick={() => setActiveSection("squawks")}>Novedades</button>
+      </nav>
+      {activeSection === "reminders" ? <RemindersPanel {...props} /> : <SquawksPanel {...props} />}
+    </section>
+  );
+}
