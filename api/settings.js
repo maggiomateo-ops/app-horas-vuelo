@@ -33,7 +33,7 @@ function trackingErrorResponse(res, error) {
   });
 }
 
-async function handleTrackingResource(req, res, { userId, aircraftId }) {
+async function handleTrackingResource(req, res, { userId, aircraftId, source }) {
   try {
     if (req.method === "GET") {
       const tracking = await getTrackingItemsFromPostgres({
