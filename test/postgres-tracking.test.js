@@ -8,6 +8,10 @@ import {
   deriveTrackingItemState,
 } from "../api/_postgresTrackingRepository.js";
 import { buildTrackingItemPayload } from "../src/services/trackingService.js";
+import {
+  buildActiveCycleLabel,
+  buildTrackingEventPresentation,
+} from "../src/utils/trackingPresentation.js";
 import { getAllowedMainTabIds } from "../src/utils/rolePermissions.js";
 
 const OWNER_ID = "11111111-1111-4111-8111-111111111111";
@@ -506,4 +510,67 @@ test("contrato no agrega migration ni funcion serverless y Settings legacy conse
   const apiFiles = (await fs.readdir(new URL("../api/", import.meta.url)))
     .filter((name) => name.endsWith(".js") && !name.startsWith("_"));
   assert.equal(apiFiles.length <= 12, true);
+});
+
+test("presentacion TRACKED_FROM_NOW explica el nuevo ciclo sin inventar TIS absoluto", () => {
+  const item = {
+    status: "ACTIVE",
+    due_basis: "TIME_IN_SERVICE",
+    recurrence: "RECURRING",
+    reference_mode: "TRACKED_FROM_NOW",
+    interval_hours: 10,
+    derived: { elapsed_hours: 0 },
+    events: [{ tracking_event_id: uuid(500) }],
+  };
+  const presentation = buildTrackingEventPresentation(item, {
+    completed_at_tis: null,
+    cycle_snapshot: {
+      due_basis: "TIME_IN_SERVICE",
+      recurrence: "RECURRING",
+      reference_mode: "TRACKED_FROM_NOW",
+      tracking_start_date: "2026-09-01",
+      interval_hours: 10,
+    },
+  });
+
+  assert.equal(presentation.title, "Ciclo atendido");
+  assert.equal(presentation.closedCycleContext, "Ciclo cerrado · Objetivo: 10.0 h desde 2026-09-01");
+  assert.equal(presentation.attendedContext, null);
+  assert.equal(presentation.nextCycleContext, "Nuevo ciclo: 10.0 h");
+  assert.doesNotMatch(JSON.stringify(presentation), /TIS absoluto no disponible/);
+  assert.equal(buildActiveCycleLabel(item), "Nuevo ciclo · 0.0 / 10.0 h");
+});
+
+test("presentacion DATE recurrente muestra ciclo cerrado y proxima fecha", () => {
+  const presentation = buildTrackingEventPresentation({
+    due_basis: "DATE",
+    recurrence: "RECURRING",
+  }, {
+    next_due_date: "2027-10-30",
+    cycle_snapshot: {
+      due_basis: "DATE",
+      recurrence: "RECURRING",
+      due_date: "2026-10-30",
+    },
+  });
+
+  assert.equal(presentation.title, "Ciclo atendido");
+  assert.equal(presentation.closedCycleContext, "Ciclo cerrado · Fecha objetivo: 2026-10-30");
+  assert.equal(presentation.nextCycleContext, "Nuevo ciclo: 2027-10-30");
+});
+
+test("presentacion ONE_TIME deja claro que el recordatorio finalizo archivado", () => {
+  const presentation = buildTrackingEventPresentation({
+    due_basis: "DATE",
+    recurrence: "ONE_TIME",
+  }, {
+    cycle_snapshot: {
+      due_basis: "DATE",
+      recurrence: "ONE_TIME",
+      due_date: "2026-10-30",
+    },
+  });
+
+  assert.equal(presentation.title, "Ciclo atendido");
+  assert.equal(presentation.nextCycleContext, "Recordatorio finalizado y archivado");
 });

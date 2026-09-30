@@ -3427,6 +3427,19 @@ select {
   gap: 12px;
 }
 
+.tracking-new-cycle {
+  width: fit-content;
+  margin: 0;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .tracking-card-values > div {
   display: grid;
   gap: 3px;
@@ -3487,12 +3500,18 @@ select {
 }
 
 .tracking-history li span,
+.tracking-history li time,
 .tracking-history li p,
 .tracking-history > p {
   display: block;
   margin: 3px 0 0;
   color: var(--app-text-muted);
   font-size: 13px;
+}
+
+.tracking-history li .tracking-next-cycle {
+  color: var(--text-primary);
+  font-weight: 700;
 }
 
 .tracking-empty {

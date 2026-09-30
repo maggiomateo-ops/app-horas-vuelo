@@ -7,6 +7,10 @@ import {
   fetchTrackingItems,
   updateTrackingItem,
 } from "../services/trackingService";
+import {
+  buildActiveCycleLabel,
+  buildTrackingEventPresentation,
+} from "../utils/trackingPresentation";
 
 const EMPTY_FORM = Object.freeze({
   concept: "",
@@ -451,6 +455,7 @@ function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
         <div className="tracking-card-grid">
           {items.map((item) => {
             const state = item.derived?.due_state || "UNAVAILABLE";
+            const activeCycleLabel = buildActiveCycleLabel(item);
             return (
               <article
                 key={item.tracking_item_id}
@@ -465,6 +470,9 @@ function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
                   </div>
                   <span className="tracking-state-label">{STATUS_LABELS[state]}</span>
                 </header>
+                {activeCycleLabel ? (
+                  <p className="tracking-new-cycle">{activeCycleLabel}</p>
+                ) : null}
                 <div className="tracking-card-values">
                   <div>
                     <span>Objetivo</span>
@@ -533,17 +541,25 @@ function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
                   <summary>Historial ({item.events.length})</summary>
                   {item.events.length ? (
                     <ol>
-                      {item.events.map((event) => (
-                        <li key={event.tracking_event_id}>
-                          <strong>Marcado atendido</strong>
-                          <span>{new Date(event.completed_at).toLocaleString("es-AR")}</span>
-                          {event.completed_at_tis !== null
-                            ? <span>TIS: {event.completed_at_tis.toFixed(1)} h</span>
-                            : null}
-                          {event.next_due_date ? <span>Próxima fecha: {event.next_due_date}</span> : null}
-                          {event.note ? <p>{event.note}</p> : null}
-                        </li>
-                      ))}
+                      {item.events.map((event) => {
+                        const presentation = buildTrackingEventPresentation(item, event);
+                        return (
+                          <li key={event.tracking_event_id}>
+                            <strong>{presentation.title}</strong>
+                            <time dateTime={event.completed_at}>
+                              {new Date(event.completed_at).toLocaleString("es-AR")}
+                            </time>
+                            <span>{presentation.closedCycleContext}</span>
+                            {presentation.attendedContext
+                              ? <span>{presentation.attendedContext}</span>
+                              : null}
+                            <span className="tracking-next-cycle">
+                              {presentation.nextCycleContext}
+                            </span>
+                            {event.note ? <p>{event.note}</p> : null}
+                          </li>
+                        );
+                      })}
                     </ol>
                   ) : <p>Sin eventos de finalización.</p>}
                 </details>
