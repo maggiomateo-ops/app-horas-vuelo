@@ -115,3 +115,17 @@ export function resolvePostgresComponentLifecycleWriteCapability(aircraftSource)
     "COMPONENT_LIFECYCLE_WRITE_FLAG_INVALID"
   );
 }
+
+export function resolvePostgresTrackingWriteCapability(settingsSource) {
+  const normalizedSource = String(settingsSource || "").trim().toUpperCase();
+  if (normalizedSource !== "POSTGRES") return { enabled: false, mode: "DISABLED" };
+  const raw = String(
+    process.env.POSTGRES_TRACKING_WRITES_ENABLED || ""
+  ).trim().toLowerCase();
+  if (!raw || raw === "false") return { enabled: false, mode: "DISABLED" };
+  if (raw === "true") return { enabled: true, mode: "OWNER_TRACKING_REMINDERS" };
+  throw capabilityError(
+    "POSTGRES_TRACKING_WRITES_ENABLED debe ser true, false o estar ausente.",
+    "TRACKING_WRITE_FLAG_INVALID"
+  );
+}
