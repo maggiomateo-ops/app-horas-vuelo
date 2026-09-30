@@ -3223,18 +3223,6 @@ select {
   line-height: 1.55;
 }
 
-.tracking-toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid var(--app-border);
-  border-radius: 13px;
-  background: var(--app-surface-muted);
-}
-
-.tracking-toolbar button,
 .tracking-card-actions button,
 .tracking-text-button {
   border: 1px solid var(--app-border-strong);
@@ -3247,22 +3235,128 @@ select {
   cursor: pointer;
 }
 
-.tracking-toolbar button {
-  padding: 8px 12px;
+.tracking-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.tracking-toolbar button.is-active {
+.tracking-summary button {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tracking-summary button strong {
+  color: var(--app-text);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.tracking-summary button span {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tracking-summary button.is-active {
+  border-color: var(--app-primary);
+  box-shadow: inset 0 0 0 1px var(--app-primary);
+}
+
+.tracking-summary button.is-urgent strong {
+  color: var(--app-danger);
+}
+
+.tracking-summary button.is-soon strong {
+  color: #b97800;
+}
+
+.tracking-summary button.is-ok strong {
+  color: var(--app-success);
+}
+
+.tracking-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(190px, 240px) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.tracking-search,
+.tracking-sort {
+  display: grid;
+  gap: 6px;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tracking-search input,
+.tracking-sort select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 9px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.tracking-current-tis,
+.tracking-result-count {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tracking-current-tis {
+  padding: 11px 2px;
+  white-space: nowrap;
+}
+
+.tracking-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.tracking-filters button {
+  padding: 7px 11px;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.tracking-filters button.is-active {
   border-color: var(--app-primary);
   background: var(--app-primary-soft);
   color: var(--app-primary-strong);
 }
 
-.tracking-toolbar > span {
-  margin-left: auto;
-  padding: 0 8px;
-  color: var(--app-text-muted);
-  font-size: 13px;
-  font-weight: 700;
+.tracking-result-count {
+  margin-top: -8px;
+  text-align: right;
 }
 
 .tracking-message {
@@ -3360,51 +3454,25 @@ select {
   padding: 8px 11px;
 }
 
-.tracking-card-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.tracking-card {
-  display: grid;
-  align-content: start;
-  gap: 16px;
-  padding: 20px;
+.tracking-list {
+  overflow: hidden;
   border: 1px solid var(--app-border);
-  border-left: 5px solid var(--app-border-strong);
-  border-radius: 16px;
+  border-radius: 14px;
+  background: var(--app-surface);
+}
+
+.tracking-list-head,
+.tracking-row-summary {
+  display: grid;
+  grid-template-columns: minmax(190px, 2fr) minmax(105px, 0.9fr) minmax(125px, 1.15fr) minmax(130px, 1.15fr) minmax(115px, 0.95fr) 34px;
+  align-items: center;
+  gap: 12px;
+}
+
+.tracking-list-head {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--app-border);
   background: var(--app-surface-muted);
-}
-
-.tracking-card.tracking-state-ok {
-  border-left-color: var(--app-success);
-}
-
-.tracking-card.tracking-state-due-soon,
-.tracking-card.tracking-state-due {
-  border-left-color: #d89a16;
-}
-
-.tracking-card.tracking-state-overdue {
-  border-left-color: var(--app-danger);
-}
-
-.tracking-card > header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.tracking-card h2 {
-  margin: 4px 0 0;
-  color: var(--app-text);
-  font-size: 19px;
-}
-
-.tracking-basis,
-.tracking-state-label {
   color: var(--app-text-muted);
   font-size: 11px;
   font-weight: 800;
@@ -3412,7 +3480,80 @@ select {
   text-transform: uppercase;
 }
 
+.tracking-row {
+  border-left: 4px solid var(--app-border-strong);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.tracking-row:last-child {
+  border-bottom: 0;
+}
+
+.tracking-row.tracking-state-ok {
+  border-left-color: var(--app-success);
+}
+
+.tracking-row.tracking-state-due-soon,
+.tracking-row.tracking-state-due {
+  border-left-color: #d89a16;
+}
+
+.tracking-row.tracking-state-overdue {
+  border-left-color: var(--app-danger);
+}
+
+.tracking-list.is-archived .tracking-row {
+  border-left-color: var(--app-border-strong);
+  background: color-mix(in srgb, var(--app-surface-muted) 62%, var(--app-surface));
+  opacity: 0.82;
+}
+
+.tracking-row-summary {
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--app-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tracking-row-summary:hover,
+.tracking-row-summary:focus-visible {
+  background: var(--app-surface-muted);
+}
+
+.tracking-row-concept {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tracking-row-concept strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tracking-row-concept small {
+  display: none;
+  color: var(--app-text-muted);
+  font-size: 11px;
+}
+
+.tracking-row-base,
+.tracking-row-objective,
+.tracking-row-remaining {
+  min-width: 0;
+  color: var(--app-text-muted);
+  font-size: 13px;
+}
+
 .tracking-state-label {
+  width: fit-content;
   padding: 5px 8px;
   border: 1px solid var(--app-border);
   border-radius: 999px;
@@ -3421,10 +3562,19 @@ select {
   letter-spacing: 0.02em;
 }
 
-.tracking-card-values {
+.tracking-row-toggle {
+  color: var(--app-primary-strong);
+  font-size: 20px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.tracking-row-detail {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
+  padding: 5px 14px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--app-border) 65%, transparent);
+  background: var(--app-surface-muted);
 }
 
 .tracking-new-cycle {
@@ -3440,25 +3590,31 @@ select {
   letter-spacing: 0.02em;
 }
 
-.tracking-card-values > div {
-  display: grid;
-  gap: 3px;
-  padding: 11px;
-  border: 1px solid var(--app-border);
-  border-radius: 10px;
-  background: var(--app-surface);
+.tracking-detail-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding-top: 12px;
 }
 
-.tracking-card-values span {
+.tracking-detail-meta > p:not(.tracking-new-cycle) {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.tracking-detail-meta > p span {
   color: var(--app-text-muted);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.tracking-card-values strong {
+.tracking-detail-meta > p strong {
   color: var(--app-text);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .tracking-notes {
@@ -3482,10 +3638,10 @@ select {
   padding-top: 12px;
 }
 
-.tracking-history summary {
-  cursor: pointer;
-  color: var(--app-primary-strong);
-  font-weight: 750;
+.tracking-history h3 {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 14px;
 }
 
 .tracking-history ol {
@@ -3534,8 +3690,7 @@ select {
   }
 
   .tracking-panel-header,
-  .tracking-form > header,
-  .tracking-card > header {
+  .tracking-form > header {
     flex-direction: column;
   }
 
@@ -3543,16 +3698,97 @@ select {
     width: 100%;
   }
 
-  .tracking-toolbar > span {
-    flex-basis: 100%;
-    margin-left: 0;
-    padding-top: 5px;
+  .tracking-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .tracking-form-grid,
-  .tracking-card-grid,
-  .tracking-card-values {
+  .tracking-controls,
+  .tracking-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tracking-current-tis {
+    padding: 0;
+  }
+
+  .tracking-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 3px;
+    scrollbar-width: thin;
+  }
+
+  .tracking-filters button {
+    flex: 0 0 auto;
+  }
+
+  .tracking-list-head {
+    display: none;
+  }
+
+  .tracking-row-summary {
+    grid-template-columns: minmax(0, 1fr) auto 28px;
+    grid-template-areas:
+      "concept state toggle"
+      "objective remaining toggle";
+    gap: 8px 10px;
+    padding: 13px 11px;
+  }
+
+  .tracking-row-concept {
+    grid-area: concept;
+  }
+
+  .tracking-row-concept strong {
+    white-space: normal;
+  }
+
+  .tracking-row-concept small {
+    display: block;
+  }
+
+  .tracking-row-base {
+    display: none;
+  }
+
+  .tracking-row-objective,
+  .tracking-row-remaining {
+    display: grid;
+    gap: 2px;
+    font-size: 12px;
+  }
+
+  .tracking-row-objective {
+    grid-area: objective;
+  }
+
+  .tracking-row-remaining {
+    grid-area: remaining;
+  }
+
+  .tracking-row-objective::before,
+  .tracking-row-remaining::before {
+    content: attr(data-label);
+    color: var(--app-text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tracking-state-label {
+    grid-area: state;
+  }
+
+  .tracking-row-toggle {
+    grid-area: toggle;
+    align-self: stretch;
+    display: grid;
+    place-items: center;
+  }
+
+  .tracking-row-detail {
+    padding: 4px 11px 14px;
   }
 }
 

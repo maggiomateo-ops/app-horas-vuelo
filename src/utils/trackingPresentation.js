@@ -15,6 +15,135 @@ function absoluteDueHours(snapshot) {
   return reference === null || interval === null ? null : reference + interval;
 }
 
+const PRIORITY_RANK = Object.freeze({
+  OVERDUE: 0,
+  DUE: 0,
+  DUE_SOON: 1,
+  OK: 2,
+  UNAVAILABLE: 3,
+});
+
+export const TRACKING_FILTERS = Object.freeze({
+  ACTIVE: "ACTIVE",
+  DUE_SOON: "DUE_SOON",
+  URGENT: "URGENT",
+  OK: "OK",
+  DATE: "DATE",
+  HOURS: "HOURS",
+  ARCHIVED: "ARCHIVED",
+});
+
+export const TRACKING_SORTS = Object.freeze({
+  PRIORITY: "PRIORITY",
+  CONCEPT: "CONCEPT",
+  DUE: "DUE",
+});
+
+function normalizedSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLocaleLowerCase("es");
+}
+
+function dueState(item) {
+  return String(item?.derived?.due_state || "UNAVAILABLE").toUpperCase();
+}
+
+function remainingValue(item) {
+  return numericValue(item?.derived?.remaining_value);
+}
+
+function compareConcept(left, right) {
+  return String(left?.concept || "").localeCompare(String(right?.concept || ""), "es", {
+    sensitivity: "base",
+  });
+}
+
+function compareComparableRemaining(left, right) {
+  if (left?.due_basis !== right?.due_basis) return null;
+  const leftRemaining = remainingValue(left);
+  const rightRemaining = remainingValue(right);
+  if (leftRemaining === null || rightRemaining === null) return null;
+  return leftRemaining - rightRemaining;
+}
+
+function comparePriority(left, right) {
+  const rankDifference = (PRIORITY_RANK[dueState(left)] ?? 4)
+    - (PRIORITY_RANK[dueState(right)] ?? 4);
+  if (rankDifference !== 0) return rankDifference;
+  const remainingDifference = compareComparableRemaining(left, right);
+  if (remainingDifference !== null && remainingDifference !== 0) return remainingDifference;
+  return compareConcept(left, right);
+}
+
+function compareDue(left, right) {
+  const rankDifference = (PRIORITY_RANK[dueState(left)] ?? 4)
+    - (PRIORITY_RANK[dueState(right)] ?? 4);
+  if (rankDifference !== 0) return rankDifference;
+  if (left?.due_basis !== right?.due_basis) {
+    return String(left?.due_basis || "").localeCompare(String(right?.due_basis || ""));
+  }
+  const remainingDifference = compareComparableRemaining(left, right);
+  if (remainingDifference !== null && remainingDifference !== 0) return remainingDifference;
+  return compareConcept(left, right);
+}
+
+export function getTrackingSummaryCounts(items) {
+  return (Array.isArray(items) ? items : []).reduce((counts, item) => {
+    if (item?.status !== "ACTIVE") return counts;
+    counts.total += 1;
+    const state = dueState(item);
+    if (state === "DUE" || state === "OVERDUE") counts.urgent += 1;
+    if (state === "DUE_SOON") counts.dueSoon += 1;
+    if (state === "OK") counts.ok += 1;
+    return counts;
+  }, { urgent: 0, dueSoon: 0, ok: 0, total: 0 });
+}
+
+export function selectTrackingItems(items, {
+  filter = TRACKING_FILTERS.ACTIVE,
+  query = "",
+  sortBy = TRACKING_SORTS.PRIORITY,
+} = {}) {
+  const source = Array.isArray(items) ? items : [];
+  const archivedScope = filter === TRACKING_FILTERS.ARCHIVED;
+  const scopedItems = source.filter((item) => (
+    archivedScope ? item?.status === "ARCHIVED" : item?.status === "ACTIVE"
+  ));
+  const searched = normalizedSearchText(query);
+  const visible = scopedItems.filter((item) => {
+    const state = dueState(item);
+    if (filter === TRACKING_FILTERS.DUE_SOON && state !== "DUE_SOON") return false;
+    if (filter === TRACKING_FILTERS.URGENT && !["DUE", "OVERDUE"].includes(state)) return false;
+    if (filter === TRACKING_FILTERS.OK && state !== "OK") return false;
+    if (filter === TRACKING_FILTERS.DATE && item?.due_basis !== "DATE") return false;
+    if (filter === TRACKING_FILTERS.HOURS && item?.due_basis !== "TIME_IN_SERVICE") return false;
+    if (!searched) return true;
+    return normalizedSearchText(`${item?.concept || ""} ${item?.notes || ""}`).includes(searched);
+  });
+
+  const comparator = sortBy === TRACKING_SORTS.CONCEPT
+    ? compareConcept
+    : sortBy === TRACKING_SORTS.DUE
+      ? compareDue
+      : comparePriority;
+
+  return {
+    items: [...visible].sort(comparator),
+    visibleCount: visible.length,
+    scopeCount: scopedItems.length,
+  };
+}
+
+export function toggleTrackingExpansion(expandedIds, trackingItemId) {
+  const next = new Set(expandedIds || []);
+  if (next.has(trackingItemId)) next.delete(trackingItemId);
+  else next.add(trackingItemId);
+  return next;
+}
+
 export function buildTrackingEventPresentation(item, event) {
   const snapshot = event?.cycle_snapshot || {};
   const dueBasis = String(snapshot.due_basis || item?.due_basis || "").toUpperCase();

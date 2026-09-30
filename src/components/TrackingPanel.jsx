@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   archiveTrackingItem,
@@ -10,6 +10,11 @@ import {
 import {
   buildActiveCycleLabel,
   buildTrackingEventPresentation,
+  getTrackingSummaryCounts,
+  selectTrackingItems,
+  toggleTrackingExpansion,
+  TRACKING_FILTERS,
+  TRACKING_SORTS,
 } from "../utils/trackingPresentation";
 
 const EMPTY_FORM = Object.freeze({
@@ -31,6 +36,15 @@ const STATUS_LABELS = {
   OVERDUE: "Vencido / superado",
   UNAVAILABLE: "Sin cálculo disponible",
 };
+
+const QUICK_FILTERS = [
+  [TRACKING_FILTERS.ACTIVE, "Todos"],
+  [TRACKING_FILTERS.DUE_SOON, "Próximos a vencer"],
+  [TRACKING_FILTERS.URGENT, "Vencidos / superados"],
+  [TRACKING_FILTERS.DATE, "Por fecha"],
+  [TRACKING_FILTERS.HOURS, "Por horas"],
+  [TRACKING_FILTERS.ARCHIVED, "Archivados"],
+];
 
 function formFromItem(item) {
   return {
@@ -279,7 +293,10 @@ function CompletionForm({ item, saving, onCancel, onSubmit }) {
 
 function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
   const [tracking, setTracking] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("ACTIVE");
+  const [activeFilter, setActiveFilter] = useState(TRACKING_FILTERS.ACTIVE);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState(TRACKING_SORTS.PRIORITY);
+  const [expandedItemIds, setExpandedItemIds] = useState(() => new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -293,7 +310,7 @@ function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
     try {
       setLoading(true);
       setError("");
-      const nextTracking = await fetchTrackingItems(aircraftId, statusFilter, signal);
+      const nextTracking = await fetchTrackingItems(aircraftId, "ALL", signal);
       setTracking(nextTracking);
       return true;
     } catch (requestError) {
@@ -307,7 +324,7 @@ function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
     } finally {
       setLoading(false);
     }
-  }, [aircraftId, onUnauthorized, statusFilter]);
+  }, [aircraftId, onUnauthorized]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -316,6 +333,10 @@ function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
     setShowForm(false);
     setEditingItem(null);
     setCompletingItem(null);
+    setActiveFilter(TRACKING_FILTERS.ACTIVE);
+    setSearchQuery("");
+    setSortBy(TRACKING_SORTS.PRIORITY);
+    setExpandedItemIds(new Set());
     void loadTracking(controller.signal);
     return () => controller.abort();
   }, [loadTracking]);
@@ -349,8 +370,23 @@ function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
     }
   };
 
-  const items = tracking?.items || [];
+  const items = tracking?.items;
   const canManage = tracking?.canManage === true;
+  const summaryCounts = useMemo(() => getTrackingSummaryCounts(items), [items]);
+  const selection = useMemo(() => selectTrackingItems(items, {
+    filter: activeFilter,
+    query: searchQuery,
+    sortBy,
+  }), [activeFilter, items, searchQuery, sortBy]);
+
+  const selectFilter = (filter) => {
+    setActiveFilter(filter);
+    setExpandedItemIds(new Set());
+  };
+
+  const toggleExpanded = (trackingItemId) => {
+    setExpandedItemIds((current) => toggleTrackingExpansion(current, trackingItemId));
+  };
 
   return (
     <section className="tracking-panel">
@@ -379,29 +415,70 @@ function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
         ) : null}
       </header>
 
-      <div className="tracking-toolbar" role="tablist" aria-label="Estado de recordatorios">
+      <div className="tracking-summary" aria-label="Resumen de recordatorios activos">
         {[
-          ["ACTIVE", "Activos"],
-          ["ARCHIVED", "Archivados"],
-          ["ALL", "Todos"],
-        ].map(([value, label]) => (
+          [TRACKING_FILTERS.URGENT, "Vencidos / superados", summaryCounts.urgent, "is-urgent"],
+          [TRACKING_FILTERS.DUE_SOON, "Próximos", summaryCounts.dueSoon, "is-soon"],
+          [TRACKING_FILTERS.OK, "En seguimiento", summaryCounts.ok, "is-ok"],
+          [TRACKING_FILTERS.ACTIVE, "Total activos", summaryCounts.total, "is-total"],
+        ].map(([value, label, count, modifier]) => (
           <button
             key={value}
             type="button"
-            role="tab"
-            aria-selected={statusFilter === value}
-            className={statusFilter === value ? "is-active" : ""}
-            onClick={() => setStatusFilter(value)}
+            className={`${modifier}${activeFilter === value ? " is-active" : ""}`}
+            aria-pressed={activeFilter === value}
+            onClick={() => selectFilter(value)}
+          >
+            <strong>{count}</strong>
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="tracking-controls">
+        <label className="tracking-search">
+          <span>Buscar</span>
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Concepto o notas"
+          />
+        </label>
+        <label className="tracking-sort">
+          <span>Ordenar</span>
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+            <option value={TRACKING_SORTS.PRIORITY}>Prioridad</option>
+            <option value={TRACKING_SORTS.CONCEPT}>Concepto</option>
+            <option value={TRACKING_SORTS.DUE}>Vencimiento / restante</option>
+          </select>
+        </label>
+        <p className="tracking-current-tis">
+          TIS actual: {tracking?.currentTisHours === null || tracking?.currentTisHours === undefined
+            ? "no disponible"
+            : `${Number(tracking.currentTisHours).toFixed(1)} h`}
+        </p>
+      </div>
+
+      <div className="tracking-filters" aria-label="Filtros de recordatorios">
+        {QUICK_FILTERS.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={activeFilter === value ? "is-active" : ""}
+            aria-pressed={activeFilter === value}
+            onClick={() => selectFilter(value)}
           >
             {label}
           </button>
         ))}
-        <span>
-          TIS actual: {tracking?.currentTisHours === null || tracking?.currentTisHours === undefined
-            ? "no disponible"
-            : `${Number(tracking.currentTisHours).toFixed(1)} h`}
-        </span>
       </div>
+
+      {!loading ? (
+        <p className="tracking-result-count">
+          {selection.visibleCount} de {selection.scopeCount} recordatorios
+        </p>
+      ) : null}
 
       {message ? <p className="tracking-message" role="status">{message}</p> : null}
       {error ? <p className="dashboard-status dashboard-status-error" role="alert">{error}</p> : null}
@@ -444,125 +521,143 @@ function TrackingPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
       ) : null}
 
       {loading ? <p className="dashboard-status">Cargando recordatorios...</p> : null}
-      {!loading && !items.length ? (
+      {!loading && !selection.items.length ? (
         <div className="tracking-empty">
-          <strong>No hay recordatorios {statusFilter === "ARCHIVED" ? "archivados" : "para mostrar"}.</strong>
-          <p>Los recordatorios que defina el Owner aparecerán en esta sección.</p>
+          <strong>No hay recordatorios que coincidan con la vista actual.</strong>
+          <p>Podés cambiar el filtro o buscar otro concepto.</p>
         </div>
       ) : null}
 
-      {!loading && items.length ? (
-        <div className="tracking-card-grid">
-          {items.map((item) => {
+      {!loading && selection.items.length ? (
+        <div className={`tracking-list${activeFilter === TRACKING_FILTERS.ARCHIVED ? " is-archived" : ""}`}>
+          <div className="tracking-list-head" aria-hidden="true">
+            <span>Concepto</span>
+            <span>Base</span>
+            <span>Objetivo</span>
+            <span>Restante</span>
+            <span>Estado</span>
+            <span />
+          </div>
+          {selection.items.map((item) => {
             const state = item.derived?.due_state || "UNAVAILABLE";
             const activeCycleLabel = buildActiveCycleLabel(item);
+            const isExpanded = expandedItemIds.has(item.tracking_item_id);
             return (
               <article
                 key={item.tracking_item_id}
-                className={`tracking-card tracking-state-${state.toLowerCase().replace("_", "-")}`}
+                className={`tracking-row tracking-state-${state.toLowerCase().replace("_", "-")}${isExpanded ? " is-expanded" : ""}`}
               >
-                <header>
-                  <div>
-                    <span className="tracking-basis">
-                      {item.due_basis === "DATE" ? "Fecha" : "Tiempo en servicio"}
-                    </span>
-                    <h2>{item.concept}</h2>
-                  </div>
+                <button
+                  type="button"
+                  className="tracking-row-summary"
+                  aria-expanded={isExpanded}
+                  aria-controls={`tracking-detail-${item.tracking_item_id}`}
+                  onClick={() => toggleExpanded(item.tracking_item_id)}
+                >
+                  <span className="tracking-row-concept">
+                    <strong>{item.concept}</strong>
+                    <small>{item.due_basis === "DATE" ? "Por fecha" : "Por horas"}</small>
+                  </span>
+                  <span className="tracking-row-base">
+                    {item.due_basis === "DATE" ? "Fecha" : "Tiempo en servicio"}
+                  </span>
+                  <span className="tracking-row-objective" data-label="Objetivo">
+                    {dueLabel(item)}
+                  </span>
+                  <span className="tracking-row-remaining" data-label="Restante">
+                    {remainingLabel(item)}
+                  </span>
                   <span className="tracking-state-label">{STATUS_LABELS[state]}</span>
-                </header>
-                {activeCycleLabel ? (
-                  <p className="tracking-new-cycle">{activeCycleLabel}</p>
-                ) : null}
-                <div className="tracking-card-values">
-                  <div>
-                    <span>Objetivo</span>
-                    <strong>{dueLabel(item)}</strong>
-                  </div>
-                  <div>
-                    <span>Estado derivado</span>
-                    <strong>{remainingLabel(item)}</strong>
-                  </div>
-                  <div>
-                    <span>Recurrencia</span>
-                    <strong>{item.recurrence === "RECURRING" ? "Recurrente" : "Una vez"}</strong>
-                  </div>
-                  <div>
-                    <span>Aviso previo</span>
-                    <strong>
-                      {item.alert_before_value} {item.due_basis === "DATE" ? "días" : "h"}
-                    </strong>
-                  </div>
-                </div>
-                {item.notes && !item.legacy_settings_managed
-                  ? <p className="tracking-notes">{item.notes}</p>
-                  : null}
-                {canManage && item.status === "ACTIVE" ? (
-                  <div className="tracking-card-actions">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCompletingItem(item);
-                        setShowForm(false);
-                      }}
-                      disabled={saving}
-                    >
-                      Marcar atendido
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingItem(item);
-                        setShowForm(true);
-                        setCompletingItem(null);
-                      }}
-                      disabled={saving}
-                    >
-                      Editar
-                    </button>
-                    {!item.legacy_settings_managed ? (
-                      <button
-                        type="button"
-                        className="is-danger"
-                        onClick={() => {
-                          if (!window.confirm(`¿Archivar “${item.concept}”?`)) return;
-                          void runMutation(
-                            () => archiveTrackingItem(aircraftId, item.tracking_item_id),
-                            "Recordatorio archivado correctamente."
-                          );
-                        }}
-                        disabled={saving}
-                      >
-                        Archivar
-                      </button>
+                  <span className="tracking-row-toggle" aria-hidden="true">{isExpanded ? "−" : "+"}</span>
+                </button>
+
+                {isExpanded ? (
+                  <div className="tracking-row-detail" id={`tracking-detail-${item.tracking_item_id}`}>
+                    <div className="tracking-detail-meta">
+                      {activeCycleLabel ? (
+                        <p className="tracking-new-cycle">{activeCycleLabel}</p>
+                      ) : null}
+                      <p>
+                        <span>Recurrencia</span>
+                        <strong>{item.recurrence === "RECURRING" ? "Recurrente" : "Una vez"}</strong>
+                      </p>
+                      <p>
+                        <span>Aviso previo</span>
+                        <strong>{item.alert_before_value} {item.due_basis === "DATE" ? "días" : "h"}</strong>
+                      </p>
+                    </div>
+                    {item.notes && !item.legacy_settings_managed
+                      ? <p className="tracking-notes">{item.notes}</p>
+                      : null}
+                    {canManage && item.status === "ACTIVE" ? (
+                      <div className="tracking-card-actions">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCompletingItem(item);
+                            setShowForm(false);
+                          }}
+                          disabled={saving}
+                        >
+                          Marcar atendido
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingItem(item);
+                            setShowForm(true);
+                            setCompletingItem(null);
+                          }}
+                          disabled={saving}
+                        >
+                          Editar
+                        </button>
+                        {!item.legacy_settings_managed ? (
+                          <button
+                            type="button"
+                            className="is-danger"
+                            onClick={() => {
+                              if (!window.confirm(`¿Archivar “${item.concept}”?`)) return;
+                              void runMutation(
+                                () => archiveTrackingItem(aircraftId, item.tracking_item_id),
+                                "Recordatorio archivado correctamente."
+                              );
+                            }}
+                            disabled={saving}
+                          >
+                            Archivar
+                          </button>
+                        ) : null}
+                      </div>
                     ) : null}
+                    <section className="tracking-history" aria-label={`Historial de ${item.concept}`}>
+                      <h3>Historial de ciclos ({item.events.length})</h3>
+                      {item.events.length ? (
+                        <ol>
+                          {item.events.map((event) => {
+                            const presentation = buildTrackingEventPresentation(item, event);
+                            return (
+                              <li key={event.tracking_event_id}>
+                                <strong>{presentation.title}</strong>
+                                <time dateTime={event.completed_at}>
+                                  {new Date(event.completed_at).toLocaleString("es-AR")}
+                                </time>
+                                <span>{presentation.closedCycleContext}</span>
+                                {presentation.attendedContext
+                                  ? <span>{presentation.attendedContext}</span>
+                                  : null}
+                                <span className="tracking-next-cycle">
+                                  {presentation.nextCycleContext}
+                                </span>
+                                {event.note ? <p>{event.note}</p> : null}
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      ) : <p>Sin ciclos atendidos registrados.</p>}
+                    </section>
                   </div>
                 ) : null}
-                <details className="tracking-history">
-                  <summary>Historial ({item.events.length})</summary>
-                  {item.events.length ? (
-                    <ol>
-                      {item.events.map((event) => {
-                        const presentation = buildTrackingEventPresentation(item, event);
-                        return (
-                          <li key={event.tracking_event_id}>
-                            <strong>{presentation.title}</strong>
-                            <time dateTime={event.completed_at}>
-                              {new Date(event.completed_at).toLocaleString("es-AR")}
-                            </time>
-                            <span>{presentation.closedCycleContext}</span>
-                            {presentation.attendedContext
-                              ? <span>{presentation.attendedContext}</span>
-                              : null}
-                            <span className="tracking-next-cycle">
-                              {presentation.nextCycleContext}
-                            </span>
-                            {event.note ? <p>{event.note}</p> : null}
-                          </li>
-                        );
-                      })}
-                    </ol>
-                  ) : <p>Sin eventos de finalización.</p>}
-                </details>
               </article>
             );
           })}

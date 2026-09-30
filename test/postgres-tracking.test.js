@@ -11,6 +11,11 @@ import { buildTrackingItemPayload } from "../src/services/trackingService.js";
 import {
   buildActiveCycleLabel,
   buildTrackingEventPresentation,
+  getTrackingSummaryCounts,
+  selectTrackingItems,
+  toggleTrackingExpansion,
+  TRACKING_FILTERS,
+  TRACKING_SORTS,
 } from "../src/utils/trackingPresentation.js";
 import { getAllowedMainTabIds } from "../src/utils/rolePermissions.js";
 
@@ -573,4 +578,109 @@ test("presentacion ONE_TIME deja claro que el recordatorio finalizo archivado", 
 
   assert.equal(presentation.title, "Ciclo atendido");
   assert.equal(presentation.nextCycleContext, "Recordatorio finalizado y archivado");
+});
+
+function trackingListItem({
+  id,
+  concept,
+  notes = "",
+  status = "ACTIVE",
+  dueBasis = "DATE",
+  dueState = "OK",
+  remaining = 30,
+}) {
+  return {
+    tracking_item_id: id,
+    concept,
+    notes,
+    status,
+    due_basis: dueBasis,
+    derived: {
+      due_state: dueState,
+      remaining_value: remaining,
+    },
+  };
+}
+
+const TRACKING_LIST_FIXTURE = [
+  trackingListItem({ id: "overdue-date", concept: "Batería ELT", dueState: "OVERDUE", remaining: -2 }),
+  trackingListItem({ id: "due-date", concept: "Inspección anual", dueState: "DUE", remaining: 0 }),
+  trackingListItem({ id: "soon-hours", concept: "Bomba de vacío", notes: "Revisar ruido", dueBasis: "TIME_IN_SERVICE", dueState: "DUE_SOON", remaining: 3 }),
+  trackingListItem({ id: "soon-date", concept: "Seguro", dueState: "DUE_SOON", remaining: 5 }),
+  trackingListItem({ id: "ok-hours", concept: "Alternador", dueBasis: "TIME_IN_SERVICE", dueState: "OK", remaining: 40 }),
+  trackingListItem({ id: "unknown", concept: "Referencia pendiente", dueBasis: "TIME_IN_SERVICE", dueState: "UNAVAILABLE", remaining: null }),
+  trackingListItem({ id: "archived", concept: "Recordatorio anterior", status: "ARCHIVED", dueState: "OVERDUE", remaining: -100 }),
+];
+
+test("resumen cuenta solo activos por estado derivado", () => {
+  assert.deepEqual(getTrackingSummaryCounts(TRACKING_LIST_FIXTURE), {
+    urgent: 2,
+    dueSoon: 2,
+    ok: 1,
+    total: 6,
+  });
+});
+
+test("busqueda client-side encuentra concepto y notas sin depender de acentos", () => {
+  const byConcept = selectTrackingItems(TRACKING_LIST_FIXTURE, { query: "bateria" });
+  assert.deepEqual(byConcept.items.map((item) => item.tracking_item_id), ["overdue-date"]);
+  assert.equal(byConcept.visibleCount, 1);
+  assert.equal(byConcept.scopeCount, 6);
+
+  const byNotes = selectTrackingItems(TRACKING_LIST_FIXTURE, { query: "ruido" });
+  assert.deepEqual(byNotes.items.map((item) => item.tracking_item_id), ["soon-hours"]);
+});
+
+test("filtros rápidos separan estados, bases y archivados", () => {
+  assert.equal(selectTrackingItems(TRACKING_LIST_FIXTURE).items.length, 6);
+  assert.deepEqual(
+    selectTrackingItems(TRACKING_LIST_FIXTURE, { filter: TRACKING_FILTERS.DUE_SOON }).items
+      .map((item) => item.tracking_item_id),
+    ["soon-hours", "soon-date"]
+  );
+  assert.deepEqual(
+    selectTrackingItems(TRACKING_LIST_FIXTURE, { filter: TRACKING_FILTERS.URGENT }).items
+      .map((item) => item.tracking_item_id),
+    ["overdue-date", "due-date"]
+  );
+  assert.equal(selectTrackingItems(TRACKING_LIST_FIXTURE, { filter: TRACKING_FILTERS.DATE }).items.length, 3);
+  assert.equal(selectTrackingItems(TRACKING_LIST_FIXTURE, { filter: TRACKING_FILTERS.HOURS }).items.length, 3);
+  const archived = selectTrackingItems(TRACKING_LIST_FIXTURE, { filter: TRACKING_FILTERS.ARCHIVED });
+  assert.deepEqual(archived.items.map((item) => item.tracking_item_id), ["archived"]);
+  assert.equal(archived.scopeCount, 1);
+});
+
+test("prioridad ordena por estado y solo compara restante dentro de la misma base", () => {
+  const priority = selectTrackingItems(TRACKING_LIST_FIXTURE, {
+    sortBy: TRACKING_SORTS.PRIORITY,
+  }).items;
+  assert.deepEqual(priority.slice(0, 2).map((item) => item.tracking_item_id), ["overdue-date", "due-date"]);
+  assert.deepEqual(priority.slice(-2).map((item) => item.tracking_item_id), ["ok-hours", "unknown"]);
+  assert.deepEqual(priority.slice(2, 4).map((item) => item.tracking_item_id), ["soon-hours", "soon-date"]);
+
+  const concept = selectTrackingItems(TRACKING_LIST_FIXTURE, {
+    sortBy: TRACKING_SORTS.CONCEPT,
+  }).items;
+  assert.equal(concept[0].tracking_item_id, "ok-hours");
+});
+
+test("expansion inline alterna cada recordatorio sin afectar los demás", () => {
+  const first = toggleTrackingExpansion(new Set(), "one");
+  assert.deepEqual([...first], ["one"]);
+  const second = toggleTrackingExpansion(first, "two");
+  assert.deepEqual([...second], ["one", "two"]);
+  assert.deepEqual([...toggleTrackingExpansion(second, "one")], ["two"]);
+});
+
+test("presentacion responsive usa lista compacta y detalle sólo expandido", async () => {
+  const [componentSource, cssSource] = await Promise.all([
+    fs.readFile(new URL("../src/components/TrackingPanel.jsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(componentSource, /fetchTrackingItems\(aircraftId, "ALL", signal\)/);
+  assert.match(componentSource, /isExpanded \? \(/);
+  assert.match(componentSource, /tracking-row-summary/);
+  assert.match(cssSource, /@media \(max-width: 760px\)[\s\S]*\.tracking-list-head\s*{\s*display: none;/);
+  assert.match(cssSource, /grid-template-areas:[\s\S]*"concept state toggle"[\s\S]*"objective remaining toggle"/);
+  assert.doesNotMatch(cssSource, /\.tracking-list\s*{[^}]*overflow-x:\s*auto/);
 });
