@@ -11,7 +11,7 @@ import {
   getTrackingItemsFromPostgres,
   updateTrackingItemInPostgres,
 } from "./_postgresTrackingRepository.js";
-import { resolveSettingsWriteCapability } from "./_settingsWriteCapability.js";
+import {\n  resolvePostgresTrackingWriteCapability,\n  resolveSettingsWriteCapability,\n} from "./_settingsWriteCapability.js";
 import {
   getSettingsFromSheets,
   saveSettingsToSheets,
@@ -137,7 +137,7 @@ export default async function handler(req, res) {
     if (source !== DATA_SOURCE.POSTGRES) {
       return res.status(404).json({ ok: false, error: "Recurso no disponible." });
     }
-    return handleTrackingResource(req, res, { userId, aircraftId });
+    return handleTrackingResource(req, res, { userId, aircraftId, source });
   }
 
   let settingsWriteCapability;
