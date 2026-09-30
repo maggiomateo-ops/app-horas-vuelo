@@ -1118,16 +1118,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--app-danger);
 }
 
-.flight-pilot-add {
-  justify-self: start;
-  padding: 0;
-  border: 0;
-  background: transparent;
+.flight-pilot-options .flight-pilot-create-action {
+  margin-top: 3px;
+  border-top: 1px solid var(--app-border);
+  border-radius: 0 0 8px 8px;
   color: var(--app-primary-strong);
-  font: inherit;
-  font-size: 13px;
   font-weight: 750;
-  cursor: pointer;
 }
 
 .flight-pilot-create {

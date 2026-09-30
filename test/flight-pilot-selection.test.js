@@ -9,6 +9,7 @@ import { fetchAircraftPilots } from "../src/services/usersService.js";
 import {
   buildPilotOptions,
   findSameNamePilotCandidates,
+  getPilotCreateAction,
   getPilotDisplayLabel,
   maskPilotDni,
 } from "../src/utils/pilotIdentity.js";
@@ -110,6 +111,25 @@ test("servicio entrega capability Postgres OWNER al selector", async () => {
   }
 });
 
+test("alta inline aparece solo para OWNER con query sin coincidencias", () => {
+  assert.deepEqual(
+    getPilotCreateAction({ canCreatePilot: true, query: "  Nuevo Piloto  ", matchCount: 0 }),
+    { name: "Nuevo Piloto", label: "+ Agregar “Nuevo Piloto” como piloto" }
+  );
+  assert.equal(
+    getPilotCreateAction({ canCreatePilot: true, query: "Nuevo Piloto", matchCount: 1 }),
+    null
+  );
+  assert.equal(
+    getPilotCreateAction({ canCreatePilot: true, query: "   ", matchCount: 0 }),
+    null
+  );
+  assert.equal(
+    getPilotCreateAction({ canCreatePilot: false, query: "Nuevo Piloto", matchCount: 0 }),
+    null
+  );
+});
+
 test("UI conserva identidad separada, alta OWNER explicita y Sheets legacy", async () => {
   const [appSource, selectorSource, settingsSource, flightSource, historySource, handlerSource] = await Promise.all([
     fs.readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
@@ -125,7 +145,10 @@ test("UI conserva identidad separada, alta OWNER explicita y Sheets legacy", asy
   assert.match(appSource, /setPilotPersonId\(editable\.pilotPersonId\)/);
   assert.match(appSource, /setPilotPersonId\(ultimoInput\.pilotPersonId \?\? ultimoInput\.pilot_person_id/);
   assert.doesNotMatch(appSource, /canCreate=\{selectedAircraftRole === "OWNER"\}/);
-  assert.match(selectorSource, /canCreatePilot \? \(/);
+  assert.doesNotMatch(selectorSource, /className="flight-pilot-add"/);
+  assert.match(selectorSource, /className="flight-pilot-create-action"/);
+  assert.match(selectorSource, /initialName=\{creationName\}/);
+  assert.match(selectorSource, /useState\(\{ nombre: initialName,/);
   assert.match(settingsSource, /result\.managementMode === "POSTGRES_CANONICAL"[\s\S]*?result\.canCreatePilot/);
   assert.match(selectorSource, /person_id: pilot\.person_id/);
   assert.match(selectorSource, /Es una persona distinta/);

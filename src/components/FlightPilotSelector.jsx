@@ -7,12 +7,13 @@ import {
 import {
   buildPilotOptions,
   findSameNamePilotCandidates,
+  getPilotCreateAction,
   getPilotDisplayLabel,
   normalizePilotName,
 } from "../utils/pilotIdentity";
 
-function PilotCreationForm({ aircraftId, pilots, refreshing, onCancel, onCreated }) {
-  const [form, setForm] = useState({ nombre: "", email: "", telefono: "", dni: "", licencia: "" });
+function PilotCreationForm({ aircraftId, pilots, initialName, refreshing, onCancel, onCreated }) {
+  const [form, setForm] = useState({ nombre: initialName, email: "", telefono: "", dni: "", licencia: "" });
   const [confirmDistinct, setConfirmDistinct] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -115,6 +116,7 @@ export default function FlightPilotSelector({
   const [error, setError] = useState("");
   const [canCreatePilot, setCanCreatePilot] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [creationName, setCreationName] = useState("");
   const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -141,6 +143,7 @@ export default function FlightPilotSelector({
     const controller = new AbortController();
     setPilots([]);
     setShowCreate(false);
+    setCreationName("");
     loadPilots(controller.signal);
     return () => controller.abort();
   }, [aircraftId, loadPilots]);
@@ -154,6 +157,11 @@ export default function FlightPilotSelector({
     normalizePilotName(option.label).includes(normalizePilotName(query))
   );
   const selectedOption = options.find((option) => option.personId === selectedPersonId);
+  const createAction = getPilotCreateAction({
+    canCreatePilot,
+    query,
+    matchCount: filtered.length,
+  });
 
   useEffect(() => {
     if (selectedOption && query !== selectedOption.label) setQuery(selectedOption.label);
@@ -176,6 +184,7 @@ export default function FlightPilotSelector({
       const option = buildPilotOptions([canonical])[0];
       if (option) choose(option);
       setShowCreate(false);
+      setCreationName("");
     } finally {
       setCreating(false);
     }
@@ -199,29 +208,53 @@ export default function FlightPilotSelector({
       />
       {open && (!selectedOption || query !== selectedOption.label) ? (
         <div className="flight-pilot-options" role="listbox">
-          {filtered.length === 0 ? <span>No hay coincidencias autorizadas.</span> : filtered.map((option) => (
-            <button
-              key={option.personId}
-              type="button"
-              role="option"
-              aria-disabled={option.ambiguous}
-              disabled={option.ambiguous}
-              onClick={() => choose(option)}
-            >
-              {option.label}{option.ambiguous ? " · identidad ambigua" : ""}
-            </button>
-          ))}
+          {filtered.length === 0 ? (
+            <>
+              <span>No hay coincidencias autorizadas.</span>
+              {createAction ? (
+                <button
+                  type="button"
+                  className="flight-pilot-create-action"
+                  disabled={disabled}
+                  onClick={() => {
+                    setCreationName(createAction.name);
+                    setShowCreate(true);
+                    setOpen(false);
+                  }}
+                >
+                  {createAction.label}
+                </button>
+              ) : null}
+            </>
+          ) : filtered.map((option) => (
+              <button
+                key={option.personId}
+                type="button"
+                role="option"
+                aria-disabled={option.ambiguous}
+                disabled={option.ambiguous}
+                onClick={() => choose(option)}
+              >
+                {option.label}{option.ambiguous ? " · identidad ambigua" : ""}
+              </button>
+            ))}
         </div>
       ) : null}
       {selectedOption ? <span className="flight-pilot-selected">Piloto seleccionado</span> : null}
       {error ? <p className="flight-pilot-error" role="alert">{error}</p> : null}
-      {canCreatePilot ? (
-        <button type="button" className="flight-pilot-add" onClick={() => setShowCreate((visible) => !visible)} disabled={disabled}>
-          + Agregar piloto
-        </button>
-      ) : null}
       {showCreate ? (
-        <PilotCreationForm aircraftId={aircraftId} pilots={pilots} refreshing={creating} onCancel={() => setShowCreate(false)} onCreated={handleCreated} />
+        <PilotCreationForm
+          key={creationName}
+          aircraftId={aircraftId}
+          pilots={pilots}
+          initialName={creationName}
+          refreshing={creating}
+          onCancel={() => {
+            setShowCreate(false);
+            setCreationName("");
+          }}
+          onCreated={handleCreated}
+        />
       ) : null}
     </div>
   );

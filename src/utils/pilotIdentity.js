@@ -56,3 +56,12 @@ export function findSameNamePilotCandidates(pilots, name) {
   if (!normalized) return [];
   return pilots.filter((pilot) => normalizePilotName(pilot.nombre) === normalized);
 }
+
+export function getPilotCreateAction({ canCreatePilot, query, matchCount }) {
+  const name = String(query || "").trim();
+  if (!canCreatePilot || !name || matchCount > 0) return null;
+  return {
+    name,
+    label: `+ Agregar “${name}” como piloto`,
+  };
+}
