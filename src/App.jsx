@@ -7,6 +7,7 @@ import FirstAircraftOnboarding from "./components/FirstAircraftOnboarding";
 import FlightPilotSelector from "./components/FlightPilotSelector";
 import HistorialesPanel from "./components/HistorialesPanel";
 import SettingsPanel from "./components/SettingsPanel";
+import TrackingPanel from "./components/TrackingPanel";
 import {
   createFirstAircraftAndRefresh,
   configureAircraftTopologyAndRefresh,
@@ -416,9 +417,11 @@ function App() {
   const selectedAircraftRole = String(selectedAircraft?.rol || "").trim().toUpperCase();
   const isGlobalAdmin = currentUser?.isAdmin === true;
   const usesCanonicalPilotSelection = currentUser?.legacyUserManagementEnabled === false;
+  const trackingAvailable = selectedAircraft?.trackingAvailable === true;
   const allowedMainTabIds = getAllowedMainTabIds({
     isAdmin: isGlobalAdmin,
     aircraftRole: selectedAircraftRole,
+    trackingAvailable,
   });
   const preferredMainTab = getPreferredMainTab({
     isAdmin: isGlobalAdmin,
@@ -1607,6 +1610,12 @@ function App() {
           settings={settings}
           settingsLoading={settingsLoading}
           settingsError={settingsError}
+          onUnauthorized={handleUnauthorized}
+        />
+      ) : effectiveActiveMainTab === "seguimiento" ? (
+        <TrackingPanel
+          aircraftId={selectedAircraft.aircraft_id}
+          aircraftRegistration={selectedAircraft.matricula}
           onUnauthorized={handleUnauthorized}
         />
       ) : (

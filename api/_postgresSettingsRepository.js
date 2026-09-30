@@ -3,11 +3,12 @@ import { postgresQuery, withPostgresTransaction } from "./_postgres.js";
 import { getValidatedAircraftAccessFromPostgres } from "./_postgresAircraftRepository.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const TRACKING_CONCEPT = Object.freeze({
+export const LEGACY_SETTINGS_TRACKING_CONCEPTS = Object.freeze({
   annual: "Annual inspection",
   inspection50: "50-hour inspection",
   inspection100: "100-hour inspection",
 });
+const TRACKING_CONCEPT = LEGACY_SETTINGS_TRACKING_CONCEPTS;
 
 function repositoryError(message, code, statusCode = 500) {
   const error = new Error(message);

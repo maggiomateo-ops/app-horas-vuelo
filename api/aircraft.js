@@ -33,6 +33,7 @@ const AIRCRAFT_RESPONSE_FIELDS = [
   "componentInstallationHistory",
   "configurationSetupAvailable",
   "componentLifecycleWritesAvailable",
+  "trackingAvailable",
 ];
 
 function sanitizeAircraft(aircraft) {
@@ -48,11 +49,14 @@ async function loadAircrafts(userId) {
   const capability = resolvePostgresAircraftConfigurationWriteCapability(source);
   const componentLifecycleCapability =
     resolvePostgresComponentLifecycleWriteCapability(source);
+  const trackingAvailable =
+    resolveDataSource("SETTINGS_DATA_SOURCE") === DATA_SOURCE.POSTGRES;
   const aircrafts = await getAircraftsForUserFromPostgres(userId);
   return aircrafts.map((aircraft) => ({
     ...aircraft,
     configurationSetupAvailable: capability.enabled,
     componentLifecycleWritesAvailable: componentLifecycleCapability.enabled,
+    trackingAvailable,
   }));
 }
 
