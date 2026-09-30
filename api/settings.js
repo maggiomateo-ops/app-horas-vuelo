@@ -11,7 +11,10 @@ import {
   getTrackingItemsFromPostgres,
   updateTrackingItemInPostgres,
 } from "./_postgresTrackingRepository.js";
-import {\n  resolvePostgresTrackingWriteCapability,\n  resolveSettingsWriteCapability,\n} from "./_settingsWriteCapability.js";
+import {
+  resolvePostgresTrackingWriteCapability,
+  resolveSettingsWriteCapability,
+} from "./_settingsWriteCapability.js";
 import {
   getSettingsFromSheets,
   saveSettingsToSheets,
