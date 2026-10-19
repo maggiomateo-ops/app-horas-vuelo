@@ -1,0 +1,55 @@
+{
+  "status": "DRAFT_REVIEW_ONLY_DO_NOT_EXECUTE",
+  "approval_verified": false,
+  "aircraft_id": "a784692c-baad-4c73-a79c-c29aee6ce894",
+  "excluded_aircraft_id": "29d775c5-023b-57d2-b592-ff20051e85fd",
+  "financial_scope_id": "b33efff4-e5a0-48ba-91b7-56c6fe14c463",
+  "label": "SYNTHETIC COSTS CANARY LV-TST",
+  "approved_by_user_id": null,
+  "approval_reference": null,
+  "request_id": null,
+  "mandates": [],
+  "candidate_user_id": "1cbda2ea-240c-4745-a5ec-d3d714cbc6bf",
+  "candidate_is_approved_test_identity": false,
+  "payer_party_id": null,
+  "responsible_party_id": null,
+  "target": {
+    "project_id": "red-pine-78283204",
+    "branch_id": "br-billowing-band-b62jj1ab",
+    "database": "app_horas"
+  },
+  "preview": {
+    "project_id": "prj_sIb43l6pCi1RgfK9N12Qh0nMpu8r",
+    "git_branch": "review/issue-8-migration-008-design"
+  },
+  "prerequisites": [
+    "Authenticated session must match an explicitly approved existing active test OWNER user UUID.",
+    "Human approver UUID and verifiable reference must explicitly approve this scope and mandate.",
+    "Approve distinct synthetic payer/responsible party UUIDs and canonical LV-TST associations; no invented legal ownership.",
+    "Provisioning requires approved manifest and atomic Audit; this draft grants nothing."
+  ],
+  "preview_configuration_plan": {
+    "executed": false,
+    "target": "preview",
+    "gitBranch": "review/issue-8-migration-008-design",
+    "DATABASE_URL": {
+      "value": null,
+      "requiredRole": "app_horas_runtime",
+      "requiredDatabase": "app_horas",
+      "requiredEndpoint": "ep-jolly-sun-b6a3ayw9.c-2.sa-east-1.aws.neon.tech",
+      "storage": "Preview branch secret only; never repository or migrator credentials"
+    },
+    "selectors": {
+      "GOOGLE_USER_RESOLUTION_SOURCE": "POSTGRES",
+      "AIRCRAFT_DATA_SOURCE": "POSTGRES",
+      "SETTINGS_DATA_SOURCE": "POSTGRES",
+      "HISTORIALES_DATA_SOURCE": "POSTGRES",
+      "FLIGHT_DATA_SOURCE": "POSTGRES"
+    },
+    "initialPOSTGRES_COST_WRITES_ENABLED": "false",
+    "writeActivationApproved": false,
+    "futureActivation": "Require separate explicit approval for this Preview branch after authenticated OFF checks. Never apply globally.",
+    "otherWriteFlags": "Keep existing values; do not copy parity branch flags.",
+    "deployment": "After separately reviewed Preview configuration, deploy exact approved SHA and verify actual runtime identity/TEST endpoint."
+  }
+}

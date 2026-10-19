@@ -1,0 +1,252 @@
+{
+  "base": "f2f215308b88126e7838f3b3746687540658d874",
+  "date": "2026-10-19",
+  "overall": "BLOCKED_NO_FUNCTIONAL_ACCEPTANCE",
+  "canonicalSheets": {
+    "productModified": "2026-10-19T21:53:53.388Z",
+    "schemaModified": "2026-10-19T21:53:54.860Z",
+    "read": true
+  },
+  "github": {
+    "branch": "review/issue-8-migration-008-design",
+    "verifiedHead": "f2f215308b88126e7838f3b3746687540658d874"
+  },
+  "neon": {
+    "projectId": "red-pine-78283204",
+    "branchId": "br-billowing-band-b62jj1ab",
+    "database": "app_horas",
+    "endpoint": "ep-jolly-sun-b6a3ayw9.c-2.sa-east-1.aws.neon.tech",
+    "ledger": [
+      {
+        "version": "001",
+        "filename": "001_initial_schema.sql",
+        "checksum_sha256": "7804df1482695e21789bd08226a37a17774b6dd1a53e3432051823cdfb59d375"
+      },
+      {
+        "version": "002",
+        "filename": "002_runtime_grant_hardening.sql",
+        "checksum_sha256": "50ef18aa813cbd061f120aa845221646068e18449f7efc868e8c56659a1c0660"
+      },
+      {
+        "version": "003",
+        "filename": "003_component_installation_historical_date.sql",
+        "checksum_sha256": "bcceccd14273a563709f7cda1ba55422c00897385137264b654f80cc75c4df06"
+      },
+      {
+        "version": "004",
+        "filename": "004_export_direct_response_artifacts.sql",
+        "checksum_sha256": "ffb317637e06040ee0f9cfd56c73ea862fe10f2bbd02d84e227a6fe0e4f63109"
+      },
+      {
+        "version": "005",
+        "filename": "005_aircraft_configuration.sql",
+        "checksum_sha256": "ef423f1c5beaf65b8613b0b458c28a9bd66c14348ac167116851100d057cd2e2"
+      },
+      {
+        "version": "006",
+        "filename": "006_costs.sql",
+        "checksum_sha256": "2c13566e417716ba15dfef4ce26c57e42d6b9c9b0c9ca2907905e6977dc44cd7"
+      },
+      {
+        "version": "007",
+        "filename": "007_costs_allocation_metric_adjustments.sql",
+        "checksum_sha256": "e3b5cc4690fef2bfd49eb425abd3d98f4ca64ecaf6a15026139954d9c1989326"
+      },
+      {
+        "version": "008",
+        "filename": "008_costs_financial_scopes_and_open_corrections.sql",
+        "checksum_sha256": "30df860f6ba51617e93c55be21e8d2355aba734977dfb3db6bf0776b5c07c160"
+      }
+    ],
+    "aircraftResolution": [
+      {
+        "to": null,
+        "from": "2022-10-26T03:00:00+00:00",
+        "status": "ACTIVE",
+        "aircraft_id": "29d775c5-023b-57d2-b592-ff20051e85fd",
+        "registration": "LV-MHZ",
+        "registration_id": "e549ec7e-66c5-5680-81ea-f1115c5cbe73"
+      },
+      {
+        "to": null,
+        "from": "2026-09-28T01:40:47.609621+00:00",
+        "status": "ACTIVE",
+        "aircraft_id": "a784692c-baad-4c73-a79c-c29aee6ce894",
+        "registration": "LV-TST",
+        "registration_id": "fcf5dcaa-e1f4-46da-8152-db3af5440b07"
+      }
+    ],
+    "structure": {
+      "session_user": "app_horas_runtime",
+      "database": "app_horas",
+      "scopes": "app.cost_financial_scopes",
+      "authorities": "app.cost_financial_authorities",
+      "revocations": "app.cost_financial_authority_revocations",
+      "records": "app.cost_financial_records",
+      "corrections": "app.cost_expense_corrections",
+      "guard": "app.guard_cost_open_detail()",
+      "detail_triggers": "2",
+      "scope_read": true,
+      "self_authorize": false,
+      "settlement_mutation": false,
+      "payment_retirement": true,
+      "payment_amount_mutation": false,
+      "audit_append": true,
+      "audit_mutation": false
+    }
+  },
+  "identity": {
+    "activeUsers": 2,
+    "activeLvTstOwners": 1,
+    "candidateUserId": "1cbda2ea-240c-4745-a5ec-d3d714cbc6bf",
+    "membershipId": "1bdab406-d811-4aa8-b339-6d27f3291ed0",
+    "userStatus": "ACTIVE",
+    "membershipRole": "OWNER",
+    "membershipStatus": "ACTIVE",
+    "verifiedPersonLink": true,
+    "authenticatedTestSessionVerified": false,
+    "financialAuthorityInferred": false
+  },
+  "preview": {
+    "projectId": "prj_sIb43l6pCi1RgfK9N12Qh0nMpu8r",
+    "teamId": "team_uy21aAfWEAi8e08PFhA9VQys",
+    "deploymentId": "dpl_GTgMj6zwEr4bFbefKJcxUcSyDpBk",
+    "url": "https://app-horas-vuelo-ht5v7lz3q-maggiomateo-2978s-projects.vercel.app",
+    "state": "READY",
+    "gitSha": "f2f215308b88126e7838f3b3746687540658d874",
+    "gitBranch": "review/issue-8-migration-008-design",
+    "branchOverrides": [],
+    "applicableDatabaseUrlPresent": false,
+    "inheritedSelectors": {
+      "GOOGLE_USER_RESOLUTION_SOURCE": "SHEETS",
+      "AIRCRAFT_DATA_SOURCE": "SHEETS",
+      "SETTINGS_DATA_SOURCE": "SHEETS",
+      "HISTORIALES_DATA_SOURCE": "SHEETS"
+    },
+    "costWriteFlagPresent": false,
+    "costWriteDefault": "OFF",
+    "runtimeConnectionInDeploymentVerified": false,
+    "applicationAuthenticatedGetTested": false,
+    "applicationPostTested": false,
+    "browserObservation": "Vercel login protection; application not reached",
+    "connectorAccess": "REJECTED_BY_AUTO_REVIEW_NO_LINK_CREATED"
+  },
+  "before": {
+    "eligible_parties": [
+      {
+        "status": "ACTIVE",
+        "party_id": "a5a7a718-a466-4214-9685-ef7f86e48399",
+        "person_id": "11dd7bdf-b7a7-46ab-b38e-a28716b311e9",
+        "party_type": "PERSON"
+      }
+    ],
+    "excluded_aircraft_fingerprint": "23934cdd964a74aa7cb38541ba3687cb",
+    "scopes": "0",
+    "mandates": "0",
+    "bindings": "0",
+    "corrections": "0",
+    "expenses": "0",
+    "settlements": "0",
+    "cost_audit": "0"
+  },
+  "after": {
+    "eligible_parties": [
+      {
+        "status": "ACTIVE",
+        "party_id": "a5a7a718-a466-4214-9685-ef7f86e48399",
+        "person_id": "11dd7bdf-b7a7-46ab-b38e-a28716b311e9",
+        "party_type": "PERSON"
+      }
+    ],
+    "excluded_aircraft_fingerprint": "23934cdd964a74aa7cb38541ba3687cb",
+    "scopes": "0",
+    "mandates": "0",
+    "bindings": "0",
+    "corrections": "0",
+    "expenses": "0",
+    "settlements": "0",
+    "cost_audit": "0"
+  },
+  "unchanged": true,
+  "gates": [
+    {
+      "id": "schema_008",
+      "status": "PASS_READ_ONLY"
+    },
+    {
+      "id": "aircraft_boundary",
+      "status": "PASS_READ_ONLY"
+    },
+    {
+      "id": "preview_build_provenance",
+      "status": "PASS"
+    },
+    {
+      "id": "test_identity_session",
+      "status": "BLOCKED"
+    },
+    {
+      "id": "explicit_financial_mandate",
+      "status": "BLOCKED"
+    },
+    {
+      "id": "synthetic_payer_and_responsible",
+      "status": "BLOCKED"
+    },
+    {
+      "id": "preview_postgres_connection",
+      "status": "BLOCKED"
+    },
+    {
+      "id": "authenticated_flag_off",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "write_activation",
+      "status": "NOT_AUTHORIZED"
+    },
+    {
+      "id": "functional_ui_canary",
+      "status": "NOT_EXECUTED"
+    },
+    {
+      "id": "economic_audit_canary",
+      "status": "NOT_EXECUTED"
+    }
+  ],
+  "mutations": {
+    "database": 0,
+    "financialScopes": 0,
+    "mandates": 0,
+    "flags": 0,
+    "environmentVariables": 0,
+    "manualDeployments": 0
+  },
+  "rollback": "NOT_APPLICABLE_NO_MUTATING_TRANSACTION",
+  "verification": {
+    "npmTests": {
+      "pass": 209,
+      "fail": 0
+    },
+    "lint": "PASS",
+    "build": "PASS"
+  },
+  "classifications": [
+    {
+      "category": "validator/diagnostic role",
+      "detail": "Initial read of schema_migrations as runtime denied; same SELECT performed as migration role. No grants changed or DML executed."
+    },
+    {
+      "category": "tool/access authorization",
+      "detail": "Vercel protected URL connector rejected by auto-review because it creates/reuses a shareable protection bypass link. No alternative bypass attempted."
+    },
+    {
+      "category": "environment",
+      "detail": "Review Preview has no DATABASE_URL or Postgres branch overrides; inherited selectors SHEETS."
+    },
+    {
+      "category": "identity/authorization",
+      "detail": "An active canonical OWNER exists, but test session, verified human mandate approver/reference and synthetic economic participant mapping are not approved."
+    }
+  ]
+}
