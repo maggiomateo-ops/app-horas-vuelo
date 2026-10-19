@@ -108,6 +108,8 @@ Revocación financiera, distinta de retiro de membresía: procedimiento privileg
 
 ## Gates restantes y Preview
 
+Actualización del gate LOGIN sobre base `239c75b7`: **BLOCKED**, no PASS de DML runtime. La conexión directa real sí funciona. Ver [resultado reproducible y bloqueo de visibilidad](issue-8-costs-runtime-gate.md) y [salida verificable](evidence/costs-008-runtime-gate.json). No se modificó la implementación Costs ni la migración para sortearlo.
+
 El código está disponible para revisión; **no equivale a aceptar Preview ni a haber habilitado Costs**. Restan acciones deliberadamente separadas:
 
 1. ChatGPT revisa commit y evidencia del preflight; autoriza aplicar la versión exacta 008 al target elegido. El guard oficial no se quitó aquí.

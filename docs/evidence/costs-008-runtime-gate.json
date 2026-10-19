@@ -1,0 +1,41 @@
+{
+  "base": "239c75b7e495bbab0d1711f2cb75be24ae157bf1",
+  "date": "2026-10-19",
+  "ok": false,
+  "status": "BLOCKED",
+  "code": "COST_RUNTIME_008_NOT_VISIBLE",
+  "runtimeLoginConnected": true,
+  "runtimeLoginDml": false,
+  "migration008VisibleToMigrator": true,
+  "migration008VisibleToRuntime": false,
+  "sha256": "30df860f6ba51617e93c55be21e8d2355aba734977dfb3db6bf0776b5c07c160",
+  "tests": [
+    "real LOGIN identity",
+    "uncommitted 008 invisible to independent runtime connection"
+  ],
+  "reason": "008 and synthetic mandates cannot be shared across PostgreSQL connections before COMMIT. This runner never commits or expands privileges.",
+  "target": {
+    "project_id": "red-pine-78283204",
+    "branch_id": "br-fancy-hall-b6h6g74f",
+    "database_name": "app_horas"
+  },
+  "identity": {
+    "session_user": "app_horas_runtime",
+    "current_user": "app_horas_runtime",
+    "database": "app_horas",
+    "pid": 1641
+  },
+  "rollbackVerified": true,
+  "independentPid": 1652,
+  "versions": [
+    "001",
+    "002",
+    "003",
+    "004",
+    "005",
+    "006",
+    "007"
+  ],
+  "fingerprint": "4dc61813ae41b37c9e2f8bc0fb5dbdf0",
+  "persistentWrites": 0
+}
