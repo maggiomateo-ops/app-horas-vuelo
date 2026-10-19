@@ -1,0 +1,18 @@
+.costs-panel { max-width: 1050px; margin: 0 auto; padding: 1rem; font-family: var(--sans, system-ui, sans-serif); color: var(--app-text); text-align: left; text-transform: none; }
+.costs-panel h1 { font-size: 1.8rem; }
+.costs-panel p { margin: .65rem 0; }
+.costs-panel h1,.costs-panel h2,.costs-panel h3 { margin: 1rem 0 .7rem; }
+.costs-panel label { display: grid; gap: .4rem; margin: .8rem 0; }
+.costs-panel input,.costs-panel select { padding: .7rem; color: inherit; background: var(--app-surface); border: 1px solid var(--app-border-strong); border-radius: .5rem; min-width: 0; font: inherit; }
+.costs-panel button { padding: .65rem 1rem; border: 1px solid var(--app-border-strong); background: var(--app-surface); color: var(--app-text); border-radius: .5rem; cursor: pointer; font: inherit; }
+.costs-panel button[aria-pressed="true"],.costs-panel button[type="submit"] { background: var(--app-primary-soft); border-color: var(--app-primary); color: var(--app-primary-strong); }
+.costs-panel button:disabled { opacity: .5; cursor: default; }
+.costs-panel fieldset,.costs-panel article,.costs-panel [aria-label="Confirmar liquidación"] { border: 1px solid var(--app-border); background: var(--app-surface); border-radius: .7rem; padding: 1rem; margin: 1rem 0; }
+.costs-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: .75rem; align-items: end; }
+.costs-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+.costs-table-wrap { overflow-x: auto; }
+.costs-panel table { width: 100%; min-width: 540px; border-collapse: collapse; }
+.costs-panel th,.costs-panel td { padding: .75rem; text-align: left; border-bottom: 1px solid var(--app-border); }
+.costs-panel caption { text-align: left; padding: .5rem 0; }
+.costs-error { padding: 1rem; border-left: 4px solid #c34141; }
+.costs-panel :focus-visible { outline: 3px solid #438fda; outline-offset: 3px; }

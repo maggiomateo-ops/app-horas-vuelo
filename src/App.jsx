@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
 import DashboardPanel from "./components/DashboardPanel";
 import AircraftOwnershipOnboarding from "./components/AircraftOwnershipOnboarding";
@@ -8,6 +8,7 @@ import FlightPilotSelector from "./components/FlightPilotSelector";
 import HistorialesPanel from "./components/HistorialesPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import TrackingPanel from "./components/TrackingPanel";
+import CostsPanel from "./components/CostsPanel";
 import {
   createFirstAircraftAndRefresh,
   configureAircraftTopologyAndRefresh,
@@ -418,11 +419,14 @@ function App() {
   const isGlobalAdmin = currentUser?.isAdmin === true;
   const usesCanonicalPilotSelection = currentUser?.legacyUserManagementEnabled === false;
   const trackingAvailable = selectedAircraft?.trackingAvailable === true;
-  const allowedMainTabIds = getAllowedMainTabIds({
+  const allowedMainTabIds = useMemo(() => {
+    const operationalMainTabIds = getAllowedMainTabIds({
     isAdmin: isGlobalAdmin,
     aircraftRole: selectedAircraftRole,
     trackingAvailable,
   });
+    return usesCanonicalPilotSelection ? [...operationalMainTabIds, "costos"] : operationalMainTabIds;
+  }, [isGlobalAdmin, selectedAircraftRole, trackingAvailable, usesCanonicalPilotSelection]);
   const preferredMainTab = getPreferredMainTab({
     isAdmin: isGlobalAdmin,
     aircraftRole: selectedAircraftRole,
@@ -1204,6 +1208,14 @@ function App() {
     );
   }
 
+  if (activeMainTab === "costos" && usesCanonicalPilotSelection) {
+    return <main className="app-shell"><header className="app-header">
+      <div className="app-brand">Archivo financiero</div>
+      <button className="form-action-button" type="button" onClick={() => setActiveMainTab(preferredMainTab)}>Volver</button>
+      <button className="form-action-button" type="button" onClick={handleLogout}>Cerrar sesión</button>
+    </header><CostsPanel onUnauthorized={handleUnauthorized} /></main>;
+  }
+
   if (aircraftsLoading) {
     return (
       <main className="app-shell app-auth-shell">
@@ -1228,6 +1240,7 @@ function App() {
           <button type="button" className="login-button" onClick={handleLogout}>
             Cerrar sesion
           </button>
+          {usesCanonicalPilotSelection && <button type="button" onClick={() => setActiveMainTab("costos")}>Abrir archivo financiero</button>}
         </section>
       </main>
     );
@@ -1235,11 +1248,11 @@ function App() {
 
   if (!selectedAircraft) {
     return (
-      <FirstAircraftOnboarding
+      <>{usesCanonicalPilotSelection && <button type="button" onClick={() => setActiveMainTab("costos")}>Abrir archivo financiero</button>}<FirstAircraftOnboarding
         onCreate={handleCreateFirstAircraft}
         onLogout={handleLogout}
         onUnauthorized={handleUnauthorized}
-      />
+      /></>
     );
   }
 

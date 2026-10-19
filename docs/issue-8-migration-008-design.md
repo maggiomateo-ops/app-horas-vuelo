@@ -1,5 +1,7 @@
 # Migración 008 — Costs V1 (D-306)
 
+> Documento del checkpoint de diseño 719d3de. La implementación y los resultados reales posteriores están en [la entrega Costs V1](issue-8-costs-v1-delivery.md). Las referencias a servicios/preflight pendientes debajo describen ese checkpoint; no sustituyen el reporte actual. El SQL oficial conserva su bloqueo.
+
 **V1 DESIGN READY FOR REVIEW — SQL BLOQUEADO, NO APLICADO.** 19/10/2026. Rama `review/issue-8-migration-008-design`, base `f6bba8b1c191157e2647b26a8bfac89901abae45`. Este diseño reemplaza la propuesta amplia de ese commit, que queda preservada en Git. No equivale a implementación completa del Issue #8.
 
 ## Decisiones canónicas revisadas

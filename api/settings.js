@@ -1,4 +1,5 @@
 import { requireAuth } from "./_auth.js";
+import { handleCostsResource } from "./_costsHttp.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import {
   getLegacySettingsShapeFromPostgres,
@@ -189,7 +190,7 @@ export default async function handler(req, res) {
       .json({ ok: false, error: "La sesion no contiene un userId valido." });
   }
 
-  if (!aircraftId) {
+  if (!aircraftId && resource !== "costs") {
     return res
       .status(500)
       .json({ ok: false, error: "Falta aircraft_id o LEGACY_AIRCRAFT_ID." });
@@ -203,6 +204,11 @@ export default async function handler(req, res) {
       ok: false,
       error: "La fuente o capacidad de escritura de Settings no esta configurada correctamente.",
     });
+  }
+
+  if (resource === "costs") {
+    if (source !== DATA_SOURCE.POSTGRES) return res.status(404).json({ ok: false, error: "Recurso no disponible." });
+    return handleCostsResource(req, res, { userId });
   }
 
   if (resource === "tracking") {

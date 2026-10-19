@@ -4,11 +4,12 @@ export const MAIN_TABS = [
   { id: "dashboards", label: "Dashboard" },
   { id: "seguimiento", label: "Seguimiento" },
   { id: "settings", label: "Settings" },
+  { id: "costos", label: "Gastos" },
 ];
 
 const BASE_MAIN_TAB_IDS = MAIN_TABS
   .map((tab) => tab.id)
-  .filter((tabId) => tabId !== "seguimiento");
+  .filter((tabId) => !["seguimiento", "costos"].includes(tabId));
 
 const ROLE_MAIN_TABS = {
   ADMIN: BASE_MAIN_TAB_IDS,

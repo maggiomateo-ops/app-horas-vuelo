@@ -1,5 +1,7 @@
 # Matriz de verificación — Costs V1 / 008
 
+> Matriz base del diseño 719d3de. Ver [resultados actuales de implementación y preflight](issue-8-costs-v1-delivery.md): tests npm y ejecución PostgreSQL se distinguen expresamente. El SQL oficial sigue bloqueado.
+
 D-306. Se retiran de V1 los casos de divulgación/delegación/mixtos; no se implementan workflows futuros. S=estático ejecutable; U=unitario offline; I=integración futura en PostgreSQL aislado y autorizado. Solo S/U de diseño y del validador de permisos se ejecutan en este commit; las pruebas de servicios económicos listadas son pendientes, no PASS.
 
 ## Tests ejecutables añadidos
