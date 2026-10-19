@@ -1,0 +1,929 @@
+{
+  "base": "d56f381d0c1665c79b797b7e056da010543e2586",
+  "date": "2026-10-19",
+  "target": {
+    "project_id": "red-pine-78283204",
+    "branch_id": "br-fancy-hall-b6h6g74f",
+    "database_name": "app_horas"
+  },
+  "preparation": {
+    "commitAcknowledged": true,
+    "sha256": "30df860f6ba51617e93c55be21e8d2355aba734977dfb3db6bf0776b5c07c160",
+    "fixture": {
+      "userId": "c0080000-0000-4000-8000-000000000001",
+      "aircraftId": "c0080000-0000-4000-8000-000000000002",
+      "responsiblePartyId": "c0080000-0000-4000-8000-000000000003",
+      "payerPartyId": "c0080000-0000-4000-8000-000000000004",
+      "scopeId": "c0080000-0000-4000-8000-000000000005",
+      "deniedUserId": "c0080000-0000-4000-8000-000000000014"
+    },
+    "initial": {
+      "catalog": {
+        "database": "app_horas",
+        "versions": [
+          "001",
+          "002",
+          "003",
+          "004",
+          "005",
+          "006",
+          "007"
+        ],
+        "schema_fingerprint": "4dc61813ae41b37c9e2f8bc0fb5dbdf0",
+        "scope_table": null
+      },
+      "roles": [
+        {
+          "role": "app_horas_runtime",
+          "can_login": true,
+          "inherit": true,
+          "superuser": false,
+          "create_db": false,
+          "create_role": false,
+          "replication": false,
+          "bypass_rls": false,
+          "member_roles": [
+            "app_runtime"
+          ],
+          "schema_create": false,
+          "owns_canonical": false
+        },
+        {
+          "role": "app_runtime",
+          "can_login": false,
+          "inherit": true,
+          "superuser": false,
+          "create_db": false,
+          "create_role": false,
+          "replication": false,
+          "bypass_rls": false,
+          "member_roles": [],
+          "schema_create": false,
+          "owns_canonical": false
+        }
+      ],
+      "tables": {
+        "app.aircraft": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "d2ca90f265904cda7dd3b3960c96f549",
+          "real_hash": "d2ca90f265904cda7dd3b3960c96f549"
+        },
+        "app.aircraft_configuration": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "da32ad139e234749992b3748a809a93c",
+          "real_hash": "da32ad139e234749992b3748a809a93c"
+        },
+        "app.aircraft_flight_field_settings": {
+          "count": 8,
+          "synthetic": 0,
+          "hash": "29e5511675ca9d6b1f1eac2a66029a08",
+          "real_hash": "29e5511675ca9d6b1f1eac2a66029a08"
+        },
+        "app.aircraft_flight_purposes": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.aircraft_membership_capabilities": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "4db9f7ce3f23b88b4a8bd78145dcae0e",
+          "real_hash": "4db9f7ce3f23b88b4a8bd78145dcae0e"
+        },
+        "app.aircraft_memberships": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "8414e7edc2b7b4368659a279e337a360",
+          "real_hash": "8414e7edc2b7b4368659a279e337a360"
+        },
+        "app.aircraft_ownership_interests": {
+          "count": 3,
+          "synthetic": 0,
+          "hash": "0a4c61669544838224e9ec107a5a8543",
+          "real_hash": "0a4c61669544838224e9ec107a5a8543"
+        },
+        "app.aircraft_persons": {
+          "count": 15,
+          "synthetic": 0,
+          "hash": "8ee5fc844530fc24ca171084d94f8728",
+          "real_hash": "8ee5fc844530fc24ca171084d94f8728"
+        },
+        "app.aircraft_registrations": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "3989cb6dc6d98cc4e11a0b619d039866",
+          "real_hash": "3989cb6dc6d98cc4e11a0b619d039866"
+        },
+        "app.aircraft_settings": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "81f23214b1c0cee8f544fec44e959061",
+          "real_hash": "81f23214b1c0cee8f544fec44e959061"
+        },
+        "app.aircraft_tanks": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "54ab76e436efba9057552f78a2f19854",
+          "real_hash": "54ab76e436efba9057552f78a2f19854"
+        },
+        "app.aircraft_utilization_baselines": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "b4d5507c9d288959f20a58fb64cd5ae3",
+          "real_hash": "b4d5507c9d288959f20a58fb64cd5ae3"
+        },
+        "app.component_installations": {
+          "count": 6,
+          "synthetic": 0,
+          "hash": "b56231c971f2a27df39ad2ea416a553f",
+          "real_hash": "b56231c971f2a27df39ad2ea416a553f"
+        },
+        "app.components": {
+          "count": 6,
+          "synthetic": 0,
+          "hash": "8c576af4108777485558f7841420f2c7",
+          "real_hash": "8c576af4108777485558f7841420f2c7"
+        },
+        "app.cost_concepts": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_event_types": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_events": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_settlement_expense_lines": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_settlement_owner_lines": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_settlement_party_lines": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_settlement_utilization_lines": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_settlements": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.expense_allocations": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.expense_payments": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.expenses": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.export_run_datasets": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "b03698e5e1ee2f77d8e7ab6f2f79a024",
+          "real_hash": "b03698e5e1ee2f77d8e7ab6f2f79a024"
+        },
+        "app.export_runs": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "b64f520a0fdfd2f277862336caad487e",
+          "real_hash": "b64f520a0fdfd2f277862336caad487e"
+        },
+        "app.export_template_version_fields": {
+          "count": 11,
+          "synthetic": 0,
+          "hash": "789a5b181146e0d388fcdccfcf77f21b",
+          "real_hash": "789a5b181146e0d388fcdccfcf77f21b"
+        },
+        "app.export_template_versions": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "6f834de8260de10544605058e874b2b5",
+          "real_hash": "6f834de8260de10544605058e874b2b5"
+        },
+        "app.export_templates": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "e161953f29db5724fc8ec1e6223f6205",
+          "real_hash": "e161953f29db5724fc8ec1e6223f6205"
+        },
+        "app.flight_component_consumables": {
+          "count": 31,
+          "synthetic": 0,
+          "hash": "8e6ca5b63fd72280f4155b8b8348e541",
+          "real_hash": "8e6ca5b63fd72280f4155b8b8348e541"
+        },
+        "app.flight_component_counters": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.flight_component_runtime": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.flight_counters": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.flight_import_batches": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.flight_import_issues": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.flight_record_revisions": {
+          "count": 352,
+          "synthetic": 0,
+          "hash": "ae483d444078f97a284e548f9b6a7dcf",
+          "real_hash": "ae483d444078f97a284e548f9b6a7dcf"
+        },
+        "app.flight_records": {
+          "count": 349,
+          "synthetic": 0,
+          "hash": "393b3d3780e4fb9c50794806c48b9611",
+          "real_hash": "393b3d3780e4fb9c50794806c48b9611"
+        },
+        "app.flight_tank_readings": {
+          "count": 68,
+          "synthetic": 0,
+          "hash": "b0b07c5e9567d7d1bc61393b4ad661a4",
+          "real_hash": "b0b07c5e9567d7d1bc61393b4ad661a4"
+        },
+        "app.parties": {
+          "count": 3,
+          "synthetic": 0,
+          "hash": "cb964e5f83ad97c328de7f025249777c",
+          "real_hash": "cb964e5f83ad97c328de7f025249777c"
+        },
+        "app.person_identifiers": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.persons": {
+          "count": 16,
+          "synthetic": 0,
+          "hash": "c64e30cdaeb587d010a74d5d2c5d818a",
+          "real_hash": "c64e30cdaeb587d010a74d5d2c5d818a"
+        },
+        "app.squawk_attachments": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.squawk_comments": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "bf1c771bccfe39665338a9520a4a36e4",
+          "real_hash": "bf1c771bccfe39665338a9520a4a36e4"
+        },
+        "app.squawk_status_events": {
+          "count": 3,
+          "synthetic": 0,
+          "hash": "a41cfb09baa7724aab424027b5ebbc18",
+          "real_hash": "a41cfb09baa7724aab424027b5ebbc18"
+        },
+        "app.squawks": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "db49672b05ae01b10a5815e90802bccc",
+          "real_hash": "db49672b05ae01b10a5815e90802bccc"
+        },
+        "app.tracking_item_events": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "d6ab34cf073e926cc3c418d465224cfa",
+          "real_hash": "d6ab34cf073e926cc3c418d465224cfa"
+        },
+        "app.tracking_items": {
+          "count": 5,
+          "synthetic": 0,
+          "hash": "c752f9714665fc5765b57c2e5cb159e2",
+          "real_hash": "c752f9714665fc5765b57c2e5cb159e2"
+        },
+        "app.user_person_links": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "4f5d4fe01daa7ffc47f72278a2ffc4e9",
+          "real_hash": "4f5d4fe01daa7ffc47f72278a2ffc4e9"
+        },
+        "app.users": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "d7045a507378177c60619da7f96b4c4a",
+          "real_hash": "d7045a507378177c60619da7f96b4c4a"
+        },
+        "app.utilization_adjustments": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "audit.audit_events": {
+          "count": 377,
+          "synthetic": 0,
+          "hash": "9cbb6f5da983fdc40bab4acc4d5e3711",
+          "real_hash": "9cbb6f5da983fdc40bab4acc4d5e3711"
+        },
+        "public.schema_migrations": {
+          "count": 7,
+          "synthetic": 0,
+          "hash": "4ab52dfd1f8c38b8baf704c416891b41",
+          "real_hash": "4ab52dfd1f8c38b8baf704c416891b41"
+        }
+      },
+      "ledger": [
+        {
+          "version": "001",
+          "filename": "001_initial_schema.sql",
+          "checksum_sha256": "7804df1482695e21789bd08226a37a17774b6dd1a53e3432051823cdfb59d375"
+        },
+        {
+          "version": "002",
+          "filename": "002_runtime_grant_hardening.sql",
+          "checksum_sha256": "50ef18aa813cbd061f120aa845221646068e18449f7efc868e8c56659a1c0660"
+        },
+        {
+          "version": "003",
+          "filename": "003_component_installation_historical_date.sql",
+          "checksum_sha256": "bcceccd14273a563709f7cda1ba55422c00897385137264b654f80cc75c4df06"
+        },
+        {
+          "version": "004",
+          "filename": "004_export_direct_response_artifacts.sql",
+          "checksum_sha256": "ffb317637e06040ee0f9cfd56c73ea862fe10f2bbd02d84e227a6fe0e4f63109"
+        },
+        {
+          "version": "005",
+          "filename": "005_aircraft_configuration.sql",
+          "checksum_sha256": "ef423f1c5beaf65b8613b0b458c28a9bd66c14348ac167116851100d057cd2e2"
+        },
+        {
+          "version": "006",
+          "filename": "006_costs.sql",
+          "checksum_sha256": "2c13566e417716ba15dfef4ce26c57e42d6b9c9b0c9ca2907905e6977dc44cd7"
+        },
+        {
+          "version": "007",
+          "filename": "007_costs_allocation_metric_adjustments.sql",
+          "checksum_sha256": "e3b5cc4690fef2bfd49eb425abd3d98f4ca64ecaf6a15026139954d9c1989326"
+        }
+      ]
+    },
+    "committed": {
+      "catalog": {
+        "database": "app_horas",
+        "versions": [
+          "001",
+          "002",
+          "003",
+          "004",
+          "005",
+          "006",
+          "007",
+          "008"
+        ],
+        "schema_fingerprint": "b858d6c0cbe328b6499a40b76f571280",
+        "scope_table": "app.cost_financial_scopes"
+      },
+      "roles": [
+        {
+          "role": "app_horas_runtime",
+          "can_login": true,
+          "inherit": true,
+          "superuser": false,
+          "create_db": false,
+          "create_role": false,
+          "replication": false,
+          "bypass_rls": false,
+          "member_roles": [
+            "app_runtime"
+          ],
+          "schema_create": false,
+          "owns_canonical": false
+        },
+        {
+          "role": "app_runtime",
+          "can_login": false,
+          "inherit": true,
+          "superuser": false,
+          "create_db": false,
+          "create_role": false,
+          "replication": false,
+          "bypass_rls": false,
+          "member_roles": [],
+          "schema_create": false,
+          "owns_canonical": false
+        }
+      ],
+      "tables": {
+        "app.aircraft": {
+          "count": 3,
+          "synthetic": 1,
+          "hash": "ceb9977e021fcb8138bdea4a870309f3",
+          "real_hash": "d2ca90f265904cda7dd3b3960c96f549"
+        },
+        "app.aircraft_configuration": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "da32ad139e234749992b3748a809a93c",
+          "real_hash": "da32ad139e234749992b3748a809a93c"
+        },
+        "app.aircraft_flight_field_settings": {
+          "count": 8,
+          "synthetic": 0,
+          "hash": "29e5511675ca9d6b1f1eac2a66029a08",
+          "real_hash": "29e5511675ca9d6b1f1eac2a66029a08"
+        },
+        "app.aircraft_flight_purposes": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.aircraft_membership_capabilities": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "4db9f7ce3f23b88b4a8bd78145dcae0e",
+          "real_hash": "4db9f7ce3f23b88b4a8bd78145dcae0e"
+        },
+        "app.aircraft_memberships": {
+          "count": 4,
+          "synthetic": 2,
+          "hash": "30ed11f7b334c77ad4c06d66cf6e926a",
+          "real_hash": "8414e7edc2b7b4368659a279e337a360"
+        },
+        "app.aircraft_ownership_interests": {
+          "count": 5,
+          "synthetic": 2,
+          "hash": "49469e2b5f94503963524f486179afbd",
+          "real_hash": "0a4c61669544838224e9ec107a5a8543"
+        },
+        "app.aircraft_persons": {
+          "count": 15,
+          "synthetic": 0,
+          "hash": "8ee5fc844530fc24ca171084d94f8728",
+          "real_hash": "8ee5fc844530fc24ca171084d94f8728"
+        },
+        "app.aircraft_registrations": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "3989cb6dc6d98cc4e11a0b619d039866",
+          "real_hash": "3989cb6dc6d98cc4e11a0b619d039866"
+        },
+        "app.aircraft_settings": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "81f23214b1c0cee8f544fec44e959061",
+          "real_hash": "81f23214b1c0cee8f544fec44e959061"
+        },
+        "app.aircraft_tanks": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "54ab76e436efba9057552f78a2f19854",
+          "real_hash": "54ab76e436efba9057552f78a2f19854"
+        },
+        "app.aircraft_utilization_baselines": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "b4d5507c9d288959f20a58fb64cd5ae3",
+          "real_hash": "b4d5507c9d288959f20a58fb64cd5ae3"
+        },
+        "app.component_installations": {
+          "count": 6,
+          "synthetic": 0,
+          "hash": "b56231c971f2a27df39ad2ea416a553f",
+          "real_hash": "b56231c971f2a27df39ad2ea416a553f"
+        },
+        "app.components": {
+          "count": 6,
+          "synthetic": 0,
+          "hash": "8c576af4108777485558f7841420f2c7",
+          "real_hash": "8c576af4108777485558f7841420f2c7"
+        },
+        "app.cost_concepts": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_event_types": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_events": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_expense_corrections": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_financial_authorities": {
+          "count": 1,
+          "synthetic": 1,
+          "hash": "8182b4f3dd3ebc163aa451b047f45954",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_financial_authority_revocations": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_financial_records": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_financial_scopes": {
+          "count": 1,
+          "synthetic": 1,
+          "hash": "83a1215971e01abcc0cacff4c776d8ba",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_settlement_expense_lines": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_settlement_owner_lines": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_settlement_party_lines": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_settlement_utilization_lines": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.cost_settlements": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.expense_allocations": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.expense_payments": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.expenses": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.export_run_datasets": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "b03698e5e1ee2f77d8e7ab6f2f79a024",
+          "real_hash": "b03698e5e1ee2f77d8e7ab6f2f79a024"
+        },
+        "app.export_runs": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "b64f520a0fdfd2f277862336caad487e",
+          "real_hash": "b64f520a0fdfd2f277862336caad487e"
+        },
+        "app.export_template_version_fields": {
+          "count": 11,
+          "synthetic": 0,
+          "hash": "789a5b181146e0d388fcdccfcf77f21b",
+          "real_hash": "789a5b181146e0d388fcdccfcf77f21b"
+        },
+        "app.export_template_versions": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "6f834de8260de10544605058e874b2b5",
+          "real_hash": "6f834de8260de10544605058e874b2b5"
+        },
+        "app.export_templates": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "e161953f29db5724fc8ec1e6223f6205",
+          "real_hash": "e161953f29db5724fc8ec1e6223f6205"
+        },
+        "app.flight_component_consumables": {
+          "count": 31,
+          "synthetic": 0,
+          "hash": "8e6ca5b63fd72280f4155b8b8348e541",
+          "real_hash": "8e6ca5b63fd72280f4155b8b8348e541"
+        },
+        "app.flight_component_counters": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.flight_component_runtime": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.flight_counters": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.flight_import_batches": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.flight_import_issues": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.flight_record_revisions": {
+          "count": 352,
+          "synthetic": 0,
+          "hash": "ae483d444078f97a284e548f9b6a7dcf",
+          "real_hash": "ae483d444078f97a284e548f9b6a7dcf"
+        },
+        "app.flight_records": {
+          "count": 349,
+          "synthetic": 0,
+          "hash": "393b3d3780e4fb9c50794806c48b9611",
+          "real_hash": "393b3d3780e4fb9c50794806c48b9611"
+        },
+        "app.flight_tank_readings": {
+          "count": 68,
+          "synthetic": 0,
+          "hash": "b0b07c5e9567d7d1bc61393b4ad661a4",
+          "real_hash": "b0b07c5e9567d7d1bc61393b4ad661a4"
+        },
+        "app.parties": {
+          "count": 5,
+          "synthetic": 2,
+          "hash": "389ac6a01da1c7f792dabbce37102565",
+          "real_hash": "cb964e5f83ad97c328de7f025249777c"
+        },
+        "app.person_identifiers": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.persons": {
+          "count": 16,
+          "synthetic": 0,
+          "hash": "c64e30cdaeb587d010a74d5d2c5d818a",
+          "real_hash": "c64e30cdaeb587d010a74d5d2c5d818a"
+        },
+        "app.squawk_attachments": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "app.squawk_comments": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "bf1c771bccfe39665338a9520a4a36e4",
+          "real_hash": "bf1c771bccfe39665338a9520a4a36e4"
+        },
+        "app.squawk_status_events": {
+          "count": 3,
+          "synthetic": 0,
+          "hash": "a41cfb09baa7724aab424027b5ebbc18",
+          "real_hash": "a41cfb09baa7724aab424027b5ebbc18"
+        },
+        "app.squawks": {
+          "count": 1,
+          "synthetic": 0,
+          "hash": "db49672b05ae01b10a5815e90802bccc",
+          "real_hash": "db49672b05ae01b10a5815e90802bccc"
+        },
+        "app.tracking_item_events": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "d6ab34cf073e926cc3c418d465224cfa",
+          "real_hash": "d6ab34cf073e926cc3c418d465224cfa"
+        },
+        "app.tracking_items": {
+          "count": 5,
+          "synthetic": 0,
+          "hash": "c752f9714665fc5765b57c2e5cb159e2",
+          "real_hash": "c752f9714665fc5765b57c2e5cb159e2"
+        },
+        "app.user_person_links": {
+          "count": 2,
+          "synthetic": 0,
+          "hash": "4f5d4fe01daa7ffc47f72278a2ffc4e9",
+          "real_hash": "4f5d4fe01daa7ffc47f72278a2ffc4e9"
+        },
+        "app.users": {
+          "count": 4,
+          "synthetic": 2,
+          "hash": "201ab2b1d06cdd771ea50aad8eb4c876",
+          "real_hash": "d7045a507378177c60619da7f96b4c4a"
+        },
+        "app.utilization_adjustments": {
+          "count": 0,
+          "synthetic": 0,
+          "hash": "d751713988987e9331980363e24189ce",
+          "real_hash": "d751713988987e9331980363e24189ce"
+        },
+        "audit.audit_events": {
+          "count": 378,
+          "synthetic": 1,
+          "hash": "0570a241d7690c134707d087240f7474",
+          "real_hash": "9cbb6f5da983fdc40bab4acc4d5e3711"
+        },
+        "public.schema_migrations": {
+          "count": 8,
+          "synthetic": 0,
+          "hash": "4d559c2b14e3650ac193d3a0a6b3e397",
+          "real_hash": "4d559c2b14e3650ac193d3a0a6b3e397"
+        }
+      },
+      "ledger": [
+        {
+          "version": "001",
+          "filename": "001_initial_schema.sql",
+          "checksum_sha256": "7804df1482695e21789bd08226a37a17774b6dd1a53e3432051823cdfb59d375"
+        },
+        {
+          "version": "002",
+          "filename": "002_runtime_grant_hardening.sql",
+          "checksum_sha256": "50ef18aa813cbd061f120aa845221646068e18449f7efc868e8c56659a1c0660"
+        },
+        {
+          "version": "003",
+          "filename": "003_component_installation_historical_date.sql",
+          "checksum_sha256": "bcceccd14273a563709f7cda1ba55422c00897385137264b654f80cc75c4df06"
+        },
+        {
+          "version": "004",
+          "filename": "004_export_direct_response_artifacts.sql",
+          "checksum_sha256": "ffb317637e06040ee0f9cfd56c73ea862fe10f2bbd02d84e227a6fe0e4f63109"
+        },
+        {
+          "version": "005",
+          "filename": "005_aircraft_configuration.sql",
+          "checksum_sha256": "ef423f1c5beaf65b8613b0b458c28a9bd66c14348ac167116851100d057cd2e2"
+        },
+        {
+          "version": "006",
+          "filename": "006_costs.sql",
+          "checksum_sha256": "2c13566e417716ba15dfef4ce26c57e42d6b9c9b0c9ca2907905e6977dc44cd7"
+        },
+        {
+          "version": "007",
+          "filename": "007_costs_allocation_metric_adjustments.sql",
+          "checksum_sha256": "e3b5cc4690fef2bfd49eb425abd3d98f4ca64ecaf6a15026139954d9c1989326"
+        },
+        {
+          "version": "008",
+          "filename": "008_costs_financial_scopes_and_open_corrections.sql",
+          "checksum_sha256": "30df860f6ba51617e93c55be21e8d2355aba734977dfb3db6bf0776b5c07c160"
+        }
+      ]
+    }
+  },
+  "smoke": {
+    "ok": true,
+    "status": "PASS",
+    "runtimeLoginConnected": true,
+    "runtimeLoginDml": true,
+    "forcedRollback": true,
+    "sha256": "30df860f6ba51617e93c55be21e8d2355aba734977dfb3db6bf0776b5c07c160",
+    "tests": [
+      "real LOGIN creation/correction/settlement",
+      "private access and flag OFF denial",
+      "immutable settlement and Audit",
+      "real database Audit failure rolls back business DML"
+    ],
+    "target": {
+      "project_id": "red-pine-78283204",
+      "branch_id": "br-fancy-hall-b6h6g74f",
+      "database_name": "app_horas"
+    },
+    "identity": {
+      "session_user": "app_horas_runtime",
+      "current_user": "app_horas_runtime",
+      "database": "app_horas",
+      "pid": 952
+    },
+    "rollbackVerified": true,
+    "independentPid": 981,
+    "versions": [
+      "001",
+      "002",
+      "003",
+      "004",
+      "005",
+      "006",
+      "007",
+      "008"
+    ],
+    "fingerprint": "b858d6c0cbe328b6499a40b76f571280",
+    "persistentWrites": 0,
+    "independentAllCanonicalTablesAndRolesUnchanged": true
+  },
+  "cleanup": {
+    "status": "PASS",
+    "deletedProjectId": "red-pine-78283204",
+    "deletedBranchId": "br-fancy-hall-b6h6g74f",
+    "getBranchHttpStatus": 404,
+    "nonDeletedBranchesListContainsTarget": false,
+    "parentBranchId": "br-billowing-band-b62jj1ab",
+    "parentGetBranchStatus": "ready",
+    "parentPresent": true
+  },
+  "verification": {
+    "npmTests": {
+      "pass": 209,
+      "fail": 0
+    },
+    "lint": "PASS",
+    "build": "PASS",
+    "official008GuardUnchanged": true
+  },
+  "classifications": [
+    {
+      "phase": "inspect stdin attempt",
+      "category": "tool",
+      "detail": "PTY canonical input line limit; interrupted before JSON completed or database transaction started. Resolved with stty -echo -icanon min 1 time 0."
+    }
+  ]
+}

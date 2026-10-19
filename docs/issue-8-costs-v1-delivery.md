@@ -108,6 +108,8 @@ Revocación financiera, distinta de retiro de membresía: procedimiento privileg
 
 ## Gates restantes y Preview
 
+Actualización posterior: **LOGIN/DML/Audit/rollback PASS** en la temporal con preparación sintética expresamente autorizada, seguida de eliminación verificada de esa rama. Ver [cierre técnico y evidencia](issue-8-costs-runtime-acceptance.md). No autoriza activación en TEST/Preview ni mandatos reales.
+
 Actualización del gate LOGIN sobre base `239c75b7`: **BLOCKED**, no PASS de DML runtime. La conexión directa real sí funciona. Ver [resultado reproducible y bloqueo de visibilidad](issue-8-costs-runtime-gate.md) y [salida verificable](evidence/costs-008-runtime-gate.json). No se modificó la implementación Costs ni la migración para sortearlo.
 
 El código está disponible para revisión; **no equivale a aceptar Preview ni a haber habilitado Costs**. Restan acciones deliberadamente separadas:

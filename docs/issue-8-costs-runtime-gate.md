@@ -1,5 +1,7 @@
 # Costs 3.3 — gate de DML con LOGIN runtime
 
+Historial: este bloqueo fue resuelto mediante la autorización posterior de preparación persistente exclusivamente sintética en la temporal. Ver [LOGIN/DML/Audit/rollback PASS y limpieza verificada](issue-8-costs-runtime-acceptance.md). Se conserva el resultado anterior sin reescribir su evidencia.
+
 Base revisada: `239c75b7e495bbab0d1711f2cb75be24ae157bf1`, Issue #8, rama `review/issue-8-migration-008-design`. Se consultaron de nuevo ambos Sheets canónicos: Product & Data Model (D-042, D-297–D-306, Roadmap 3.3) y Postgres Schema Catalog. Ambos mantienen pendiente el smoke de LOGIN runtime, 008 aprobada, mandatos explícitos y aceptación Preview. No se reabrió ninguna decisión ni se cambió Costs V1.
 
 ## Resultado real: BLOCKED — no PASS de DML
