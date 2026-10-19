@@ -143,3 +143,18 @@ export function resolvePostgresSquawkWriteCapability(settingsSource) {
     "SQUAWK_WRITE_FLAG_INVALID"
   );
 }
+
+export function resolvePostgresCostWriteCapability(settingsSource) {
+  const normalizedSource = String(settingsSource || "").trim().toUpperCase();
+  const raw = String(process.env.POSTGRES_COST_WRITES_ENABLED ?? "")
+    .trim()
+    .toLowerCase();
+  if (raw && raw !== "true" && raw !== "false") {
+    throw capabilityError(
+      "POSTGRES_COST_WRITES_ENABLED debe ser true, false o estar ausente.",
+      "COST_WRITE_FLAG_INVALID"
+    );
+  }
+  const enabled = normalizedSource === "POSTGRES" && raw === "true";
+  return { enabled, mode: enabled ? "OWNER_COSTS" : "DISABLED" };
+}
