@@ -1,6 +1,7 @@
 -- DESIGN DRAFT ONLY -- NOT APPROVED / DO NOT APPLY.
 -- Candidate schema for docs/issue-8-migration-008-design.md, not runtime delivery.
--- D-304 is confirmed; detailed choices in this file are PROPOSALS.
+-- D-306 V1: private administration archives, explicit authority and OPEN corrections.
+-- D-304/D-305 remain binding; disclosure/delegation workflows are deferred.
 -- db/migrate.js discovers numbered SQL files automatically. Keep this blocker
 -- until independent contract review, a new authorization and isolated preflight.
 DO $draft_only$
@@ -9,14 +10,47 @@ BEGIN
 END;
 $draft_only$;
 
+-- Future preflight: only canonical roles, no elevated flags, unexpected role
+-- paths (including SET ROLE), schema ownership/CREATE or canonical object ownership.
+DO $runtime_roles$
+DECLARE
+  runtime_role record;
+BEGIN
+  IF (SELECT count(*) FROM pg_roles WHERE rolname IN ('app_runtime','app_horas_runtime')) <> 2 THEN
+    RAISE EXCEPTION 'COST_RUNTIME_ROLES_MISSING';
+  END IF;
+  FOR runtime_role IN SELECT * FROM pg_roles WHERE rolname IN ('app_runtime','app_horas_runtime') LOOP
+    IF runtime_role.rolsuper OR runtime_role.rolcreatedb OR runtime_role.rolcreaterole
+      OR runtime_role.rolreplication OR runtime_role.rolbypassrls
+      OR runtime_role.rolcanlogin <> (runtime_role.rolname = 'app_horas_runtime')
+      OR (runtime_role.rolname = 'app_horas_runtime' AND NOT runtime_role.rolinherit)
+      OR has_schema_privilege(runtime_role.oid, 'app', 'CREATE')
+      OR has_schema_privilege(runtime_role.oid, 'audit', 'CREATE')
+      OR EXISTS (SELECT 1 FROM pg_namespace WHERE nspname IN ('app','audit') AND nspowner = runtime_role.oid)
+      OR EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname IN ('app','audit') AND c.relowner = runtime_role.oid)
+      OR EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname IN ('app','audit') AND p.proowner = runtime_role.oid)
+      OR EXISTS (SELECT 1 FROM pg_roles other_role WHERE other_role.oid <> runtime_role.oid
+        AND pg_has_role(runtime_role.oid, other_role.oid, 'MEMBER')
+        AND NOT (runtime_role.rolname = 'app_horas_runtime' AND other_role.rolname = 'app_runtime')) THEN
+      RAISE EXCEPTION 'COST_RUNTIME_ROLE_UNSAFE: %', runtime_role.rolname;
+    END IF;
+  END LOOP;
+  IF NOT pg_has_role('app_horas_runtime', 'app_runtime', 'USAGE') THEN
+    RAISE EXCEPTION 'COST_RUNTIME_INHERITANCE_MISSING';
+  END IF;
+END;
+$runtime_roles$;
+
 -- No INSERT/UPDATE of historical financial roots or settlement snapshots.
 -- All new binding/ACL tables start empty: unmapped history remains inaccessible.
 
 CREATE TABLE app.cost_financial_scopes (
   financial_scope_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   aircraft_id uuid NOT NULL REFERENCES app.aircraft(aircraft_id),
-  holder_party_id uuid NOT NULL REFERENCES app.parties(party_id),
   label text NOT NULL CHECK (length(btrim(label)) > 0),
+  approval_reference text NOT NULL CHECK (length(btrim(approval_reference)) > 0),
   created_by_user_id uuid NOT NULL REFERENCES app.users(user_id),
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT uq_cost_scope_aircraft UNIQUE (financial_scope_id, aircraft_id)
@@ -28,9 +62,6 @@ CREATE TABLE app.cost_financial_authorities (
   financial_authority_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   financial_scope_id uuid NOT NULL REFERENCES app.cost_financial_scopes(financial_scope_id),
   user_id uuid NOT NULL REFERENCES app.users(user_id),
-  authority_basis text NOT NULL CHECK (
-    authority_basis IN ('PERSON_HOLDER', 'ORGANIZATION_REPRESENTATIVE', 'DELEGATED_ADMIN')
-  ),
   approval_reference text NOT NULL CHECK (length(btrim(approval_reference)) > 0),
   authorized_by_user_id uuid NOT NULL REFERENCES app.users(user_id),
   authorized_at timestamptz NOT NULL DEFAULT now(),
@@ -48,10 +79,24 @@ CREATE TABLE app.cost_financial_authority_revocations (
 );
 
 -- Composite keys prevent a binding to a root on a different aircraft.
-ALTER TABLE app.cost_concepts ADD CONSTRAINT uq_cost_concept_aircraft
-  UNIQUE (cost_concept_id, aircraft_id);
-ALTER TABLE app.cost_event_types ADD CONSTRAINT uq_cost_type_aircraft
-  UNIQUE (cost_event_type_id, aircraft_id);
+-- Scope the vocabulary too: a former administration's private name must neither
+-- become visible nor reserve that name for every future administration.
+ALTER TABLE app.cost_concepts ADD COLUMN financial_scope_id uuid,
+  ADD CONSTRAINT fk_cost_concept_scope FOREIGN KEY (financial_scope_id, aircraft_id)
+    REFERENCES app.cost_financial_scopes(financial_scope_id, aircraft_id),
+  ADD CONSTRAINT uq_cost_concept_aircraft UNIQUE (cost_concept_id, aircraft_id, financial_scope_id);
+ALTER TABLE app.cost_event_types ADD COLUMN financial_scope_id uuid,
+  ADD CONSTRAINT fk_cost_type_scope FOREIGN KEY (financial_scope_id, aircraft_id)
+    REFERENCES app.cost_financial_scopes(financial_scope_id, aircraft_id),
+  ADD CONSTRAINT uq_cost_type_aircraft UNIQUE (cost_event_type_id, aircraft_id, financial_scope_id);
+DROP INDEX app.uq_active_cost_concept_name;
+DROP INDEX app.uq_active_cost_event_type_name;
+CREATE UNIQUE INDEX uq_active_cost_concept_name
+  ON app.cost_concepts (financial_scope_id, lower(name))
+  WHERE status = 'ACTIVE' AND financial_scope_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_active_cost_event_type_name
+  ON app.cost_event_types (financial_scope_id, lower(name))
+  WHERE status = 'ACTIVE' AND financial_scope_id IS NOT NULL;
 ALTER TABLE app.cost_events ADD CONSTRAINT uq_cost_event_aircraft
   UNIQUE (cost_event_id, aircraft_id);
 ALTER TABLE app.expenses ADD CONSTRAINT uq_cost_expense_aircraft
@@ -80,10 +125,10 @@ CREATE TABLE app.cost_financial_records (
   CONSTRAINT uq_cost_record_scope UNIQUE (financial_record_id, financial_scope_id),
   CONSTRAINT fk_cost_record_scope FOREIGN KEY (financial_scope_id, aircraft_id)
     REFERENCES app.cost_financial_scopes(financial_scope_id, aircraft_id),
-  CONSTRAINT fk_cost_record_concept FOREIGN KEY (cost_concept_id, aircraft_id)
-    REFERENCES app.cost_concepts(cost_concept_id, aircraft_id),
-  CONSTRAINT fk_cost_record_type FOREIGN KEY (cost_event_type_id, aircraft_id)
-    REFERENCES app.cost_event_types(cost_event_type_id, aircraft_id),
+  CONSTRAINT fk_cost_record_concept FOREIGN KEY (cost_concept_id, aircraft_id, financial_scope_id)
+    REFERENCES app.cost_concepts(cost_concept_id, aircraft_id, financial_scope_id),
+  CONSTRAINT fk_cost_record_type FOREIGN KEY (cost_event_type_id, aircraft_id, financial_scope_id)
+    REFERENCES app.cost_event_types(cost_event_type_id, aircraft_id, financial_scope_id),
   CONSTRAINT fk_cost_record_event FOREIGN KEY (cost_event_id, aircraft_id)
     REFERENCES app.cost_events(cost_event_id, aircraft_id),
   CONSTRAINT fk_cost_record_expense FOREIGN KEY (expense_id, aircraft_id)
@@ -92,48 +137,6 @@ CREATE TABLE app.cost_financial_records (
     REFERENCES app.cost_settlements(cost_settlement_id, aircraft_id)
 );
 CREATE INDEX idx_cost_record_scope ON app.cost_financial_records (financial_scope_id);
-
--- A disclosure has one holder scope, one identified user and an enumerated set.
--- Different scopes require separate disclosures and independently valid issuers.
-CREATE TABLE app.cost_financial_disclosures (
-  financial_disclosure_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  financial_scope_id uuid NOT NULL REFERENCES app.cost_financial_scopes(financial_scope_id),
-  financial_authority_id uuid NOT NULL,
-  recipient_user_id uuid NOT NULL REFERENCES app.users(user_id),
-  issued_by_user_id uuid NOT NULL REFERENCES app.users(user_id),
-  issued_at timestamptz NOT NULL DEFAULT now(),
-  request_id uuid NOT NULL UNIQUE,
-  reason text NOT NULL CHECK (length(btrim(reason)) > 0),
-  CONSTRAINT uq_cost_disclosure_scope UNIQUE (financial_disclosure_id, financial_scope_id),
-  CONSTRAINT fk_cost_disclosure_authority FOREIGN KEY (financial_authority_id, financial_scope_id)
-    REFERENCES app.cost_financial_authorities(financial_authority_id, financial_scope_id)
-);
-CREATE INDEX idx_cost_disclosure_recipient
-  ON app.cost_financial_disclosures (recipient_user_id, financial_scope_id);
-
-CREATE TABLE app.cost_financial_disclosure_records (
-  financial_disclosure_id uuid NOT NULL,
-  financial_scope_id uuid NOT NULL,
-  financial_record_id uuid NOT NULL,
-  PRIMARY KEY (financial_disclosure_id, financial_record_id),
-  CONSTRAINT fk_cost_disclosure_record_header
-    FOREIGN KEY (financial_disclosure_id, financial_scope_id)
-    REFERENCES app.cost_financial_disclosures(financial_disclosure_id, financial_scope_id),
-  CONSTRAINT fk_cost_disclosure_record_scope
-    FOREIGN KEY (financial_record_id, financial_scope_id)
-    REFERENCES app.cost_financial_records(financial_record_id, financial_scope_id)
-);
-CREATE INDEX idx_cost_disclosure_record_lookup
-  ON app.cost_financial_disclosure_records (financial_record_id, financial_disclosure_id);
-
-CREATE TABLE app.cost_financial_disclosure_revocations (
-  financial_disclosure_id uuid PRIMARY KEY
-    REFERENCES app.cost_financial_disclosures(financial_disclosure_id),
-  revoked_by_user_id uuid NOT NULL REFERENCES app.users(user_id),
-  revoked_at timestamptz NOT NULL DEFAULT now(),
-  reason text NOT NULL CHECK (length(btrim(reason)) > 0),
-  request_id uuid NOT NULL UNIQUE
-);
 
 -- Optimistic revision of the entire open detail set, not a monetary counter.
 ALTER TABLE app.expenses ADD COLUMN details_version bigint NOT NULL DEFAULT 0;
@@ -238,17 +241,87 @@ CREATE TRIGGER trg_cost_payment_open_detail BEFORE INSERT OR UPDATE ON app.expen
 CREATE TRIGGER trg_cost_allocation_open_detail BEFORE INSERT OR UPDATE ON app.expense_allocations
   FOR EACH ROW EXECUTE FUNCTION app.guard_cost_open_detail();
 
--- Match migration 002's removal of broad UPDATE before column grants.
-REVOKE UPDATE ON app.expense_payments, app.expense_allocations FROM app_runtime;
+-- REVOKE on the group alone does NOT remove direct grants to the login or
+-- column grants. Normalize both named roles and PUBLIC, then verify EFFECTIVE
+-- privileges. Unexpected inheritance/ownership causes failure, never silent repair.
+DO $runtime_grants$
+DECLARE
+  relation_name text;
+  column_list text;
+BEGIN
+  FOREACH relation_name IN ARRAY ARRAY[
+    'app.cost_financial_scopes', 'app.cost_financial_authorities',
+    'app.cost_financial_authority_revocations', 'app.cost_financial_records',
+    'app.cost_expense_corrections', 'app.expense_payments', 'app.expense_allocations',
+    'app.cost_settlements', 'app.cost_settlement_expense_lines',
+    'app.cost_settlement_party_lines', 'app.cost_settlement_owner_lines',
+    'app.cost_settlement_utilization_lines', 'audit.audit_events'
+  ] LOOP
+    EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE %s FROM app_runtime, app_horas_runtime, PUBLIC',
+      relation_name::regclass);
+    SELECT string_agg(quote_ident(attname), ', ' ORDER BY attnum) INTO column_list
+      FROM pg_attribute WHERE attrelid = relation_name::regclass AND attnum > 0 AND NOT attisdropped;
+    EXECUTE format('REVOKE SELECT (%1$s), INSERT (%1$s), UPDATE (%1$s), REFERENCES (%1$s) ON TABLE %2$s FROM app_runtime, app_horas_runtime, PUBLIC',
+      column_list, relation_name::regclass);
+  END LOOP;
+END;
+$runtime_grants$;
+
+-- Explicit authority provisioning/revocation is reviewed and privileged, not
+-- an OWNER self-service action. Missing mandate/binding always denies access.
+GRANT SELECT ON app.cost_financial_scopes, app.cost_financial_authorities,
+  app.cost_financial_authority_revocations TO app_runtime;
+GRANT SELECT, INSERT ON app.cost_financial_records, app.cost_expense_corrections,
+  app.expense_payments, app.expense_allocations, app.cost_settlements,
+  app.cost_settlement_expense_lines, app.cost_settlement_party_lines,
+  app.cost_settlement_owner_lines, app.cost_settlement_utilization_lines,
+  audit.audit_events TO app_runtime;
 GRANT UPDATE (retired_correction_id, retired_at, retired_by_user_id)
   ON app.expense_payments, app.expense_allocations TO app_runtime;
 
--- Privileged, reviewed provisioning only until representation/bootstrap is agreed.
-GRANT SELECT ON app.cost_financial_scopes, app.cost_financial_authorities,
-  app.cost_financial_authority_revocations TO app_runtime;
-GRANT SELECT, INSERT ON app.cost_financial_records, app.cost_financial_disclosures,
-  app.cost_financial_disclosure_records, app.cost_financial_disclosure_revocations,
-  app.cost_expense_corrections TO app_runtime;
--- No UPDATE/DELETE on ACL history, bindings, correction batches or scopes.
--- Existing SELECT/INSERT on detail rows is retained; no DELETE is added.
--- Existing settlement/Audit SELECT/INSERT-only privileges are unchanged.
+-- In a future approved migration transaction, fail/rollback if direct, inherited
+-- or PUBLIC privileges still defeat the contract. No assertion is made about
+-- the existing live database until these checks are actually authorized/run.
+DO $runtime_effective_privileges$
+DECLARE
+  role_name text;
+  relation_name text;
+  column_row record;
+  mutable_detail boolean;
+  authority_table boolean;
+  expected_insert boolean;
+  expected_update boolean;
+BEGIN
+  FOREACH role_name IN ARRAY ARRAY['app_runtime', 'app_horas_runtime', 'public'] LOOP
+    FOREACH relation_name IN ARRAY ARRAY[
+      'app.cost_financial_scopes', 'app.cost_financial_authorities',
+      'app.cost_financial_authority_revocations', 'app.cost_financial_records',
+      'app.cost_expense_corrections', 'app.expense_payments', 'app.expense_allocations',
+      'app.cost_settlements', 'app.cost_settlement_expense_lines',
+      'app.cost_settlement_party_lines', 'app.cost_settlement_owner_lines',
+      'app.cost_settlement_utilization_lines', 'audit.audit_events'
+    ] LOOP
+      mutable_detail := relation_name IN ('app.expense_payments','app.expense_allocations');
+      authority_table := relation_name IN ('app.cost_financial_scopes',
+        'app.cost_financial_authorities','app.cost_financial_authority_revocations');
+      expected_insert := role_name <> 'public' AND NOT authority_table;
+      IF has_table_privilege(role_name::name, relation_name, 'SELECT') <> (role_name <> 'public')
+        OR has_table_privilege(role_name::name, relation_name, 'INSERT') <> expected_insert
+        OR has_table_privilege(role_name::name, relation_name, 'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') THEN
+        RAISE EXCEPTION 'COST_RUNTIME_TABLE_PRIVILEGES_UNSAFE: %, %', role_name, relation_name;
+      END IF;
+      FOR column_row IN SELECT attname FROM pg_attribute
+        WHERE attrelid = relation_name::regclass AND attnum > 0 AND NOT attisdropped LOOP
+        expected_update := role_name <> 'public' AND mutable_detail
+          AND column_row.attname IN ('retired_correction_id','retired_at','retired_by_user_id');
+        IF has_column_privilege(role_name::name, relation_name, column_row.attname, 'SELECT') <> (role_name <> 'public')
+          OR has_column_privilege(role_name::name, relation_name, column_row.attname, 'UPDATE') <> expected_update
+          OR has_column_privilege(role_name::name, relation_name, column_row.attname, 'INSERT') <> expected_insert
+          OR has_column_privilege(role_name::name, relation_name, column_row.attname, 'REFERENCES') THEN
+          RAISE EXCEPTION 'COST_RUNTIME_COLUMN_PRIVILEGES_UNSAFE: %, %, %', role_name, relation_name, column_row.attname;
+        END IF;
+      END LOOP;
+    END LOOP;
+  END LOOP;
+END;
+$runtime_effective_privileges$;

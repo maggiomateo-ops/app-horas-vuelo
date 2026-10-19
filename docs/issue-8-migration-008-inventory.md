@@ -1,77 +1,68 @@
-# Inventario exacto del borrador 008
+# Inventario exacto — 008 V1 simplificada
 
-Estado: propuesta no aprobada. El SQL asociado es la definición revisable; no se ejecutó. Todas las tablas pertenecen a `app`. No hay cambios en `audit` ni en migrations 001/002/006/007. Los `REFERENCES` sin acción explícita usan NO ACTION; no hay CASCADE. Las FK son inmediatas, no diferidas. Todos los PK UUID nuevos tienen `DEFAULT gen_random_uuid()`, salvo las tablas de revocaciones que usan el ID de su grant/mandato como PK/FK. Todos los timestamps nuevos de creación/emisión/corrección/revocación usan `timestamptz NOT NULL DEFAULT now()`, excepto `retired_at` nullable y sin default.
+Propuesta D-306, no aplicada. El [SQL](../db/migrations/008_costs_financial_scopes_and_open_corrections.sql) es la definición revisable. No contiene backfill DML. Se retiran del borrador las tres tablas de divulgación y authority_basis; el modelo no incorpora delegación. Se mantienen cinco tablas, una función invoker y dos triggers.
 
-## Tablas nuevas: ocho
+## Tablas nuevas
 
-| Tabla | Columnas (NN = NOT NULL; ? = nullable) | Claves, FK y CHECK |
+Todas en app. UUID PK con DEFAULT gen_random_uuid(), excepto la revocación cuyo PK es el mandato. NN=NOT NULL; timestamps de creación/aprobación/revocación/corrección son timestamptz NN DEFAULT now(). FKs inmediatas, NO ACTION, sin CASCADE.
+
+| Tabla | Columnas exactas | Claves/FK/CHECK |
 | --- | --- | --- |
-| `cost_financial_scopes` | `financial_scope_id uuid PK`, `aircraft_id uuid NN`, `holder_party_id uuid NN`, `label text NN`, `created_by_user_id uuid NN`, `created_at timestamptz NN` | FK aircraft→aircraft.aircraft_id; holder→parties.party_id; creator→users.user_id. CHECK label no vacío. `uq_cost_scope_aircraft(financial_scope_id,aircraft_id)` |
-| `cost_financial_authorities` | `financial_authority_id uuid PK`, `financial_scope_id uuid NN`, `user_id uuid NN`, `authority_basis text NN`, `approval_reference text NN`, `authorized_by_user_id uuid NN`, `authorized_at timestamptz NN` | FK scope→scopes; user y authorizer→users. CHECK basis ∈ PERSON_HOLDER/ORGANIZATION_REPRESENTATIVE/DELEGATED_ADMIN; reference no vacía. `uq_cost_authority_scope(financial_authority_id,financial_scope_id)` |
-| `cost_financial_authority_revocations` | `financial_authority_id uuid PK/FK`, `revoked_by_user_id uuid NN`, `revoked_at timestamptz NN`, `reason text NN` | FK authority→authorities; actor→users. CHECK reason no vacía. PK permite una revocación por mandato |
-| `cost_financial_records` | `financial_record_id uuid PK`, `financial_scope_id uuid NN`, `aircraft_id uuid NN`, `cost_concept_id uuid ?`, `cost_event_type_id uuid ?`, `cost_event_id uuid ?`, `expense_id uuid ?`, `cost_settlement_id uuid ?`, `registered_by_user_id uuid NN`, `registered_at timestamptz NN`, `provenance_reference text NN` | UNIQUE individual de cada una de las cinco raíces; CHECK provenance no vacía. `ck_cost_record_one_root`: exactamente una raíz no NULL. `uq_cost_record_scope(financial_record_id,financial_scope_id)`. FK registrador→users. Seis FK compuestas enumeradas abajo |
-| `cost_financial_disclosures` | `financial_disclosure_id uuid PK`, `financial_scope_id uuid NN`, `financial_authority_id uuid NN`, `recipient_user_id uuid NN`, `issued_by_user_id uuid NN`, `issued_at timestamptz NN`, `request_id uuid NN UNIQUE`, `reason text NN` | FK scope→scopes; recipient/issuer→users; CHECK reason no vacía. `uq_cost_disclosure_scope(financial_disclosure_id,financial_scope_id)`; `fk_cost_disclosure_authority(financial_authority_id,financial_scope_id)`→authorities par homónimo |
-| `cost_financial_disclosure_records` | `financial_disclosure_id uuid NN`, `financial_scope_id uuid NN`, `financial_record_id uuid NN` | PK(disclosure_id,record_id). `fk_cost_disclosure_record_header(disclosure_id,scope_id)`→disclosures par homónimo; `fk_cost_disclosure_record_scope(record_id,scope_id)`→records par homónimo (usar nombres completos del SQL) |
-| `cost_financial_disclosure_revocations` | `financial_disclosure_id uuid PK/FK`, `revoked_by_user_id uuid NN`, `revoked_at timestamptz NN`, `reason text NN`, `request_id uuid NN UNIQUE` | FK disclosure→disclosures; actor→users. CHECK reason no vacía. Una revocación por grant |
-| `cost_expense_corrections` | `cost_expense_correction_id uuid PK`, `expense_id uuid NN`, `base_details_version bigint NN`, `request_id uuid NN UNIQUE`, `actor_user_id uuid NN`, `corrected_at timestamptz NN`, `reason text NN` | FK expense→expenses; actor→users. CHECK base_version≥0 y reason no vacía. `uq_cost_correction_version(expense_id,base_details_version)`; `uq_cost_correction_expense(correction_id,expense_id)` |
+| cost_financial_scopes | financial_scope_id uuid PK; aircraft_id uuid NN; label text NN; approval_reference text NN; created_by_user_id uuid NN; created_at timestamptz NN | aircraft→aircraft; creator→users; label/approval no vacíos; uq_cost_scope_aircraft(scope_id,aircraft_id) |
+| cost_financial_authorities | financial_authority_id uuid PK; financial_scope_id uuid NN; user_id uuid NN; approval_reference text NN; authorized_by_user_id uuid NN; authorized_at timestamptz NN | scope→scopes; user/authorizer→users; approval no vacío; uq_cost_authority_scope(authority_id,scope_id) |
+| cost_financial_authority_revocations | financial_authority_id uuid PK/FK; revoked_by_user_id uuid NN; revoked_at timestamptz NN; reason text NN | authority→authorities; actor→users; reason no vacío |
+| cost_financial_records | financial_record_id uuid PK; financial_scope_id uuid NN; aircraft_id uuid NN; cost_concept_id/cost_event_type_id/cost_event_id/expense_id/cost_settlement_id uuid NULL cada uno; registered_by_user_id uuid NN; registered_at timestamptz NN; provenance_reference text NN | UNIQUE individual de las cinco raíces; ck_cost_record_one_root exactamente una raíz; uq_cost_record_scope(record_id,scope_id); registrador→users; provenance no vacío; seis FK compuestas abajo |
+| cost_expense_corrections | cost_expense_correction_id uuid PK; expense_id uuid NN; base_details_version bigint NN; request_id uuid NN UNIQUE; actor_user_id uuid NN; corrected_at timestamptz NN; reason text NN | expense→expenses; actor→users; base_version≥0 y reason no vacío; uq_cost_correction_version(expense_id,base_details_version); uq_cost_correction_expense(correction_id,expense_id) |
 
-FK de `cost_financial_records`:
+FK del registro: fk_cost_record_scope(scope_id,aircraft_id)→scopes; fk_cost_record_concept(concept_id,aircraft_id,scope_id)→cost_concepts; fk_cost_record_type(type_id,aircraft_id,scope_id)→cost_event_types; fk_cost_record_event(event_id,aircraft_id)→cost_events; fk_cost_record_expense(expense_id,aircraft_id)→expenses; fk_cost_record_settlement(settlement_id,aircraft_id)→cost_settlements. Los nombres completos de columnas del SQL se conservan, aquí se abrevian solo para lectura.
 
-| Nombre | Columnas origen | Destino |
-| --- | --- | --- |
-| `fk_cost_record_scope` | financial_scope_id, aircraft_id | cost_financial_scopes(financial_scope_id, aircraft_id) |
-| `fk_cost_record_concept` | cost_concept_id, aircraft_id | cost_concepts(cost_concept_id, aircraft_id) |
-| `fk_cost_record_type` | cost_event_type_id, aircraft_id | cost_event_types(cost_event_type_id, aircraft_id) |
-| `fk_cost_record_event` | cost_event_id, aircraft_id | cost_events(cost_event_id, aircraft_id) |
-| `fk_cost_record_expense` | expense_id, aircraft_id | expenses(expense_id, aircraft_id) |
-| `fk_cost_record_settlement` | cost_settlement_id, aircraft_id | cost_settlements(cost_settlement_id, aircraft_id) |
+## Cambios a tablas existentes
 
-## Tablas existentes: cambios exactos
-
-| Tabla | Cambio |
+| Tabla | Cambio exacto |
 | --- | --- |
-| cost_concepts | Añadir `uq_cost_concept_aircraft UNIQUE(cost_concept_id,aircraft_id)`; no columnas nuevas |
-| cost_event_types | Añadir `uq_cost_type_aircraft UNIQUE(cost_event_type_id,aircraft_id)`; `boundary_basis` intacto |
-| cost_events | Añadir `uq_cost_event_aircraft UNIQUE(cost_event_id,aircraft_id)`; lifecycle intacto |
-| expenses | Añadir `uq_cost_expense_aircraft UNIQUE(expense_id,aircraft_id)`; `details_version bigint NOT NULL DEFAULT 0`; `ck_cost_details_version CHECK(details_version>=0)` |
-| cost_settlements | Añadir `uq_cost_settlement_aircraft UNIQUE(cost_settlement_id,aircraft_id)` como clave referenciable. No columnas ni UPDATE de filas ni cambios en índices originales de 007 |
-| expense_payments | Añadir cuatro columnas: `created_correction_id uuid NULL`, `retired_correction_id uuid NULL`, `retired_at timestamptz NULL`, `retired_by_user_id uuid NULL REFERENCES users(user_id)`. Dos FK compuestas `(created_correction_id,expense_id)` y `(retired_correction_id,expense_id)`→cost_expense_corrections(cost_expense_correction_id,expense_id), nombres `fk_cost_payment_created_correction` y `fk_cost_payment_retired_correction`. `ck_cost_payment_retirement`: tres metadatos de retiro todos NULL o todos NOT NULL. Mantener amount>0 y datos originales |
-| expense_allocations | Las mismas cuatro columnas y FK, prefijo `fk_cost_allocation_...`; `ck_cost_allocation_retirement` equivalente. Quitar **solo** `uq_expense_allocation_party`; sustituir por UNIQUE parcial vigente. Mantener CHECK de porcentaje positivo/≤100, importe≥0 y método |
+| cost_concepts | financial_scope_id uuid NULL; fk_cost_concept_scope(financial_scope_id,aircraft_id)→scopes; uq_cost_concept_aircraft UNIQUE(cost_concept_id,aircraft_id,financial_scope_id) |
+| cost_event_types | financial_scope_id uuid NULL; fk_cost_type_scope(financial_scope_id,aircraft_id)→scopes; uq_cost_type_aircraft UNIQUE(cost_event_type_id,aircraft_id,financial_scope_id) |
+| cost_events | uq_cost_event_aircraft UNIQUE(cost_event_id,aircraft_id) |
+| expenses | uq_cost_expense_aircraft UNIQUE(expense_id,aircraft_id); details_version bigint NN DEFAULT 0; ck_cost_details_version CHECK≥0 |
+| cost_settlements | uq_cost_settlement_aircraft UNIQUE(cost_settlement_id,aircraft_id); sin UPDATE/DELETE de filas ni cambios a unicidad de 007 |
+| expense_payments | created_correction_id uuid NULL; retired_correction_id uuid NULL; retired_at timestamptz NULL; retired_by_user_id uuid NULL FK→users. fk_cost_payment_created_correction(created_correction_id,expense_id) y fk_cost_payment_retired_correction(retired_correction_id,expense_id)→corrections(correction_id,expense_id). ck_cost_payment_retirement: tres metadatos de retiro todos NULL o todos NOT NULL |
+| expense_allocations | Mismas cuatro columnas/FK/CHECK que pagos, con prefijo fk_cost_allocation_* y ck_cost_allocation_retirement. Se elimina únicamente uq_expense_allocation_party, sustituida por UNIQUE parcial |
 
-Tablas settlement de detalle, `parties`, `users`, memberships y ownership interests no cambian. El runtime conserva sus privilegios previos, salvo el retiro de UPDATE amplio sobre los dos detalles abiertos. No se introduce FK desde snapshots hacia batches: no se reescriben sus identidades ni fuentes.
+No se cambia el tipo ni los CHECK de amount/porcentajes/métodos de 006/007. No hay columnas nuevas ni DML en las cuatro tablas de líneas settlement, ni cambios de esquema en Audit, usuarios, parties, ownership o membresías.
 
 ## Índices
-
-Nuevos explícitos:
 
 | Nombre | Definición |
 | --- | --- |
 | idx_cost_authority_user_scope | authorities(user_id,financial_scope_id) |
 | idx_cost_record_scope | records(financial_scope_id) |
-| idx_cost_disclosure_recipient | disclosures(recipient_user_id,financial_scope_id) |
-| idx_cost_disclosure_record_lookup | disclosure_records(financial_record_id,financial_disclosure_id) |
-| uq_cost_active_allocation_party | UNIQUE expense_allocations(expense_id,party_id) WHERE retired_at IS NULL |
-| idx_cost_active_payment_expense | expense_payments(expense_id) WHERE retired_at IS NULL |
+| uq_active_cost_concept_name | Sustituye el índice de 006: UNIQUE concepts(financial_scope_id,lower(name)) WHERE status=ACTIVE AND scope_id IS NOT NULL |
+| uq_active_cost_event_type_name | Sustituye el índice de 006: UNIQUE types(financial_scope_id,lower(name)) WHERE status=ACTIVE AND scope_id IS NOT NULL |
+| uq_cost_active_allocation_party | UNIQUE allocations(expense_id,party_id) WHERE retired_at IS NULL |
+| idx_cost_active_payment_expense | payments(expense_id) WHERE retired_at IS NULL |
 
-Cada PK/UNIQUE descrito arriba también crea su índice B-tree implícito. Al eliminar `uq_expense_allocation_party` se elimina su índice de soporte; no se borran otros índices. No se tocan `uq_cost_original_event_currency`, `uq_cost_original_period_currency`, `uq_cost_settlement_utilization_evidence` ni los dos índices de nombres activos por aeronave.
+Cada PK/UNIQUE crea su índice de soporte. DROP de los dos índices de nombre previos para recrearlos; DROP de uq_expense_allocation_party elimina su índice de soporte. No se eliminan otros índices, ni se modifica 006/007. uq_cost_original_event_currency/uq_cost_original_period_currency/uq_cost_settlement_utilization_evidence siguen intactos.
 
-## Función, triggers y enforcement
+## Función y triggers
 
-`app.guard_cost_open_detail() RETURNS trigger`, PL/pgSQL, SECURITY INVOKER, `search_path=pg_catalog,app`. Sin SECURITY DEFINER. EXECUTE PUBLIC revocado y EXECUTE runtime otorgado. Dos triggers BEFORE INSERT OR UPDATE FOR EACH ROW: `trg_cost_payment_open_detail` y `trg_cost_allocation_open_detail`.
+app.guard_cost_open_detail() RETURNS trigger, LANGUAGE plpgsql SECURITY INVOKER, search_path=pg_catalog,app. EXECUTE PUBLIC revocado, EXECUTE al grupo app_runtime. trg_cost_payment_open_detail y trg_cost_allocation_open_detail: BEFORE INSERT OR UPDATE, FOR EACH ROW.
 
-El guard bloquea el gasto padre con FOR UPDATE; rechaza gasto no OPEN, evento no OPEN o gasto presente en cualquier settlement; exige batch al insertar; permite solo transición no retirado→retirado con valores originales iguales; compara base_version+1 con expenses.details_version y actor del retiro con batch. FK/CHECK complementan esa verificación. No hay trigger DELETE porque runtime no recibe DELETE; el procedimiento privilegiado tampoco debe eliminar historia.
+Guardas: gasto padre FOR UPDATE; OPEN, evento OPEN si existe, ausencia de fuente congelada incluso por período; batch obligatorio en INSERT; solo retiro unidireccional sin cambiar valores; base_version+1 igual a details_version; actor de retiro igual al batch. SQLSTATE 23514 ante violación. No calcula totales ni autoriza al usuario: responsabilidad del servicio. Audit se inserta en la misma transacción del servicio, no desde este trigger.
 
-**Servicio, no CHECK SQL:** autoridad vigente y su correspondencia con issuer; emisor autorizado para la party; usuario ACTIVE; membresía/OWNER para economía; targets no vacíos; mismo scope para nuevas relaciones entre raíces; detalle que pertenece al gasto; totales; política mixta; snapshot/proyecciones; idempotencia por contenido; Audit atómico. No se afirma aislamiento por usuario final a nivel RLS con el rol compartido.
+## Permisos y gates
 
-## Permisos exactos propuestos para app_runtime
+**13 tablas normalizadas:** las cinco nuevas, expense_payments, expense_allocations, cost_settlements, sus cuatro tablas de líneas y audit.audit_events. Primero REVOKE ALL de tabla para app_runtime, app_horas_runtime y PUBLIC; después REVOKE SELECT/INSERT/UPDATE/REFERENCES por todas las columnas de cada tabla. Sin CASCADE: grants dependientes inesperados bloquean la migración futura y requieren revisión, no ampliación silenciosa.
 
-| Objetos | Antes | Después |
-| --- | --- | --- |
-| cost_financial_scopes, cost_financial_authorities, cost_financial_authority_revocations | No existen | SELECT; solo aprovisionamiento/revocación privilegiada revisada |
-| cost_financial_records, cost_financial_disclosures, cost_financial_disclosure_records, cost_financial_disclosure_revocations, cost_expense_corrections | No existen | SELECT, INSERT; jamás UPDATE/DELETE |
-| expense_payments, expense_allocations | SELECT, INSERT, UPDATE tabla | REVOKE UPDATE tabla; GRANT UPDATE(retired_correction_id,retired_at,retired_by_user_id); SELECT/INSERT conservados; sin DELETE |
-| cost_concepts, cost_event_types, cost_events, expenses | SELECT, INSERT, UPDATE tabla | Sin cambios; el servicio debe proteger raíces y details_version |
-| cost_settlements y sus cuatro tablas de líneas | SELECT, INSERT | Sin cambios, sin UPDATE/DELETE |
-| audit.audit_events | SELECT, INSERT | Sin cambios |
+| Objetos | Derechos reotorgados exclusivamente a app_runtime |
+| --- | --- |
+| scopes, authorities, authority_revocations | SELECT |
+| records, corrections, payments, allocations, settlement header + cuatro líneas, Audit | SELECT, INSERT |
+| payments, allocations | Además UPDATE(retired_correction_id,retired_at,retired_by_user_id) únicamente |
 
-Ningún GRANT nuevo a PUBLIC. Como en 002, revocar el privilegio de tabla es indispensable: un GRANT por columnas por sí solo no limita el UPDATE amplio de 006. En preflight futuro revisar privilegios efectivos/herencia y default privileges, no solo este texto.
+app_horas_runtime debe heredar el grupo, no recibe grants directos nuevos. PUBLIC no recibe ninguno. No se otorgan DELETE/TRUNCATE/TRIGGER/REFERENCES ni grants con grant option. Las raíces concepts/types/events/expenses conservan sus permisos anteriores; el servicio impide cambios de ámbito y modificaciones congeladas.
+
+Antes del DDL, DO runtime_roles exige ambos roles existentes con flags seguros, login/grupo correctos, herencia utilizable, ausencia de roles extra (incluso MEMBER/SET ROLE), ownership/CREATE en app/audit y objetos canónicos. No altera membresías ni ownership.
+
+Después de los grants, DO runtime_effective_privileges verifica SELECT/INSERT esperados, ausencia de UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER de tabla y SELECT/UPDATE/INSERT/REFERENCES por columna para grupo, login y PUBLIC. Un RAISE provoca rollback en el runner transaccional futuro. No se basa en information_schema filtrado solo por grantee del grupo.
+
+Se añade scripts/lib/costs-v1-privilege-contract.mjs para leer evidencia mediante tres SELECT inyectados y validar el contrato offline. No conecta ni ejecuta al importarlo. El SQL propuesto y los privilegios del entorno real requieren preflight posterior; no son equivalentes a haber corregido ya el servidor.
