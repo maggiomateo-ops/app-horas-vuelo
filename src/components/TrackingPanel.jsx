@@ -393,11 +393,10 @@ function RemindersPanel({ aircraftId, aircraftRegistration, onUnauthorized }) {
     <section className="tracking-panel">
       <header className="tracking-panel-header">
         <div>
-          <p className="dashboard-eyebrow">Seguimiento del propietario</p>
-          <h1>Recordatorios · {aircraftRegistration}</h1>
+          <p className="dashboard-eyebrow">Seguimiento</p>
+          <h1>Recordatorios</h1>
           <p>
-            Alertas personales por fecha o tiempo en servicio. Son recordatorios del
-            propietario y no reemplazan la evaluación de un profesional habilitado.
+            {aircraftRegistration} · No reemplaza la evaluación de un profesional habilitado.
           </p>
         </div>
         {canManage ? (
@@ -673,8 +672,8 @@ export default function TrackingPanel(props) {
   return (
     <section className="tracking-workspace">
       <nav className="tracking-section-nav" aria-label="Secciones de seguimiento">
-        <button type="button" className={activeSection === "reminders" ? "is-active" : ""} onClick={() => setActiveSection("reminders")}>Recordatorios</button>
-        <button type="button" className={activeSection === "squawks" ? "is-active" : ""} onClick={() => setActiveSection("squawks")}>Novedades</button>
+        <button type="button" aria-current={activeSection === "reminders" ? "page" : undefined} className={activeSection === "reminders" ? "is-active" : ""} onClick={() => setActiveSection("reminders")}>Recordatorios</button>
+        <button type="button" aria-current={activeSection === "squawks" ? "page" : undefined} className={activeSection === "squawks" ? "is-active" : ""} onClick={() => setActiveSection("squawks")}>Novedades</button>
       </nav>
       {activeSection === "reminders" ? <RemindersPanel {...props} /> : <SquawksPanel {...props} />}
     </section>

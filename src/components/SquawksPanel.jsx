@@ -196,10 +196,10 @@ export default function SquawksPanel({ aircraftId, aircraftRegistration, onUnaut
   return (
     <section className="squawk-panel">
       <header className="tracking-panel-header">
-        <div><p className="dashboard-eyebrow">Seguimiento operativo</p><h1>Novedades · {aircraftRegistration}</h1><p>Observaciones reportadas por la tripulación y el propietario, con su actividad y estado.</p></div>
+        <div><p className="dashboard-eyebrow">Seguimiento operativo</p><h1>Novedades</h1><p>{aircraftRegistration} · Actividad y estado</p></div>
         {canCreate ? <button type="button" className="form-action-button is-primary" onClick={() => { setEditing(null); setShowForm(true); }}>Reportar novedad</button> : null}
       </header>
-      {!canWrite ? <p className="tracking-form-note">La gestión de novedades está temporalmente deshabilitada. La consulta permanece disponible.</p> : null}
+      {!canWrite ? <p className="tracking-form-note">Solo lectura. La gestión de novedades está deshabilitada.</p> : null}
       <div className="squawk-summary">
         {[["OPEN", "Abiertas", summary.open], ["SENT_TO_WORKSHOP", "En taller", summary.workshop], ["RESOLVED", "Resueltas", summary.resolved], ["ALL", "Total", summary.total]].map(([value, label, count]) => (
           <button key={value} type="button" className={status === value ? "is-active" : ""} onClick={() => setStatus(value)}><strong>{count}</strong><span>{label}</span></button>

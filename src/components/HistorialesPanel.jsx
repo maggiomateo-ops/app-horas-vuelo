@@ -13,7 +13,7 @@ import { getLatestRecords } from "../utils/historiales";
 const HISTORIAL_TABS = [
   { id: "aeronave", label: "Aeronave", responseKey: "historialAeronave" },
   { id: "motor", label: "Motor", responseKey: "historialMotor" },
-  { id: "helice", label: "Helice", responseKey: "historialHelice" },
+  { id: "helice", label: "Hélice", responseKey: "historialHelice" },
 ];
 
 const HISTORIAL_LIMIT_OPTIONS = [10, 20, 30, 40, 50, 100];
@@ -218,6 +218,10 @@ function HistorialesPanel({
   return (
     <section className="history-panel">
       <div className="history-screen">
+        <header className="dashboard-section-header">
+          <h2 className="dashboard-title">Historiales</h2>
+          <p className="dashboard-meta">{aircraftRegistration}</p>
+        </header>
         <div className="history-topbar">
           <div className="history-subtabs" role="tablist" aria-label="Tipos de historial">
             {HISTORIAL_TABS.map((tab) => (
@@ -253,7 +257,7 @@ function HistorialesPanel({
                 onClick={handlePrintCurrent}
                 disabled={loading || !!error}
               >
-                Print
+                Imprimir
               </button>
               <button
                 type="button"
@@ -261,7 +265,7 @@ function HistorialesPanel({
                 onClick={handlePrintAll}
                 disabled={loading || !!error}
               >
-                Print All
+                Imprimir todos
               </button>
             </div>
 

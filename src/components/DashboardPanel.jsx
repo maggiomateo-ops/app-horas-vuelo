@@ -186,8 +186,7 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
 
       {!metrics.meta.hasComputacionHoras ? (
         <p className="dashboard-inline-note">
-          Aun no llegaron filas de Computacion Horas desde la API. Los KPIs de propietario y
-          aceite pueden verse incompletos.
+          Datos insuficientes para completar los indicadores de uso y aceite.
         </p>
       ) : null}
 
@@ -199,7 +198,7 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
       <section className="dashboard-section dashboard-section-totals">
         <div className="dashboard-section-heading">
           <h3>Totales generales</h3>
-          <p>Tomados del ultimo valor disponible de cada historial tecnico.</p>
+
         </div>
         <div className="dashboard-grid dashboard-grid-four">
           {totalCards.map((card) => (
@@ -210,8 +209,8 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
 
       <section className="dashboard-section dashboard-section-inspections">
         <div className="dashboard-section-heading">
-          <h3>Proximas inspecciones</h3>
-          <p>Estados dinamicos segun los umbrales configurados en Settings.</p>
+          <h3>Próximas inspecciones</h3>
+
         </div>
         <div className="dashboard-grid dashboard-grid-three">
           {metrics.inspections.map((inspection) => (
@@ -230,13 +229,13 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
       <section className="dashboard-section dashboard-section-owner">
         <div className="dashboard-section-heading">
           <h3>Uso por propietario</h3>
-          <p>Sumatoria de Tiempo en Servicio y porcentaje sobre el total segun cada corte.</p>
+
         </div>
         <div className="settings-stack">
           {ownerUsageSections.map((section) => (
             <div key={section.id} className="settings-subsection">
               <h3>{section.title}</h3>
-              <p className="dashboard-meta">{section.detail}</p>
+              <details className="dashboard-calculation-help"><summary>Período de cálculo</summary><p className="dashboard-meta">{section.detail}</p>
               {section.startFound && section.startFlightId ? (
                 <p className="dashboard-meta">
                   Vuelo de corte resuelto: ID {section.startFlightId}
@@ -245,6 +244,7 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
               ) : (
                 <p className="dashboard-inline-note">{section.fallbackMessage}</p>
               )}
+              </details>
               <DataTable
                 columns={[
                   { key: "owner", label: "Propietario" },
@@ -263,7 +263,7 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
       <section className="dashboard-section dashboard-section-oil">
         <div className="dashboard-section-heading">
           <h3>Consumo de aceite</h3>
-          <p>Ventana movil de {metrics.oil.windowMonths} meses usando Tiempo en Servicio.</p>
+          <p>Últimos {metrics.oil.windowMonths} meses · Tiempo en servicio</p>
         </div>
         <div className="dashboard-grid dashboard-grid-three">
           <KpiCard

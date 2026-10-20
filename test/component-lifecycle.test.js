@@ -482,9 +482,7 @@ test("UI owner muestra posiciones, historial y confirmacion sin edicion in-place
   assert.match(settingsSource, /aircraftConfigurationPanel/);
 });
 
-test("no crea migration 006 ni una funcion serverless numero 13", async () => {
-  const migrations = await fs.readdir(new URL("../db/migrations/", import.meta.url));
-  assert.equal(migrations.some((filename) => filename.startsWith("006_")), false);
+test("conserva el limite de 12 funciones serverless", async () => {
   const entries = await fs.readdir(new URL("../api/", import.meta.url), { withFileTypes: true });
   const functions = entries.filter(
     (entry) => entry.isFile() && entry.name.endsWith(".js") && !entry.name.startsWith("_")

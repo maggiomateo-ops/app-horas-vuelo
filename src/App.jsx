@@ -1256,10 +1256,10 @@ function App() {
 
       <header className="app-header">
         <div className="app-brand">
-          <span className="app-brand-mark" aria-hidden="true">✦</span>
+          <span className="app-brand-mark" aria-hidden="true">✈</span>
           <div>
-            <p className="app-brand-eyebrow">Flight operations</p>
-            <p className="app-brand-title">App Horas de Vuelo</p>
+            <p className="app-brand-eyebrow">Operaciones de vuelo</p>
+            <p className="app-brand-title">Horas MHZ</p>
           </div>
         </div>
 
