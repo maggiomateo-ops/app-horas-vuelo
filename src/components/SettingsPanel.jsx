@@ -79,7 +79,7 @@ function OwnerOptionsField({ value, onChange, disabled = false }) {
 
   return (
     <label className="settings-field">
-      <span>Opciones de propietario del formulario (separadas por coma)</span>
+      <span>Opciones de propietario del formulario</span>
       <input
         type="text"
         value={inputValue}
@@ -107,13 +107,15 @@ function SettingsPanel({
   ownershipConfigured,
 }) {
   const [requestedPage, setRequestedPage] = useState("app");
+  const [sectionPages, setSectionPages] = useState({ form: "operation", dashboards: "preferences" });
   const [visitedPages, setVisitedPages] = useState(() => new Set(["app"]));
   const canViewUsers = isGlobalAdmin || String(aircraftRole || "").trim().toUpperCase() === "OWNER";
   const navigation = getSettingsNavigation({ canViewUsers, canViewComponents: Boolean(aircraftConfigurationPanel) });
   const page = resolveSettingsPage(navigation, requestedPage);
   const activeTab = page.id;
   const selectPage = (id) => {
-    const next = resolveSettingsPage(navigation, id);
+    const next = resolveSettingsPage(navigation, sectionPages[id] || id);
+    setSectionPages((current) => ({ ...current, [next.sectionId]: next.id }));
     setRequestedPage(next.id);
     setVisitedPages((current) => new Set([...current, next.id]));
   };
@@ -260,13 +262,21 @@ function SettingsPanel({
       </div>
 
       <div className="settings-layout">
-      <SettingsNavigation items={navigation} activePage={activeTab} onSelect={selectPage} />
+      <SettingsNavigation items={navigation} activeSection={page.sectionId} onSelect={selectPage} />
       <div className="settings-category-content">
       <nav className="settings-breadcrumbs" aria-label="Ubicación en Settings">
         <ol>{page.path.map((part, index) => <li key={part.id} aria-current={index === page.path.length - 1 ? "page" : undefined}>{part.label}</li>)}</ol>
       </nav>
       <div hidden={activeTab === "users" || activeTab === "components"}>
-          <h3 className="settings-category-title">{page.label}</h3>
+          <h3 className="settings-category-title">{page.title}</h3>
+          {page.tabs.length > 0 ? (
+            <nav className="settings-content-tabs" aria-label={`Opciones de ${page.title}`}>
+              {page.tabs.map((tab) => (
+                <button key={tab.id} type="button" aria-current={activeTab === tab.id ? "page" : undefined}
+                  onClick={() => selectPage(tab.id)}>{tab.label}</button>
+              ))}
+            </nav>
+          ) : null}
 
           {loading ? <p className="dashboard-status">Cargando settings...</p> : null}
           {error ? <p className="dashboard-status dashboard-status-error">{error}</p> : null}
@@ -314,17 +324,6 @@ function SettingsPanel({
           </div>
         ) : null}
 
-        {activeTab === "form" ? (
-          <div className="settings-grid">
-            <OwnerOptionsField
-              value={draft.operationalConfig.ownerOptions}
-              onChange={handleChange(["operationalConfig", "ownerOptions"])}
-              disabled={!canEditPath("operationalConfig.ownerOptions")}
-            />
-            <p className="dashboard-inline-note">Opciones del formulario de vuelo. No modifican la propiedad legal.</p>
-          </div>
-        ) : null}
-
         {activeTab === "operation" ? (
           <div className="settings-grid" aria-label={QUICK_FLIGHT_LABELS.es.label}>
             <SettingsField
@@ -363,6 +362,17 @@ function SettingsPanel({
               }
               disabled={!canEditPath("operationalConfig.defaultServiceTimeGarmin")}
             />
+          </div>
+        ) : null}
+
+        {page.sectionId === "form" ? (
+          <div className="settings-grid settings-form-options">
+            <OwnerOptionsField
+              value={draft.operationalConfig.ownerOptions}
+              onChange={handleChange(["operationalConfig", "ownerOptions"])}
+              disabled={!canEditPath("operationalConfig.ownerOptions")}
+            />
+            <p className="dashboard-inline-note">Separá las opciones con comas. No modifica la propiedad legal.</p>
           </div>
         ) : null}
 

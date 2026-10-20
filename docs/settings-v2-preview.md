@@ -1,5 +1,7 @@
 # Settings V2 y diagnóstico Preview — 2026-10-20
 
+La navegación expandible de esta entrega fue sustituida por la [revisión de navegación fija](settings-navigation-flat.md). El diagnóstico de infraestructura que sigue es el registrado en la entrega original.
+
 ## Base y alcance
 
 Continuación `codex/settings-v2-preview` desde `2797956c6824c3ce2c8f7f75547459766163f85a`, verificado localmente y en GitHub. No se incorporan commits pendientes de Costs.

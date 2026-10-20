@@ -2,24 +2,25 @@
   grid-template-columns: 236px minmax(0, 1fr);
   gap: clamp(24px, 4vw, 48px);
 }
-.settings-tree { position: sticky; top: 20px; font-size: 13px; }
-.settings-tree ul { list-style: none; padding: 0; margin: 0; }
-.settings-tree > ul > li { margin-bottom: 14px; }
-.settings-tree li ul { margin-left: 12px; padding-left: 10px; border-left: 1px solid var(--app-border); }
-.settings-tree li ul[hidden] { display: none; }
-.settings-tree button { width: 100%; min-height: 40px; padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--app-text-muted); text-align: left; font: inherit; line-height: 1.35; }
-.settings-tree button:hover { background: var(--app-surface-muted); color: var(--app-text); }
-.settings-tree button[aria-current="page"] { background: var(--app-primary-soft); color: var(--app-primary-strong); font-weight: 650; }
-.settings-nav-group { display: flex; align-items: center; gap: 4px; }
-.settings-nav-group > span { flex: 1; padding: 10px 12px; font-size: 12px; font-weight: 700; color: var(--app-text); }
-.settings-nav-group > button:first-child { flex: 1; }
-.settings-nav-group .settings-nav-disclosure { flex: 0 0 36px; width: 36px; min-height: 36px; text-align: center; font-size: 18px; }
+.settings-sidebar { position: sticky; top: 20px; font-size: 13px; }
+.settings-sidebar ul { list-style: none; padding: 0; margin: 0; }
+.settings-sidebar > ul > li { margin-bottom: 22px; }
+.settings-sidebar li ul { display: grid; gap: 4px; }
+.settings-sidebar button { width: 100%; min-height: 42px; padding: 10px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--app-text-muted); text-align: left; font: inherit; line-height: 1.35; }
+.settings-sidebar button:hover { background: var(--app-surface-muted); color: var(--app-text); }
+.settings-sidebar button[aria-current="page"] { background: var(--app-primary-soft); color: var(--app-primary-strong); font-weight: 650; }
+.settings-sidebar-heading { margin: 0 0 8px; padding-inline: 12px; font-size: 12px; font-weight: 700; color: var(--app-text); }
+.settings-content-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 24px; }
+.settings-content-tabs button { padding: 9px 13px; min-height: 42px; border: 0; border-radius: 9px; background: var(--app-surface-muted); color: var(--app-text-muted); font-size: 13px; }
+.settings-content-tabs button:hover { color: var(--app-text); }
+.settings-content-tabs button[aria-current="page"] { background: var(--app-primary-soft); color: var(--app-primary-strong); font-weight: 650; }
 .settings-breadcrumbs { margin-bottom: 20px; color: var(--app-text-soft); font-size: 12px; }
 .settings-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: 5px 8px; list-style: none; margin: 0; padding: 0; }
 .settings-breadcrumbs li + li::before { content: '/'; margin-right: 8px; color: var(--app-text-soft); }
 .settings-breadcrumbs li[aria-current="page"] { color: var(--app-text-muted); }
 .settings-category-content { padding-top: 6px; }
 .settings-category-content > [hidden] { display: none; }
+.settings-form-options { margin-top: 28px; }
 .settings-panel .settings-form { max-width: 800px; margin-top: 24px; }
 .settings-field-help { color: var(--app-text-soft); font-weight: 400; font-size: 12px; line-height: 1.5; }
 .settings-ownership-status { padding-block: 8px; font-size: 14px; color: var(--app-text); }
@@ -32,14 +33,13 @@
 }
 @media (max-width: 760px) {
   .settings-panel .settings-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
-  .settings-tree { display: none; }
+  .settings-sidebar { display: none; }
   .settings-panel .settings-mobile-category { display: grid; gap: 6px; font-size: 12px; }
   .settings-mobile-category select { min-height: 46px; }
   .settings-breadcrumbs { margin-bottom: 14px; font-size: 11px; }
   .settings-category-content { padding-top: 0; }
   .settings-panel .dashboard-section-header { margin-bottom: 20px; }
-  .settings-nav-disclosure { min-height: 44px; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .settings-tree button { transition: background-color 140ms ease, color 140ms ease; }
+  .settings-sidebar button, .settings-content-tabs button { transition: background-color 140ms ease, color 140ms ease; }
 }

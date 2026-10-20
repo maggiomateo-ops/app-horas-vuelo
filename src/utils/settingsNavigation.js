@@ -7,13 +7,13 @@ export const QUICK_FLIGHT_LABELS = Object.freeze({
 export const SETTINGS_NAVIGATION = [
   { id: 'aircraft', label: 'Aeronave', children: [
     { id: 'app', label: 'Datos generales' },
-    { id: 'ownership', label: 'Propiedad' },
+    { id: 'ownership', label: 'Propiedad', title: 'Propiedad de la aeronave' },
   ] },
   { id: 'configuration', label: 'Configuración', children: [
-    { id: 'form', label: 'Formulario', page: true, children: [
+    { id: 'form', label: 'Formulario', tabs: [
       { id: 'operation', label: QUICK_FLIGHT_LABELS.es.label },
     ] },
-    { id: 'dashboards', label: 'Dashboards', children: [
+    { id: 'dashboards', label: 'Dashboards', tabs: [
       { id: 'preferences', label: 'Preferencias' },
       { id: 'inspections', label: 'Inspecciones' },
       { id: 'oil', label: 'Aceite' },
@@ -30,26 +30,34 @@ export function getSettingsNavigation({ canViewUsers, canViewComponents }) {
     (item.id !== 'users' || canViewUsers) && (item.id !== 'components' || canViewComponents));
 }
 
-export function getSettingsPages(items, ancestors = []) {
-  return items.flatMap((item) => {
-    const path = [...ancestors, { id: item.id, label: item.label }];
-    return [
-      ...(!item.children || item.page ? [{ id: item.id, label: item.label, path }] : []),
-      ...(item.children ? getSettingsPages(item.children, path) : []),
-    ];
-  });
+export function getSettingsSections(items) {
+  return items.flatMap((item) => (item.children || [item]).map((section) => ({
+    ...section,
+    path: item.children ? [{ id: item.id, label: item.label }, { id: section.id, label: section.label }] : [{ id: item.id, label: item.label }],
+  })));
+}
+
+export function getSettingsPages(items) {
+  return getSettingsSections(items).flatMap((section) => (section.tabs || [section]).map((tab) => ({
+    id: tab.id,
+    label: tab.label,
+    sectionId: section.id,
+    title: section.title || section.label,
+    path: section.path,
+    tabs: section.tabs || [],
+  })));
 }
 
 export function resolveSettingsPage(items, requestedId) {
   const pages = getSettingsPages(items);
-  return pages.find((page) => page.id === requestedId) || pages[0];
+  return pages.find((page) => page.id === requestedId)
+    || pages.find((page) => page.sectionId === requestedId)
+    || pages[0];
 }
-
 
 const PAGE_FIELD_PREFIXES = {
   app: ['appConfig.aircraftName', 'appConfig.aircraftRegistration'],
-  form: ['operationalConfig.ownerOptions'],
-  operation: ['operationalConfig.default'],
+  operation: ['operationalConfig.default', 'operationalConfig.ownerOptions'],
   preferences: ['appConfig.oilUnitLabel', 'appConfig.currency'],
   inspections: ['kpiParams.annualInspection.', 'kpiParams.inspection50.', 'kpiParams.inspection100.'],
   oil: ['kpiParams.oil.'],
