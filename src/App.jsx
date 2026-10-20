@@ -8,6 +8,7 @@ import FlightPilotSelector from "./components/FlightPilotSelector";
 import HistorialesPanel from "./components/HistorialesPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import TrackingPanel from "./components/TrackingPanel";
+import { QUICK_FLIGHT_LABELS } from "./utils/settingsNavigation";
 import {
   createFirstAircraftAndRefresh,
   configureAircraftTopologyAndRefresh,
@@ -1499,9 +1500,9 @@ function App() {
                   onClick={rellenadoRapido}
                   disabled={loading}
                   title="Completa solamente los campos vacíos con la fecha, ruta y tiempos configurados. No guarda automáticamente."
-                  aria-label="Quick Flight: completar campos vacíos sin guardar"
+                  aria-label={QUICK_FLIGHT_LABELS.es.action}
                 >
-                  Quick Flight
+                  {QUICK_FLIGHT_LABELS.es.label}
                 </button>
                 <button
                   type="button"
@@ -1620,6 +1621,8 @@ function App() {
         />
       ) : (
         <SettingsPanel
+          key={selectedAircraft.aircraft_id}
+          ownershipConfigured={selectedAircraft.ownershipConfigured}
           aircraftId={selectedAircraft.aircraft_id}
           aircraftRegistration={selectedAircraft.matricula}
           aircraftRole={selectedAircraftRole}

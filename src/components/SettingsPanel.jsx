@@ -1,20 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import SettingsUsersPanel from "./SettingsUsersPanel";
-
-const SETTINGS_CATEGORIES = [
-  { id: "aircraft", label: "Aeronave", tabs: [{ id: "app", label: "Identificación" }] },
-  { id: "configuration", label: "Configuración", tabs: [
-    { id: "operation", label: "Carga de vuelos" },
-    { id: "inspections", label: "Inspecciones" },
-    { id: "oil", label: "Aceite" },
-    { id: "thresholds", label: "Umbrales" },
-    { id: "annual", label: "Utilización" },
-  ] },
-  { id: "components", label: "Componentes / Propulsión", tabs: [] },
-  { id: "ownership", label: "Propiedad", tabs: [{ id: "ownership", label: "Propietarios de registro" }] },
-  { id: "users", label: "Usuarios / Acceso", tabs: [] },
-  { id: "preferences", label: "Preferencias", tabs: [{ id: "preferences", label: "Unidades y moneda" }] },
-];
+import SettingsNavigation from "./SettingsNavigation";
+import "./SettingsPanel.css";
+import { getSettingsNavigation, resolveSettingsPage, isSettingsPageEditable, QUICK_FLIGHT_LABELS } from "../utils/settingsNavigation";
 
 const SETTINGS_WRITE_MODE = Object.freeze({
   LEGACY_FULL: "LEGACY_FULL",
@@ -48,18 +36,23 @@ function SettingsField({
   step,
   placeholder,
   disabled = false,
+  help,
 }) {
+  const helpId = useId();
   return (
     <label className="settings-field">
       <span>{label}</span>
       <input
         type={type}
+        aria-label={label}
+        aria-describedby={help ? helpId : undefined}
         value={value}
         step={step}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
       />
+      {help ? <small id={helpId} className="settings-field-help">{help}</small> : null}
     </label>
   );
 }
@@ -86,7 +79,7 @@ function OwnerOptionsField({ value, onChange, disabled = false }) {
 
   return (
     <label className="settings-field">
-      <span>Propietarios (separados por coma)</span>
+      <span>Opciones de propietario del formulario (separadas por coma)</span>
       <input
         type="text"
         value={inputValue}
@@ -111,13 +104,18 @@ function SettingsPanel({
   onSave,
   onUnauthorized,
   aircraftConfigurationPanel = null,
+  ownershipConfigured,
 }) {
-  const [activeSection, setActiveSection] = useState("aircraft");
-  const [activeTab, setActiveTab] = useState("app");
-  const category = SETTINGS_CATEGORIES.find((item) => item.id === activeSection);
-  const selectCategory = (item) => {
-    setActiveSection(item.id);
-    setActiveTab(item.tabs[0]?.id || "");
+  const [requestedPage, setRequestedPage] = useState("app");
+  const [visitedPages, setVisitedPages] = useState(() => new Set(["app"]));
+  const canViewUsers = isGlobalAdmin || String(aircraftRole || "").trim().toUpperCase() === "OWNER";
+  const navigation = getSettingsNavigation({ canViewUsers, canViewComponents: Boolean(aircraftConfigurationPanel) });
+  const page = resolveSettingsPage(navigation, requestedPage);
+  const activeTab = page.id;
+  const selectPage = (id) => {
+    const next = resolveSettingsPage(navigation, id);
+    setRequestedPage(next.id);
+    setVisitedPages((current) => new Set([...current, next.id]));
   };
   const [draft, setDraft] = useState(settings);
   const [saveMessage, setSaveMessage] = useState("");
@@ -200,14 +198,10 @@ function SettingsPanel({
     effectiveCanEdit &&
     (writeCapability.mode === SETTINGS_WRITE_MODE.LEGACY_FULL || editablePathSet.has(path));
 
-  const canViewUsers = isGlobalAdmin || isOwner;
-
-  useEffect(() => {
-    if (!canViewUsers && activeSection === "users") {
-      setActiveSection("aircraft");
-      setActiveTab("app");
-    }
-  }, [activeSection, canViewUsers]);
+  const pageHasEditableFields = isSettingsPageEditable(activeTab, {
+    ...writeCapability,
+    enabled: effectiveCanEdit,
+  });
 
   const handleChange = (path) => (value) => {
     setSaveMessage("");
@@ -237,90 +231,52 @@ function SettingsPanel({
 
   const editStatusText = (() => {
     if (!canEdit) {
-      return "Acceso de solo lectura.";
+      return "Solo lectura.";
     }
     if (writeCapabilityLoading) {
-      return "Validando permisos de escritura...";
+      return "Verificando acceso...";
     }
     if (!writeCapability.enabled) {
-      return "Escritura deshabilitada en este entorno.";
+      return "Solo lectura.";
     }
     if (canonicalSubsetMode && !isOwner) {
-      return "La edicion Postgres TEST requiere rol OWNER.";
+      return "Solo lectura.";
     }
     if (canonicalSubsetMode) {
-      return "Edicion parcial habilitada para Settings canonicos.";
+      return "Edición limitada.";
     }
-    return "Editable para OWNER y ADMIN.";
+    return "Edición habilitada.";
   })();
 
   return (
     <section className="settings-panel">
       <div className="dashboard-section-header">
         <div>
-          <p className="dashboard-eyebrow">
-            {activeSection === "aircraft" ? "Ajustes de la aeronave" : "Ajustes"}
-          </p>
           <h2 className="dashboard-title">Settings</h2>
         </div>
         <p className="dashboard-meta">
-          {activeSection !== "users" ? editStatusText : "Usuarios y accesos de la aeronave."}
+          {activeTab !== "users" && activeTab !== "components" ? editStatusText : aircraftRegistration}
         </p>
       </div>
 
       <div className="settings-layout">
-      <label className="settings-mobile-category">
-        <span>Categoría</span>
-        <select value={activeSection} onChange={(event) => selectCategory(SETTINGS_CATEGORIES.find((item) => item.id === event.target.value))}>
-          {SETTINGS_CATEGORIES.filter((item) => item.id !== "users" || canViewUsers).map((item) => (
-            <option key={item.id} value={item.id}>{item.label}</option>
-          ))}
-        </select>
-      </label>
-      <nav className="settings-section-tabs" aria-label="Categorías de Settings">
-        {SETTINGS_CATEGORIES.filter((item) => item.id !== "users" || canViewUsers).map((item) => (
-          <button key={item.id} type="button"
-            aria-current={activeSection === item.id ? "page" : undefined}
-            className={`settings-section-tab ${activeSection === item.id ? "is-active" : ""}`}
-            onClick={() => selectCategory(item)}>{item.label}</button>
-        ))}
-      </nav>
+      <SettingsNavigation items={navigation} activePage={activeTab} onSelect={selectPage} />
       <div className="settings-category-content">
-      {activeSection !== "users" ? (
-        <>
-          <h3 className="settings-category-title">{category.label}</h3>
+      <nav className="settings-breadcrumbs" aria-label="Ubicación en Settings">
+        <ol>{page.path.map((part, index) => <li key={part.id} aria-current={index === page.path.length - 1 ? "page" : undefined}>{part.label}</li>)}</ol>
+      </nav>
+      <div hidden={activeTab === "users" || activeTab === "components"}>
+          <h3 className="settings-category-title">{page.label}</h3>
 
           {loading ? <p className="dashboard-status">Cargando settings...</p> : null}
           {error ? <p className="dashboard-status dashboard-status-error">{error}</p> : null}
-          {canonicalSubsetMode && effectiveCanEdit ? (
-            <p className="dashboard-inline-note">
-              Podés editar unidad de aceite, próxima inspección anual y umbrales amarillos.
-            </p>
-          ) : null}
-
-          {activeSection === "components" ? aircraftConfigurationPanel || <p className="dashboard-status">No hay configuración de componentes disponible para esta aeronave.</p> : null}
-
-          <div className="settings-tabs" role="tablist" aria-label="Tabs de settings" hidden={category.tabs.length < 2}>
-            {category.tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                className={`settings-tab ${activeTab === tab.id ? "is-active" : ""}`}
-                aria-selected={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
           <form className="settings-form" onSubmit={handleSubmit}>
         <fieldset className="settings-readonly-fieldset" disabled={!effectiveCanEdit}>
         {activeTab === "app" ? (
           <div className="settings-grid">
             <SettingsField
-              label="Nombre visible"
+              label="Nombre en la app"
+              help="Nombre utilizado para identificar esta aeronave en la aplicación"
               value={draft.appConfig.aircraftName}
               onChange={handleChange(["appConfig", "aircraftName"])}
               disabled={!canEditPath("appConfig.aircraftName")}
@@ -352,6 +308,13 @@ function SettingsPanel({
         ) : null}
 
         {activeTab === "ownership" ? (
+          <div className="settings-ownership-status" role="status">
+            <strong>{ownershipConfigured === true ? "Titularidad legal configurada" : ownershipConfigured === false ? "Titularidad legal pendiente" : "Titularidad legal no disponible en esta fuente"}</strong>
+            <p>La titularidad legal es independiente de las opciones del formulario y del rol de acceso.</p>
+          </div>
+        ) : null}
+
+        {activeTab === "form" ? (
           <div className="settings-grid">
             <OwnerOptionsField
               value={draft.operationalConfig.ownerOptions}
@@ -363,7 +326,7 @@ function SettingsPanel({
         ) : null}
 
         {activeTab === "operation" ? (
-          <div className="settings-grid">
+          <div className="settings-grid" aria-label={QUICK_FLIGHT_LABELS.es.label}>
             <SettingsField
               label="Origen predeterminado"
               value={draft.operationalConfig.defaultOrigin}
@@ -579,7 +542,7 @@ function SettingsPanel({
 
         </fieldset>
 
-        {effectiveCanEdit && category.tabs.length > 0 ? (
+        {pageHasEditableFields ? (
           <div className="settings-actions">
             <button type="submit" className="settings-save-button" disabled={loading || isSaving}>
               {isSaving ? "Guardando..." : "Guardar cambios"}
@@ -591,8 +554,9 @@ function SettingsPanel({
           </div>
         ) : null}
           </form>
-        </>
-      ) : (
+      </div>
+      {aircraftConfigurationPanel && visitedPages.has("components") ? <div hidden={activeTab !== "components"}>{aircraftConfigurationPanel}</div> : null}
+      {canViewUsers && visitedPages.has("users") ? <div hidden={activeTab !== "users"}>
         <SettingsUsersPanel
           aircraftId={aircraftId}
           aircraftRegistration={aircraftRegistration}
@@ -600,7 +564,7 @@ function SettingsPanel({
           currentUserId={currentUserId}
           onUnauthorized={onUnauthorized}
         />
-      )}
+      </div> : null}
       </div>
       </div>
     </section>
