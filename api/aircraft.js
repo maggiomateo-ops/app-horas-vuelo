@@ -26,6 +26,7 @@ const AIRCRAFT_RESPONSE_FIELDS = [
   "modelo",
   "rol",
   "ownershipConfigured",
+  "ownershipInterests",
   "flightWritesReady",
   "configurationConfigured",
   "configuration",

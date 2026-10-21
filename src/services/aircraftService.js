@@ -379,8 +379,9 @@ const AIRCRAFT_PROPULSION_TYPES = new Set([
 ]);
 
 function configurationCount(value) {
+  if (value == null || String(value).trim() === "") return null;
   const normalized = Number(value);
-  return Number.isInteger(normalized) && normalized >= 0 ? normalized : null;
+  return Number.isInteger(normalized) && normalized >= 0 && normalized <= 32767 ? normalized : null;
 }
 
 export function validateAircraftConfiguration(values) {

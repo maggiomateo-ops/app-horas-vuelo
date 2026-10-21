@@ -1,3 +1,4 @@
+import { componentKey, syncComponents } from '../utils/aircraftConfigurationDraft';
 import { useRef, useState } from "react";
 
 import {
@@ -15,34 +16,6 @@ const PROPULSION_OPTIONS = [
   ["ELECTRIC", "Eléctrica"],
   ["OTHER", "Otra"],
 ];
-
-function componentKey(componentType, positionIndex) {
-  return `${componentType}:${positionIndex}`;
-}
-
-function syncComponents(current, engineCount, propellerCount) {
-  const byKey = new Map(current.map((component) => [
-    componentKey(component.componentType, component.positionIndex),
-    component,
-  ]));
-  return [
-    ...Array.from({ length: engineCount }, (_, index) => ({
-      componentType: "ENGINE",
-      positionIndex: index + 1,
-    })),
-    ...Array.from({ length: propellerCount }, (_, index) => ({
-      componentType: "PROPELLER",
-      positionIndex: index + 1,
-    })),
-  ].map((identity) => ({
-    manufacturer: "",
-    model: "",
-    serialNumber: "",
-    openingTisHours: "",
-    ...identity,
-    ...(byKey.get(componentKey(identity.componentType, identity.positionIndex)) || {}),
-  }));
-}
 
 function ComponentFields({ component, disabled, onChange }) {
   const label = component.componentType === "ENGINE" ? "Motor" : "Hélice";
@@ -121,8 +94,8 @@ export default function AircraftConfigurationOnboarding({
   const updateCount = (field, rawValue) => {
     setValues((current) => {
       const next = { ...current, [field]: rawValue };
-      const engineCount = Math.max(0, Number.parseInt(next.engineCount, 10) || 0);
-      const propellerCount = Math.max(0, Number.parseInt(next.propellerCount, 10) || 0);
+      const engineCount = Math.max(0, Math.min(32767, Number.parseInt(next.engineCount, 10) || 0));
+      const propellerCount = Math.max(0, Math.min(32767, Number.parseInt(next.propellerCount, 10) || 0));
       return {
         ...next,
         components: adoptingExisting
@@ -181,7 +154,7 @@ export default function AircraftConfigurationOnboarding({
           <p className="dashboard-eyebrow">Configuración aeronáutica</p>
           <h2 id="configuration-summary-title">Topología configurada</h2>
           <p>
-            {configuration?.propulsionType || "—"} · {configuration?.engineCount ?? 0} motor(es) · {configuration?.propellerCount ?? 0} hélice(s)
+            {configuration?.propulsionType || "—"} · {configuration?.engineCount ?? "—"} motor(es) · {configuration?.propellerCount ?? "—"} hélice(s)
           </p>
         </header>
         <div className="aircraft-installation-summary">
@@ -274,6 +247,7 @@ export default function AircraftConfigurationOnboarding({
               <input
                 type="number"
                 min="0"
+                max="32767"
                 step="1"
                 value={values.engineCount}
                 onChange={(event) => updateCount("engineCount", event.target.value)}
@@ -286,6 +260,7 @@ export default function AircraftConfigurationOnboarding({
               <input
                 type="number"
                 min="0"
+                max="32767"
                 step="1"
                 value={values.propellerCount}
                 onChange={(event) => updateCount("propellerCount", event.target.value)}
@@ -332,7 +307,7 @@ export default function AircraftConfigurationOnboarding({
               <p>
                 {adoptingExisting
                   ? `Se vincularán los componentes existentes a una topología de ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s). No se modificarán sus datos físicos.`
-                  : `Se crearán ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s). Esta etapa no permite reemplazar ni remover componentes posteriormente.`}
+                  : `Se crearán ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s). Los cambios posteriores se gestionan en Componentes / Propulsión.`}
               </p>
               <button
                 type="button"

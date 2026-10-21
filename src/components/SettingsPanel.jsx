@@ -1,3 +1,4 @@
+import AircraftOwnershipSummary from './AircraftOwnershipSummary';
 import { useEffect, useId, useMemo, useState } from "react";
 import SettingsUsersPanel from "./SettingsUsersPanel";
 import SettingsNavigation from "./SettingsNavigation";
@@ -105,6 +106,7 @@ function SettingsPanel({
   onUnauthorized,
   aircraftConfigurationPanel = null,
   ownershipConfigured,
+  ownershipInterests,
 }) {
   const [requestedPage, setRequestedPage] = useState("app");
   const [sectionPages, setSectionPages] = useState({ form: "operation", dashboards: "preferences" });
@@ -318,10 +320,7 @@ function SettingsPanel({
         ) : null}
 
         {activeTab === "ownership" ? (
-          <div className="settings-ownership-status" role="status">
-            <strong>{ownershipConfigured === true ? "Titularidad legal configurada" : ownershipConfigured === false ? "Titularidad legal pendiente" : "Titularidad legal no disponible en esta fuente"}</strong>
-            <p>La titularidad legal es independiente de las opciones del formulario y del rol de acceso.</p>
-          </div>
+          <AircraftOwnershipSummary configured={ownershipConfigured} interests={ownershipInterests} />
         ) : null}
 
         {activeTab === "operation" ? (

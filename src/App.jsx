@@ -1653,6 +1653,7 @@ function App() {
         <SettingsPanel
           key={selectedAircraft.aircraft_id}
           ownershipConfigured={selectedAircraft.ownershipConfigured}
+          ownershipInterests={selectedAircraftRole === "OWNER" ? selectedAircraft.ownershipInterests : undefined}
           aircraftId={selectedAircraft.aircraft_id}
           aircraftRegistration={selectedAircraft.matricula}
           aircraftRole={selectedAircraftRole}
@@ -1664,9 +1665,10 @@ function App() {
           error={settingsError}
           onSave={handleSaveSettings}
           onUnauthorized={handleUnauthorized}
-          aircraftConfigurationPanel={hasCanonicalConfigurationState && configurationConfigured ? (
+          aircraftConfigurationPanel={hasCanonicalConfigurationState ? (configurationConfigured || canConfigureAircraft ? (
             <AircraftConfigurationOnboarding
-              configurationConfigured
+              key={selectedAircraft.aircraft_id}
+              configurationConfigured={configurationConfigured}
               configuration={selectedAircraft.configuration}
               componentInstallations={selectedAircraft.componentInstallations}
               componentInstallationHistory={selectedAircraft.componentInstallationHistory}
@@ -1675,7 +1677,12 @@ function App() {
               onComplete={handleConfigureAircraft}
               onUnauthorized={handleUnauthorized}
             />
-          ) : null}
+          ) : (
+            <section className="read-only-access" role="status">
+              <h3>Configuración pendiente</h3>
+              <p>La configuración técnica no está habilitada para esta sesión.</p>
+            </section>
+          )) : null}
         />
       )}
       </div>

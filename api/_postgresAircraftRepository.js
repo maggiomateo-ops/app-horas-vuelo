@@ -140,8 +140,10 @@ const CURRENT_CONFIGURATION_JOIN = `
 `;
 
 export function mapPostgresAircraftRow(row) {
+  const { ownershipInterests, ...aircraft } = row || {};
   return {
-    ...row,
+    ...aircraft,
+    ...(row?.rol === "OWNER" && Array.isArray(ownershipInterests) ? { ownershipInterests } : {}),
     configurationConfigured: row?.configurationConfigured === true,
     configuration: row?.configurationConfigured === true
       ? row.configuration ?? null
@@ -165,6 +167,7 @@ export async function getAircraftsForUserFromPostgres(userId) {
         aircraft.manufacturer AS fabricante,
         aircraft.model AS modelo,
         membership.role AS rol,
+        legal_ownership.interests AS "ownershipInterests",
         current_ownership.ownership_count > 0 AS "ownershipConfigured",
         current_ownership.active_ownership_total = 100.00 AS "flightWritesReady",
         aircraft_configuration.aircraft_id IS NOT NULL AS "configurationConfigured",
@@ -184,6 +187,22 @@ export async function getAircraftsForUserFromPostgres(userId) {
       ${CURRENT_REGISTRATION_JOIN}
       ${CURRENT_OWNERSHIP_JOIN}
       ${CURRENT_CONFIGURATION_JOIN}
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(jsonb_agg(jsonb_build_object(
+          'ownershipInterestId', interest.ownership_interest_id,
+          'partyId', party.party_id,
+          'partyType', party.party_type,
+          'name', CASE WHEN party.party_type = 'PERSON' THEN person.full_name ELSE party.organization_name END,
+          'share', interest.ownership_share,
+          'effectiveFrom', interest.effective_from_at,
+          'effectiveTo', interest.effective_to_at,
+          'partyStatus', party.status
+        ) ORDER BY interest.effective_from_at DESC, interest.ownership_interest_id), '[]'::jsonb) AS interests
+        FROM app.aircraft_ownership_interests interest
+        JOIN app.parties party ON party.party_id = interest.party_id
+        LEFT JOIN app.persons person ON person.person_id = party.person_id
+        WHERE interest.aircraft_id = aircraft.aircraft_id AND membership.role = 'OWNER'
+      ) legal_ownership ON membership.role = 'OWNER'
       WHERE membership.user_id = $1::uuid
         AND membership.status = 'ACTIVE'
         AND aircraft.status = 'ACTIVE'

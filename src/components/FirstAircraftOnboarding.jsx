@@ -1,3 +1,4 @@
+import CountrySelector from './CountrySelector';
 import { useRef, useState } from "react";
 
 import {
@@ -184,22 +185,8 @@ export default function FirstAircraftOnboarding({
                 />
               </label>
 
-              <label className={errors.countryCode ? "has-error" : ""}>
-                <span>País (ISO-2)</span>
-                <input
-                  type="text"
-                  maxLength={2}
-                  value={values.countryCode}
-                  onChange={(event) =>
-                    updateField(
-                      "countryCode",
-                      event.target.value.replace(/[^a-z]/gi, "").toUpperCase()
-                    )
-                  }
-                  disabled={submitting || !canCreate}
-                />
-                {errors.countryCode ? <small>{errors.countryCode}</small> : null}
-              </label>
+              <CountrySelector value={values.countryCode} onChange={(code) => updateField("countryCode", code)}
+                disabled={submitting || !canCreate} error={errors.countryCode} />
 
               <label className={errors.openingTisHours ? "has-error" : ""}>
                 <span>TIS inicial</span>

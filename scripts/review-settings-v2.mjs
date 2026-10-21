@@ -23,8 +23,8 @@ const canonical = params.get('canonical') === '1';
 const role = params.get('role') || 'OWNER';
 const onboardingAvailable = ['enabled','disabled'].includes(params.get('onboarding'));
 const onboardingEnabled = params.get('onboarding') === 'enabled';
-const aircraft = (id,matricula) => ({aircraft_id:id,matricula,modelo:'PA-28 Demo',rol:role,ownershipConfigured:true,configurationConfigured:true,flightWritesReady:true,trackingAvailable:true,configuration:{propulsionType:'PISTON',engineCount:1,propellerCount:1},componentInstallations:[],componentInstallationHistory:[]});
-let reviewAircrafts = params.get('count') === '0' ? [] : [aircraft('fixture-one','LV-DEMO'), ...(params.get('count') === '1' ? [] : [aircraft('fixture-two','LV-OTHER')])];
+const aircraft = (id,matricula) => ({aircraft_id:id,matricula,modelo:'PA-28 Demo',rol:role,ownershipConfigured:true,configurationConfigured:true,flightWritesReady:true,trackingAvailable:true,configuration:{propulsionType:'PISTON',engineCount:1,propellerCount:1},componentInstallations:[],componentInstallationHistory:[], ...(params.get('setup') === '1' ? {configurationSetupAvailable:true,configurationConfigured:id==='fixture-one',ownershipConfigured:id==='fixture-one',flightWritesReady:id==='fixture-one',configuration:id==='fixture-one'?{propulsionType:'PISTON',engineCount:1,propellerCount:1}:null,ownershipInterests:role==='OWNER'?(id==='fixture-one'?[{ownershipInterestId:'fictional-legal',partyId:'fictional-party',partyType:'PERSON',name:'Titular ficticio',share:100,effectiveFrom:'2026-01-01T00:00:00Z',effectiveTo:null,partyStatus:'ACTIVE'}]:[]):undefined}: {})});
+let reviewAircrafts = params.get('count') === '0' ? [] : [aircraft('fixture-one','LV-DEMO'), ...(params.get('count') === '1' ? [] : [aircraft('fixture-two',params.get('setup')==='1'?'LV-SIM':'LV-OTHER')])];
 window.fetch = async (url,options={}) => {
   if(url === '/api/aircraft' && options.method === 'POST') {
     if(!onboardingEnabled) return Response.json({ok:false,code:'POSTGRES_ONBOARDING_WRITES_NOT_ENABLED'},{status:503});

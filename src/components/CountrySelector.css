@@ -1,0 +1,12 @@
+.country-picker { position: relative; display: grid; align-content: start; gap: 8px; min-width: 0; }
+.country-picker > label { font-size: 13px; font-weight: 600; }
+.country-picker-control { position: relative; }
+.country-picker-control input { width: 100%; padding-right: 40px; }
+.country-picker-control button { position: absolute; right: 5px; top: 2px; bottom: 2px; width: 34px; border: 0; background: transparent; color: var(--app-text-muted); font-size: 22px; cursor: pointer; }
+.country-picker-list { position: absolute; z-index: 20; top: 100%; margin: 4px 0 0; padding: 4px; list-style: none; max-height: 220px; overflow-y: auto; width: 100%; background: var(--app-surface); color: var(--app-text); border: 1px solid var(--app-border); border-radius: 10px; box-shadow: var(--app-shadow); }
+.country-picker-list li { padding: 10px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.country-picker-list li.is-active, .country-picker-list li:hover { background: var(--app-surface-muted, #eaf3fa); }
+.country-picker-list small { color: var(--app-text-muted); }
+.country-picker input:focus-visible { outline: 2px solid var(--app-accent, #247ab0); outline-offset: 2px; }
+.country-picker.has-error input { border-color: var(--app-danger, #b42318); }
+.country-picker.has-error > small { color: var(--app-danger, #b42318); }

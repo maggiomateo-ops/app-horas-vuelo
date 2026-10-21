@@ -43,3 +43,11 @@
 @media (prefers-reduced-motion: no-preference) {
   .settings-sidebar button, .settings-content-tabs button { transition: background-color 140ms ease, color 140ms ease; }
 }
+.ownership-interest-list { display: grid; gap: 14px; margin-top: 20px; }
+.ownership-interest { padding: 18px; border-radius: 12px; background: var(--app-surface-muted); }
+.ownership-interest header, .ownership-interest-meta { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ownership-interest header { font-size: 16px; }
+.ownership-interest-meta { font-size: 12px; color: var(--app-text-muted); margin-top: 8px; }
+.ownership-interest dl { display: flex; gap: 24px; flex-wrap: wrap; margin: 16px 0 0; font-size: 13px; }
+.ownership-interest dt { color: var(--app-text-muted); }
+.ownership-interest dd { margin: 4px 0 0; }
