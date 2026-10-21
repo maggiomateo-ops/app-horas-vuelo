@@ -1,16 +1,19 @@
+import { getAircraftOnboardingCapability } from "./_aircraftOnboardingCapability.js";
 import { getSession } from "./_auth.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { resolveSettingsWriteCapability, resolvePostgresFlightWriteCapability } from "./_settingsWriteCapability.js";
 
 // Deployment marker: refresh Preview environment after Flight write gate activation.
-function resolveParityCapabilities() {
+function resolveParityCapabilities(session) {
   const identitySource = resolveDataSource("GOOGLE_USER_RESOLUTION_SOURCE");
+  const aircraftSource = resolveDataSource("AIRCRAFT_DATA_SOURCE");
   const settingsSource = resolveDataSource("SETTINGS_DATA_SOURCE");
   const flightSource = resolveDataSource("FLIGHT_DATA_SOURCE");
   const settingsWriteCapability = resolveSettingsWriteCapability(settingsSource);
   const flightWriteCapability = resolvePostgresFlightWriteCapability(flightSource);
 
   return {
+    ...getAircraftOnboardingCapability({ session, identitySource, aircraftSource }),
     legacyUserManagementEnabled: identitySource !== DATA_SOURCE.POSTGRES,
     settingsWritesEnabled: settingsWriteCapability.enabled,
     settingsWriteMode: settingsWriteCapability.mode,
@@ -27,7 +30,7 @@ export default async function handler(req, res) {
 
   let capabilities;
   try {
-    capabilities = resolveParityCapabilities();
+    capabilities = resolveParityCapabilities(session);
   } catch {
     return res.status(500).json({ ok: false, authenticated: false, error: "Las fuentes de datos o capacidades de escritura no estan configuradas correctamente." });
   }

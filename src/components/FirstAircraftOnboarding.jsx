@@ -42,8 +42,12 @@ export default function FirstAircraftOnboarding({
   onCreate,
   onLogout,
   onUnauthorized,
+  onCancel,
+  canCreate = false,
+  embedded = false,
+  titleId,
 }) {
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(embedded);
   const [values, setValues] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
@@ -65,6 +69,8 @@ export default function FirstAircraftOnboarding({
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (!canCreate) return;
 
     if (!submitGuardRef.current.tryStart()) {
       return;
@@ -96,11 +102,11 @@ export default function FirstAircraftOnboarding({
     }
   };
 
-  return (
-    <main className="app-shell app-auth-shell">
+  const content = (
       <section className="first-aircraft-card">
-        <p className="login-eyebrow">Primeros pasos</p>
-        <h1 className="login-title">App Horas de Vuelo</h1>
+        <p className="login-eyebrow">{embedded ? "Nueva aeronave" : "Primeros pasos"}</p>
+        <h1 id={titleId} className="login-title">{embedded ? "Agregar aeronave" : "App Horas de Vuelo"}</h1>
+        {!canCreate ? <p className="first-aircraft-copy" role="status">El alta de aeronaves no está habilitada en este entorno.</p> : null}
 
         {!showForm ? (
           <>
@@ -111,7 +117,8 @@ export default function FirstAircraftOnboarding({
               <button
                 type="button"
                 className="login-button"
-                onClick={() => setShowForm(true)}
+                onClick={() => { if (canCreate) setShowForm(true); }}
+                disabled={!canCreate}
               >
                 Agregar aeronave
               </button>
@@ -140,7 +147,7 @@ export default function FirstAircraftOnboarding({
                     updateField("registration", event.target.value.toUpperCase())
                   }
                   autoComplete="off"
-                  disabled={submitting}
+                  disabled={submitting || !canCreate}
                 />
                 {errors.registration ? <small>{errors.registration}</small> : null}
               </label>
@@ -151,7 +158,7 @@ export default function FirstAircraftOnboarding({
                   type="text"
                   value={values.manufacturer}
                   onChange={(event) => updateField("manufacturer", event.target.value)}
-                  disabled={submitting}
+                  disabled={submitting || !canCreate}
                 />
                 {errors.manufacturer ? <small>{errors.manufacturer}</small> : null}
               </label>
@@ -162,7 +169,7 @@ export default function FirstAircraftOnboarding({
                   type="text"
                   value={values.model}
                   onChange={(event) => updateField("model", event.target.value)}
-                  disabled={submitting}
+                  disabled={submitting || !canCreate}
                 />
                 {errors.model ? <small>{errors.model}</small> : null}
               </label>
@@ -173,7 +180,7 @@ export default function FirstAircraftOnboarding({
                   type="text"
                   value={values.serialNumber}
                   onChange={(event) => updateField("serialNumber", event.target.value)}
-                  disabled={submitting}
+                  disabled={submitting || !canCreate}
                 />
               </label>
 
@@ -189,7 +196,7 @@ export default function FirstAircraftOnboarding({
                       event.target.value.replace(/[^a-z]/gi, "").toUpperCase()
                     )
                   }
-                  disabled={submitting}
+                  disabled={submitting || !canCreate}
                 />
                 {errors.countryCode ? <small>{errors.countryCode}</small> : null}
               </label>
@@ -204,7 +211,7 @@ export default function FirstAircraftOnboarding({
                   value={values.openingTisHours}
                   onChange={(event) => updateField("openingTisHours", event.target.value)}
                   placeholder="Desconocido"
-                  disabled={submitting}
+                  disabled={submitting || !canCreate}
                 />
                 {errors.openingTisHours ? (
                   <small>{errors.openingTisHours}</small>
@@ -223,7 +230,7 @@ export default function FirstAircraftOnboarding({
                   onChange={(event) =>
                     updateField("baselineEffectiveDate", event.target.value)
                   }
-                  disabled={submitting}
+                  disabled={submitting || !canCreate}
                 />
                 {errors.baselineEffectiveDate ? (
                   <small>{errors.baselineEffectiveDate}</small>
@@ -238,25 +245,26 @@ export default function FirstAircraftOnboarding({
             ) : null}
 
             <div className="first-aircraft-actions first-aircraft-form-actions">
-              <button type="submit" className="login-button" disabled={submitting}>
+              <button type="submit" className="login-button" disabled={submitting || !canCreate}>
                 {submitting ? "Creando aeronave..." : "Crear aeronave"}
               </button>
               <button
                 type="button"
                 className="first-aircraft-secondary-button"
                 onClick={() => {
+                  if (embedded) { onCancel(); return; }
                   setShowForm(false);
                   setErrors({});
                   setSubmitError("");
                 }}
                 disabled={submitting}
               >
-                Volver
+                {embedded ? "Cancelar" : "Volver"}
               </button>
             </div>
           </form>
         )}
       </section>
-    </main>
   );
+  return embedded ? content : <main className="app-shell app-auth-shell">{content}</main>;
 }

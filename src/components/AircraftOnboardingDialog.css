@@ -1,0 +1,14 @@
+.aircraft-create-dialog { width: min(680px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid var(--app-border); border-radius: 20px; background: var(--app-surface); color: var(--app-text); box-shadow: var(--app-shadow); overflow-y: auto; overscroll-behavior: contain; }
+.aircraft-create-dialog::backdrop { background: rgb(5 15 28 / 65%); }
+.aircraft-create-dialog .first-aircraft-card { width: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; box-shadow: none; padding: clamp(22px, 4vw, 36px); }
+.aircraft-create-dialog .login-title { font-size: 27px; text-align: left; margin: 6px 0 14px; }
+.aircraft-create-dialog .login-eyebrow, .aircraft-create-dialog .first-aircraft-copy { text-align: left; }
+.aircraft-create-dialog .first-aircraft-form { margin-top: 18px; }
+.aircraft-create-dialog .first-aircraft-actions { justify-content: flex-start; }
+.aircraft-create-dialog .first-aircraft-grid input { min-height: 44px; }
+@media (max-width: 560px) {
+  .aircraft-create-dialog .first-aircraft-grid { grid-template-columns: minmax(0, 1fr); }
+  .aircraft-create-dialog .first-aircraft-actions { flex-direction: column; }
+  .aircraft-create-dialog .first-aircraft-actions button { width: 100%; min-height: 44px; }
+}
+:root[data-theme="dark"] .aircraft-create-dialog .login-button { color: #0b1422; }

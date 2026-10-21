@@ -22,7 +22,7 @@ const VALID_INPUT = Object.freeze({
   baselineEffectiveDate: "2026-09-27",
 });
 
-function createMockRepository({ duplicate = false } = {}) {
+function createMockRepository({ duplicate = false, userStatus = "ACTIVE" } = {}) {
   const queries = [];
   let transactionOptions;
   const client = {
@@ -30,7 +30,7 @@ function createMockRepository({ duplicate = false } = {}) {
       queries.push({ text, params });
 
       if (text.includes("FROM app.users")) {
-        return { rows: [{ user_id: USER_ID, status: "ACTIVE" }] };
+        return { rows: [{ user_id: USER_ID, status: userStatus }] };
       }
 
       if (text.includes("registration_duplicate")) {
@@ -236,4 +236,10 @@ test("POST /api/aircraft queda bloqueado por defecto sin abrir Postgres", async 
       process.env.POSTGRES_ONBOARDING_WRITES_ENABLED = previousOnboardingFlag;
     }
   }
+});
+
+test("un usuario inactivo no puede crear otra aeronave ni generar Audit de alta", async () => {
+  const mock = createMockRepository({userStatus:"DISABLED"});
+  await assert.rejects(mock.createAircraft({userId:USER_ID,input:VALID_INPUT}), {code:"USER_NOT_AUTHORIZED",statusCode:403});
+  assert.equal(mock.queries.some((query)=>query.text.includes("INSERT INTO")), false);
 });

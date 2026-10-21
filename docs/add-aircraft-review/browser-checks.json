@@ -1,0 +1,53 @@
+{
+  "environment": "Local isolated fixture; no real API writes",
+  "checks": [
+    {
+      "name": "Cancelar conserva LV-DEMO, origen y observaciones",
+      "passed": true
+    },
+    {
+      "name": "Alta simulada selecciona LV-SIM y conserva LV-DEMO en selector",
+      "passed": true
+    },
+    {
+      "name": "Nueva aeronave no recibe el borrador de Registro anterior",
+      "passed": true
+    },
+    {
+      "name": "Cancelación conserva Settings y su borrador",
+      "passed": true
+    },
+    {
+      "name": "Cancelación devuelve foco al acceso Agregar aeronave",
+      "passed": true
+    },
+    {
+      "name": "Error de alta conserva datos del formulario para corregir o cancelar",
+      "passed": true
+    },
+    {
+      "name": "Fallo de creación no agrega ni selecciona una aeronave",
+      "passed": true
+    },
+    {
+      "name": "Usuario sin aeronaves conserva el onboarding inicial y TIS vacío",
+      "passed": true
+    },
+    {
+      "name": "Gate cerrado deshabilita la acción de agregar",
+      "passed": true
+    },
+    {
+      "name": "Alta inicial simulada selecciona su nueva aeronave",
+      "passed": true
+    },
+    {
+      "name": "Formulario vacío bloquea alta y mantiene validaciones",
+      "passed": true
+    },
+    {
+      "name": "Acción dentro del selector; cancelación conserva LV-DEMO, borrador SADF y foco en selector",
+      "passed": true
+    }
+  ]
+}

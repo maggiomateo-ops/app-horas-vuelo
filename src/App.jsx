@@ -4,13 +4,16 @@ import DashboardPanel from "./components/DashboardPanel";
 import AircraftOwnershipOnboarding from "./components/AircraftOwnershipOnboarding";
 import AircraftConfigurationOnboarding from "./components/AircraftConfigurationOnboarding";
 import FirstAircraftOnboarding from "./components/FirstAircraftOnboarding";
+import AircraftOnboardingDialog from "./components/AircraftOnboardingDialog";
 import FlightPilotSelector from "./components/FlightPilotSelector";
 import HistorialesPanel from "./components/HistorialesPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import TrackingPanel from "./components/TrackingPanel";
 import { QUICK_FLIGHT_LABELS } from "./utils/settingsNavigation";
 import {
-  createFirstAircraftAndRefresh,
+  createAircraftForSession,
+  canCreateAircraft,
+  ADD_AIRCRAFT_OPTION,
   configureAircraftTopologyAndRefresh,
   configureOwnershipAndRefresh,
   fetchAircrafts,
@@ -292,6 +295,7 @@ function App() {
   const [selectedAircraftId, setSelectedAircraftId] = useState("");
   const [aircraftsLoading, setAircraftsLoading] = useState(true);
   const [aircraftsError, setAircraftsError] = useState("");
+  const [showAircraftOnboarding, setShowAircraftOnboarding] = useState(false);
   const [aircraftOnboardingById, setAircraftOnboardingById] = useState({});
   const [ownershipConfirmation, setOwnershipConfirmation] = useState("");
   const [configurationJustCompleted, setConfigurationJustCompleted] = useState(false);
@@ -1018,6 +1022,7 @@ function App() {
         credentials: "include",
       });
     } finally {
+      setShowAircraftOnboarding(false);
       setCurrentUser(null);
       setAuthStatus(AUTH_STATUS.unauthenticated);
       setLoginError("");
@@ -1032,6 +1037,7 @@ function App() {
   };
 
   const handleUnauthorized = useCallback(() => {
+    setShowAircraftOnboarding(false);
     setAuthStatus(AUTH_STATUS.unauthenticated);
   }, []);
 
@@ -1063,6 +1069,12 @@ function App() {
   const handleAircraftChange = (event) => {
     const nextAircraftId = event.target.value;
 
+    if (nextAircraftId === ADD_AIRCRAFT_OPTION) {
+      if (canCreateAircraft(currentUser) && !loading) setShowAircraftOnboarding(true);
+      return;
+    }
+    if (!aircrafts.some((aircraft) => aircraft.aircraft_id === nextAircraftId)) return;
+
     if (nextAircraftId === selectedAircraftId) {
       return;
     }
@@ -1077,8 +1089,15 @@ function App() {
   };
 
   const handleCreateFirstAircraft = async (values) => {
-    const result = await createFirstAircraftAndRefresh(values);
+    const result = await createAircraftForSession(values, { user: currentUser, currentAircrafts: aircrafts });
 
+    limpiarFormulario();
+    setUltimoInput(null);
+    setSettings(DEFAULT_SETTINGS);
+    setSettingsError("");
+    setOwnershipConfirmation("");
+    setConfigurationJustCompleted(false);
+    setShowAircraftOnboarding(false);
     setAircrafts(result.aircrafts);
     setSelectedAircraftId(result.selectedAircraftId);
     setAircraftsError("");
@@ -1237,6 +1256,7 @@ function App() {
   if (!selectedAircraft) {
     return (
       <FirstAircraftOnboarding
+        canCreate={canCreateAircraft(currentUser)}
         onCreate={handleCreateFirstAircraft}
         onLogout={handleLogout}
         onUnauthorized={handleUnauthorized}
@@ -1271,13 +1291,23 @@ function App() {
               id="aircraft-selector"
               value={selectedAircraft.aircraft_id}
               onChange={handleAircraftChange}
-              disabled={aircrafts.length === 1}
+              disabled={aircrafts.length === 1 && currentUser?.aircraftOnboardingAvailable !== true}
             >
               {aircrafts.map((aircraft) => (
                 <option key={aircraft.aircraft_id} value={aircraft.aircraft_id}>
                   {aircraft.matricula} · {aircraft.modelo}
                 </option>
               ))}
+              {currentUser?.aircraftOnboardingAvailable === true && (
+                <optgroup label="Gestión de aeronaves">
+                  <option
+                    value={ADD_AIRCRAFT_OPTION}
+                    disabled={!canCreateAircraft(currentUser) || loading}
+                  >
+                    + Agregar aeronave
+                  </option>
+                </optgroup>
+              )}
             </select>
             <span className="aircraft-role">{selectedAircraftRole}</span>
           </span>
@@ -1649,6 +1679,11 @@ function App() {
         />
       )}
       </div>
+      {showAircraftOnboarding ? (
+        <AircraftOnboardingDialog canCreate={canCreateAircraft(currentUser)}
+          onCreate={handleCreateFirstAircraft} onCancel={() => setShowAircraftOnboarding(false)}
+          onUnauthorized={handleUnauthorized} />
+      ) : null}
     </main>
   );
 }

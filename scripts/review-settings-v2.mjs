@@ -1,4 +1,4 @@
-// Local visual review only. All app API calls are intercepted; mutations never leave the page.
+// Local visual review only. All app API calls are intercepted; simulated mutations never leave the page.
 import { createServer } from 'vite';
 
 const server = await createServer({
@@ -12,7 +12,7 @@ const server = await createServer({
         const width = Number(query.get('width'));
         if ([390, 768].includes(width)) {
           query.delete('width');
-          res.end(`<!doctype html><html lang="es"><head><title>Settings V2 · ${width}px fixture</title></head><body style="margin:0;background:#dce4ef"><iframe title="Settings V2 ${width}px" width="${width}" height="1000" style="border:0;display:block" src="/__settings-review?${query}"></iframe></body></html>`);
+          res.end(`<!doctype html><html lang="es"><head><title>Settings V2 · ${width}px fixture</title></head><body style="margin:0;background:#dce4ef"><iframe title="Settings V2 ${width}px" width="${width}" height="${width === 390 ? 700 : 1000}" style="border:0;display:block" src="/__settings-review?${query}"></iframe></body></html>`);
           return;
         }
         const html = `<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Settings V2 · Fictional review</title></head><body><div id="root"></div><script>
@@ -21,13 +21,24 @@ if(['light','dark'].includes(params.get('theme'))) localStorage.setItem('theme-m
 const editable = params.get('edit') === '1';
 const canonical = params.get('canonical') === '1';
 const role = params.get('role') || 'OWNER';
+const onboardingAvailable = ['enabled','disabled'].includes(params.get('onboarding'));
+const onboardingEnabled = params.get('onboarding') === 'enabled';
 const aircraft = (id,matricula) => ({aircraft_id:id,matricula,modelo:'PA-28 Demo',rol:role,ownershipConfigured:true,configurationConfigured:true,flightWritesReady:true,trackingAvailable:true,configuration:{propulsionType:'PISTON',engineCount:1,propellerCount:1},componentInstallations:[],componentInstallationHistory:[]});
+let reviewAircrafts = params.get('count') === '0' ? [] : [aircraft('fixture-one','LV-DEMO'), ...(params.get('count') === '1' ? [] : [aircraft('fixture-two','LV-OTHER')])];
 window.fetch = async (url,options={}) => {
+  if(url === '/api/aircraft' && options.method === 'POST') {
+    if(!onboardingEnabled) return Response.json({ok:false,code:'POSTGRES_ONBOARDING_WRITES_NOT_ENABLED'},{status:503});
+    if(params.get('failure') === '1') return Response.json({ok:false,error:'Simulated failure'},{status:503});
+    const input = JSON.parse(options.body);
+    const created = {aircraft_id:'fixture-created',matricula:input.registration,fabricante:input.manufacturer,modelo:input.model,rol:'OWNER',ownershipConfigured:false,configurationConfigured:false,flightWritesReady:false,configurationSetupAvailable:false,trackingAvailable:true,componentInstallations:[]};
+    reviewAircrafts = [...reviewAircrafts,created];
+    return Response.json({ok:true,aircraft:created,onboarding:{ownershipConfigured:false,flightWritesReady:false}},{status:201});
+  }
   if(options.method && options.method !== 'GET') throw new Error('Local fixture: mutations blocked');
   let data;
-  if(url.includes('/api/session')) data={ok:true,authenticated:true,user:{userId:'fixture-user',isAdmin:false,legacyUserManagementEnabled:!canonical,settingsWritesEnabled:editable,settingsWriteMode:canonical?'CANONICAL_SUBSET':'LEGACY_FULL',settingsEditablePaths:canonical?['appConfig.oilUnitLabel']:null}};
+  if(url.includes('/api/session')) data={ok:true,authenticated:true,user:{userId:'11111111-1111-4111-8111-111111111111',isAdmin:false,aircraftOnboardingAvailable:onboardingAvailable,aircraftOnboardingWritesEnabled:onboardingEnabled,legacyUserManagementEnabled:!canonical,settingsWritesEnabled:editable,settingsWriteMode:canonical?'CANONICAL_SUBSET':'LEGACY_FULL',settingsEditablePaths:canonical?['appConfig.oilUnitLabel']:null}};
   else if(url.includes('/api/aircraft-pilots')) data={ok:true,pilots:[],management_mode:'POSTGRES_CANONICAL',capabilities:{can_create_pilot:false}};
-  else if(url.includes('/api/aircraft')) data={ok:true,aircrafts:[aircraft('fixture-one','LV-DEMO'),aircraft('fixture-two','LV-SIM')]};
+  else if(url.includes('/api/aircraft')) data={ok:true,aircrafts:reviewAircrafts};
   else if(url.includes('resource=tracking')) data={ok:true,tracking:{items:[],currentTisHours:1234.5,writes_enabled:false}};
   else if(url.includes('resource=squawks')) data={ok:true,squawks:{items:[],writes_enabled:false}};
   else if(url.includes('/api/settings')) data={ok:true,settings:{appConfig:{aircraftName:url.includes('fixture-two')?'Aeronave simulada':'Aeronave demo',aircraftRegistration:url.includes('fixture-two')?'LV-SIM':'LV-DEMO'},operationalConfig:{ownerOptions:['DEMO']}}};

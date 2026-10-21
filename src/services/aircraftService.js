@@ -1,3 +1,5 @@
+export const ADD_AIRCRAFT_OPTION = "__add_aircraft__";
+
 export async function fetchAircrafts(signal) {
   const response = await fetch("/api/aircraft", {
     method: "GET",
@@ -79,7 +81,7 @@ export async function createAircraft(values) {
 
 export async function createFirstAircraftAndRefresh(
   values,
-  { createRequest = createAircraft, loadAircrafts = fetchAircrafts } = {}
+  { createRequest = createAircraft, loadAircrafts = fetchAircrafts, currentAircrafts = [] } = {}
 ) {
   const created = await createRequest(values);
   let refreshedAircrafts;
@@ -91,7 +93,7 @@ export async function createFirstAircraftAndRefresh(
       throw error;
     }
 
-    refreshedAircrafts = [];
+    refreshedAircrafts = currentAircrafts;
   }
 
   const createdAircraftId = String(created.aircraft.aircraft_id).trim();
@@ -107,6 +109,20 @@ export async function createFirstAircraftAndRefresh(
     selectedAircraftId: createdAircraftId,
     onboarding: created.onboarding,
   };
+}
+
+export function canCreateAircraft(user) {
+  return user?.aircraftOnboardingAvailable === true
+    && user?.aircraftOnboardingWritesEnabled === true;
+}
+
+export async function createAircraftForSession(values, { user, ...options }) {
+  if (!canCreateAircraft(user)) {
+    const error = new Error("El alta de aeronaves no está habilitada para esta sesión.");
+    error.code = "AIRCRAFT_ONBOARDING_NOT_AVAILABLE";
+    throw error;
+  }
+  return createFirstAircraftAndRefresh(values, options);
 }
 
 export function createAircraftSubmissionGuard() {
