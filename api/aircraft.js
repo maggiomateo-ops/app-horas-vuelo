@@ -1,3 +1,4 @@
+import { requireAircraftConfigurationCanary, aircraftConfigurationSetupAvailable } from "./_aircraftConfigurationCanary.js";
 import { requireAuth } from "./_auth.js";
 import { getAircraftsForUser } from "./_adminRepository.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
@@ -9,7 +10,6 @@ import { mutateComponentLifecycleInPostgres } from "./_postgresComponentLifecycl
 import {
   resolvePostgresOnboardingWriteCapability,
   resolvePostgresOwnershipWriteCapability,
-  resolvePostgresAircraftConfigurationWriteCapability,
   resolvePostgresComponentLifecycleWriteCapability,
 } from "./_settingsWriteCapability.js";
 
@@ -44,10 +44,9 @@ function sanitizeAircraft(aircraft) {
   }, {});
 }
 
-async function loadAircrafts(userId) {
+async function loadAircrafts(userId, session) {
   const source = resolveDataSource("AIRCRAFT_DATA_SOURCE");
   if (source !== DATA_SOURCE.POSTGRES) return getAircraftsForUser(userId);
-  const capability = resolvePostgresAircraftConfigurationWriteCapability(source);
   const componentLifecycleCapability =
     resolvePostgresComponentLifecycleWriteCapability(source);
   const trackingAvailable =
@@ -55,7 +54,7 @@ async function loadAircrafts(userId) {
   const aircrafts = await getAircraftsForUserFromPostgres(userId);
   return aircrafts.map((aircraft) => ({
     ...aircraft,
-    configurationSetupAvailable: capability.enabled,
+    configurationSetupAvailable: aircraftConfigurationSetupAvailable({ source, session, aircraft }),
     componentLifecycleWritesAvailable: componentLifecycleCapability.enabled,
     trackingAvailable,
   }));
@@ -75,7 +74,7 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const aircrafts = await loadAircrafts(userId);
+      const aircrafts = await loadAircrafts(userId, session);
       return res.status(200).json({ ok: true, aircrafts: aircrafts.map(sanitizeAircraft) });
     } catch {
       return res.status(500).json({ ok: false, error: "No se pudieron cargar las aeronaves." });
@@ -132,20 +131,13 @@ export default async function handler(req, res) {
     }
 
     if (action === "setup-configuration") {
-      let capability;
       try {
-        capability = resolvePostgresAircraftConfigurationWriteCapability(source);
-      } catch {
-        return res.status(500).json({
+        requireAircraftConfigurationCanary({ source, session, aircraftId: req.body?.aircraftId });
+      } catch (error) {
+        return res.status(error.statusCode || 503).json({
           ok: false,
-          error: "La capacidad de configuracion aeronautica no esta configurada correctamente.",
-        });
-      }
-      if (source !== DATA_SOURCE.POSTGRES || !capability.enabled) {
-        return res.status(503).json({
-          ok: false,
-          code: "POSTGRES_AIRCRAFT_CONFIGURATION_WRITES_NOT_ENABLED",
-          error: "La configuracion aeronautica permanece deshabilitada.",
+          code: error.code || "AIRCRAFT_CONFIGURATION_CANARY_NOT_CONFIGURED",
+          error: "La configuración técnica no está habilitada para esta aeronave.",
         });
       }
       const configurationInput = { ...(req.body || {}) };

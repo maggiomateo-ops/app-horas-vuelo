@@ -324,6 +324,10 @@ export default function AircraftConfigurationOnboarding({
             </button>
           )}
 
+          <button type="button" className="form-action-button" disabled={submitting}
+            onClick={() => { setShowForm(false); setReviewing(false); setSubmitError(""); }}>
+            Cancelar
+          </button>
           {submitError ? <p className="flight-form-message is-error" role="alert">{submitError}</p> : null}
         </form>
       )}
