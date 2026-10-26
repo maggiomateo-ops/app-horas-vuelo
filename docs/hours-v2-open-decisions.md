@@ -1,3 +1,5 @@
+> Preparación vigente de permisos, purga y concurrencia: [hours-v2-preflight-preparation.md](hours-v2-preflight-preparation.md). SQL fuera del runner; no ejecutado ni desplegado.
+
 # Aprobaciones funcionales pendientes — Horas V2
 
 Estado: **sin aprobación definitiva**. D-308 registra dirección conservadora PROPOSED para F1/F3/F5/F7/F8. F2/F4/F6 tienen contrato técnico detallado en [hours-v2-technical-closure.md](hours-v2-technical-closure.md), todavía PROPOSED. D-307 solo confirma intención de producto. Esta lista no solicita ejecutar DDL, configurar LV-SIM ni cambiar flags. Cerrar primero estas decisiones; luego congelar contrato/DDL y recién solicitar preflight en rama Neon descartable.

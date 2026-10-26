@@ -1,3 +1,5 @@
+> Plan actualizado y matriz completa: [preparación final](../../hours-v2-preflight-preparation.md). Leer antes de usar cualquier script; todo permanece NO EJECUTADO.
+
 # Preflight posterior — preparado, NO ejecutado
 
 No lanzar contra TEST padre ni Production. Crear rama descartable solo con aprobación separada; fixtures totalmente sintéticas de dos aeronaves A/B, OWNER ACTIVE e inactivo, motores N posiciones y dos episodios. Registrar endpoint/branch/rol sin secretos y verificar que no coincidan con entornos protegidos. Este documento no autoriza crear rama Neon ni ejecutar SQL.

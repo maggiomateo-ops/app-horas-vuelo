@@ -1,6 +1,7 @@
 -- PROPOSAL ONLY. NOT A MIGRATION. DO NOT EXECUTE; outside db/migrations.
 -- Revision F2/F4/F6: D-307 is product intent, NOT approval of this DDL/policy.
--- No grants, triggers, backfill, business writes or runner registration in this proposal.
+-- Core schema only; retention.sql and security.sql complete the isolated preflight proposal.
+-- No execution, backfill, business writes or runner registration authorized.
 -- Supporting candidate keys on existing canonical tables: no business-value changes.
 ALTER TABLE app.flight_records ADD CONSTRAINT uq_hours_flight_aircraft UNIQUE (aircraft_id, flight_id);
 ALTER TABLE app.component_installations ADD CONSTRAINT uq_hours_installation_scope UNIQUE (aircraft_id, component_installation_id, component_id);
@@ -53,12 +54,15 @@ CREATE TABLE app.hours_import_mapping_versions (
   created_at timestamptz NOT NULL DEFAULT now(),
   FOREIGN KEY(aircraft_id,import_batch_id) REFERENCES app.flight_import_batches(aircraft_id,import_batch_id),
   UNIQUE(aircraft_id,mapping_version_id),
+  UNIQUE(aircraft_id,mapping_version_id,import_batch_id),
   UNIQUE(import_batch_id,version_number)
 );
 CREATE TABLE app.hours_import_mapping_fields (
-  mapping_version_id uuid NOT NULL REFERENCES app.hours_import_mapping_versions(mapping_version_id),
+  aircraft_id uuid NOT NULL,
+  mapping_version_id uuid NOT NULL,
+  FOREIGN KEY(aircraft_id,mapping_version_id) REFERENCES app.hours_import_mapping_versions(aircraft_id,mapping_version_id),
   field_code text NOT NULL,
-  source_sheet text NOT NULL,
+  source_sheet text NOT NULL CHECK(source_sheet ~ '^sheet-([1-9]|1[0-9]|20)$'),
   source_column text NOT NULL,
   transformation text NOT NULL CHECK(transformation IN ('TEXT','ISO_DATE','DECIMAL_HOURS','HH_MM_HOURS','EXPLICIT_LOOKUP')),
   PRIMARY KEY(mapping_version_id,field_code)
@@ -68,11 +72,13 @@ CREATE TABLE app.hours_import_mapping_fields (
 CREATE TABLE app.hours_import_staged_rows (
   staged_row_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   aircraft_id uuid NOT NULL,
+  import_batch_id uuid NOT NULL,
+  source_ordinal integer NOT NULL CHECK(source_ordinal > 0),
   mapping_version_id uuid NOT NULL,
-  source_sheet text NOT NULL CHECK(length(btrim(source_sheet)) > 0),
+  source_sheet text NOT NULL CHECK(source_sheet ~ '^sheet-([1-9]|1[0-9]|20)$'),
   source_row_number integer NOT NULL CHECK(source_row_number > 0),
   source_row_sha256 text NOT NULL CHECK(source_row_sha256 ~ '^[a-f0-9]{64}$'),
-  source_record_key text,
+  source_record_key text CHECK(source_record_key IS NULL OR source_record_key ~ '^[a-f0-9]{64}$'),
   date_precision text NOT NULL CHECK(date_precision IN ('DATE','MONTH','YEAR','UNKNOWN')),
   source_date_text text,
   flight_date date,
@@ -85,8 +91,10 @@ CREATE TABLE app.hours_import_staged_rows (
   duration_evidence jsonb NOT NULL CHECK(jsonb_typeof(duration_evidence)='object'),
   -- Typed DTO validation must enforce raw/unit/resolution/exact seconds/canonical rounding per mapped field.
   created_at timestamptz NOT NULL DEFAULT now(),
-  FOREIGN KEY(aircraft_id,mapping_version_id) REFERENCES app.hours_import_mapping_versions(aircraft_id,mapping_version_id),
+  FOREIGN KEY(aircraft_id,mapping_version_id,import_batch_id) REFERENCES app.hours_import_mapping_versions(aircraft_id,mapping_version_id,import_batch_id),
   UNIQUE(aircraft_id,staged_row_id),
+  UNIQUE(aircraft_id,staged_row_id,import_batch_id),
+  UNIQUE(mapping_version_id,source_ordinal),
   UNIQUE(mapping_version_id,source_sheet,source_row_number),
   CHECK((date_precision='DATE' AND flight_date IS NOT NULL AND source_year IS NULL AND source_month IS NULL)
     OR (date_precision='MONTH' AND flight_date IS NULL AND source_year IS NOT NULL AND source_month IS NOT NULL)
@@ -142,6 +150,7 @@ CREATE TABLE app.hours_reconciliation_runs (
   hours_plan_id uuid NOT NULL,
   hours_plan_revision_id uuid NOT NULL,
   import_batch_id uuid,
+  input_generation bigint NOT NULL CHECK(input_generation >= 0),
   input_sha256 text NOT NULL CHECK(input_sha256 ~ '^[a-f0-9]{64}$'),
   episode_manifest_sha256 text NOT NULL CHECK(episode_manifest_sha256 ~ '^[a-f0-9]{64}$'),
   algorithm_version text NOT NULL CHECK(length(btrim(algorithm_version)) > 0),
@@ -155,6 +164,7 @@ CREATE TABLE app.hours_reconciliation_runs (
   FOREIGN KEY(aircraft_id,hours_plan_id,hours_plan_revision_id) REFERENCES app.aircraft_hours_plan_revisions(aircraft_id,hours_plan_id,hours_plan_revision_id),
   FOREIGN KEY(aircraft_id,import_batch_id) REFERENCES app.flight_import_batches(aircraft_id,import_batch_id),
   UNIQUE(aircraft_id,reconciliation_run_id),
+  UNIQUE(aircraft_id,reconciliation_run_id,import_batch_id),
   UNIQUE(aircraft_id,hours_plan_id,reconciliation_run_id),
   UNIQUE(aircraft_id,reconciliation_run_id,confirmable),
   UNIQUE(hours_plan_revision_id,input_sha256,algorithm_version,policy_version),
@@ -193,13 +203,15 @@ CREATE TABLE app.hours_reconciliation_staged_rows (
   aircraft_id uuid NOT NULL,
   reconciliation_run_id uuid NOT NULL,
   staged_row_id uuid NOT NULL,
+  import_batch_id uuid NOT NULL,
   disposition text NOT NULL CHECK(disposition IN ('INCLUDE','EXCLUDE_VERIFIED_DUPLICATE','REQUIRES_REVIEW')),
   matched_flight_id uuid,
   matched_flight_revision_id uuid,
   reason text NOT NULL,
   PRIMARY KEY(aircraft_id,reconciliation_run_id,staged_row_id),
-  FOREIGN KEY(aircraft_id,reconciliation_run_id) REFERENCES app.hours_reconciliation_runs(aircraft_id,reconciliation_run_id),
-  FOREIGN KEY(aircraft_id,staged_row_id) REFERENCES app.hours_import_staged_rows(aircraft_id,staged_row_id),
+  FOREIGN KEY(aircraft_id,reconciliation_run_id,import_batch_id) REFERENCES app.hours_reconciliation_runs(aircraft_id,reconciliation_run_id,import_batch_id),
+  FOREIGN KEY(aircraft_id,staged_row_id,import_batch_id) REFERENCES app.hours_import_staged_rows(aircraft_id,staged_row_id,import_batch_id),
+  UNIQUE(aircraft_id,reconciliation_run_id,staged_row_id,disposition),
   FOREIGN KEY(aircraft_id,matched_flight_id) REFERENCES app.flight_records(aircraft_id,flight_id),
   FOREIGN KEY(matched_flight_id,matched_flight_revision_id) REFERENCES app.flight_record_revisions(flight_id,flight_revision_id),
   CHECK((matched_flight_id IS NULL) = (matched_flight_revision_id IS NULL)),
@@ -289,11 +301,12 @@ CREATE TABLE app.hours_import_committed_rows (
   aircraft_id uuid NOT NULL,
   reconciliation_run_id uuid NOT NULL,
   staged_row_id uuid NOT NULL,
+  disposition text NOT NULL DEFAULT 'INCLUDE' CHECK(disposition='INCLUDE'),
   flight_id uuid NOT NULL,
   flight_revision_id uuid NOT NULL,
   PRIMARY KEY(staged_row_id),
   FOREIGN KEY(aircraft_id,reconciliation_run_id) REFERENCES app.hours_reconciliation_confirmations(aircraft_id,reconciliation_run_id),
-  FOREIGN KEY(aircraft_id,reconciliation_run_id,staged_row_id) REFERENCES app.hours_reconciliation_staged_rows(aircraft_id,reconciliation_run_id,staged_row_id),
+  FOREIGN KEY(aircraft_id,reconciliation_run_id,staged_row_id,disposition) REFERENCES app.hours_reconciliation_staged_rows(aircraft_id,reconciliation_run_id,staged_row_id,disposition),
   FOREIGN KEY(aircraft_id,flight_id) REFERENCES app.flight_records(aircraft_id,flight_id),
   FOREIGN KEY(flight_id,flight_revision_id) REFERENCES app.flight_record_revisions(flight_id,flight_revision_id),
   UNIQUE(flight_id,flight_revision_id)
@@ -321,7 +334,7 @@ CREATE TABLE app.hours_acceptance_invalidations (
   aircraft_id uuid NOT NULL,
   hours_acceptance_id uuid NOT NULL,
   acceptance_sequence integer NOT NULL,
-  reason_code text NOT NULL CHECK(reason_code IN ('REVISION_CHANGED','FLIGHT_VOIDED','RETROACTIVE_FLIGHT','INSTALLATION_CHANGED','REFERENCE_SUPERSEDED')),
+  reason_code text NOT NULL CHECK(reason_code IN ('REVISION_CHANGED','FLIGHT_VOIDED','RETROACTIVE_FLIGHT','INSTALLATION_CHANGED','REFERENCE_SUPERSEDED','OVERHAUL_CHANGED','ADJUSTMENT_CHANGED','POLICY_CHANGED','SOURCE_CHANGED')),
   source_reference text NOT NULL,
   recorded_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(hours_acceptance_id,request_id,reason_code),
@@ -340,3 +353,7 @@ CREATE TABLE app.hours_acceptance_invalidations (
 -- complete coverage, current revisions or manifest freshness. SERIALIZABLE confirmation must
 -- revalidate these under shared aircraft locks used by ALL competing mutators (see preflight.md).
 -- No DDL execution, grants, policy approval or raw-file storage provisioning authorized here.
+
+-- Bounded cleanup/scope lookup indexes; table teardown removes these automatically.
+CREATE INDEX ix_hours_runs_batch ON app.hours_reconciliation_runs(aircraft_id,import_batch_id);
+CREATE INDEX ix_hours_mapping_batch ON app.hours_import_mapping_versions(aircraft_id,import_batch_id);

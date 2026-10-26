@@ -1,4 +1,5 @@
 -- PROPOSED teardown for EMPTY DISPOSABLE PREFLIGHT branch only. DO NOT EXECUTE here.
+-- Run rollback-security.sql first; rollback-retention.sql after this file, on empty disposable only.
 -- Normal preflight must ROLLBACK the entire transaction, including supporting constraints.
 -- Never CASCADE, destroy committed imports or remove historical evidence in shared TEST/Production.
 DROP TABLE app.hours_acceptance_invalidations;

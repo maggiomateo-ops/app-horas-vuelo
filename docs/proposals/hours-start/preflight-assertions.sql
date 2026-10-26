@@ -29,6 +29,7 @@ BEGIN
   END IF;
 END $$;
 -- Negative scope probe uses TWO pre-provisioned synthetic aircraft/plan pairs only.
+-- Caller binds OWNER A context and begin_mutation; fixture B/plan B existence verified separately.
 -- Fixture IDs passed through session-local settings, never hard-coded real aircraft UUIDs.
 DO $$
 DECLARE
@@ -37,14 +38,14 @@ DECLARE
   p uuid := current_setting('hours_v2.fixture_plan_b')::uuid;
   rejected boolean := false;
 BEGIN
-  IF a=b OR NOT EXISTS(SELECT 1 FROM app.aircraft_hours_plans WHERE aircraft_id=b AND hours_plan_id=p) THEN
+  IF a=b THEN
     RAISE EXCEPTION 'Invalid synthetic fixtures';
   END IF;
   BEGIN
     INSERT INTO app.aircraft_hours_plan_revisions
       (aircraft_id,hours_plan_id,revision_number,start_mode,status,reason,created_by_user_id)
-      SELECT a,p,999,'CURRENT_REFERENCE','DRAFT','synthetic cross-scope rejection',created_by_user_id
-      FROM app.aircraft_hours_plans WHERE aircraft_id=b AND hours_plan_id=p;
+      VALUES(a,p,999,'CURRENT_REFERENCE','DRAFT','synthetic cross-scope rejection',
+       nullif(current_setting('hours_v2.actor_id',true),'')::uuid);
   EXCEPTION WHEN foreign_key_violation THEN rejected := true;
   END;
   IF NOT rejected THEN RAISE EXCEPTION 'Cross-aircraft plan association accepted'; END IF;

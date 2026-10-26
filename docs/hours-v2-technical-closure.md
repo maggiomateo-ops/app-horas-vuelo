@@ -1,3 +1,5 @@
+> Preparación vigente de permisos, purga y concurrencia: [hours-v2-preflight-preparation.md](hours-v2-preflight-preparation.md). SQL fuera del runner; no ejecutado ni desplegado.
+
 # Horas V2 — contrato técnico F2/F4/F6
 
 2026-10-26. Base verificada `d7e1e5a17d0aefad394a326cf30aed33d2dc4e71`. **PROPOSED para congelación técnica; no aprobación funcional, DDL ni provisión.** Complementa y prevalece sobre la precisión/tolerancia preliminar de la revisión anterior. D-307 permanece CONFIRMED solo como intención de producto. D-308 permanece PROPOSED. Ningún resultado de tests cambia esos estados.

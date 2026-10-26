@@ -1,3 +1,5 @@
+> Preparación vigente de permisos, purga y concurrencia: [hours-v2-preflight-preparation.md](hours-v2-preflight-preparation.md). SQL fuera del runner; no ejecutado ni desplegado.
+
 > Revisión vigente F2/F4/F6: [contrato técnico](hours-v2-technical-closure.md). Sustituye precisión preliminar en décimas para referencias/diferencias por segundos exactos y política sin tolerancia. SQL no ejecutado.
 
 # Horas V2 — revisión de arquitectura, NO aprobado para migrar

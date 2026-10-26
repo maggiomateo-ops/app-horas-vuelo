@@ -1,0 +1,22 @@
+{
+  "aircraft_hours_plans": "APPEND_ONLY",
+  "aircraft_hours_plan_revisions": "APPEND_ONLY",
+  "hours_component_overhaul_episodes": "APPEND_ONLY",
+  "hours_import_mapping_versions": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_import_mapping_fields": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_import_staged_rows": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_counter_references": "APPEND_ONLY",
+  "hours_reconciliation_runs": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_reconciliation_flights": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_reconciliation_installations": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_reconciliation_staged_rows": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_reconciliation_references": "TEMPORARY_UNTIL_CONFIRMED",
+  "flight_component_utilization_attributions": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_candidate_component_attributions": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_reconciliation_differences": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_reconciliation_issues": "TEMPORARY_UNTIL_CONFIRMED",
+  "hours_reconciliation_confirmations": "APPEND_ONLY",
+  "hours_import_committed_rows": "APPEND_ONLY",
+  "aircraft_hours_acceptances": "APPEND_ONLY",
+  "hours_acceptance_invalidations": "APPEND_ONLY"
+}
