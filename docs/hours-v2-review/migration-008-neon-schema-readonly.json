@@ -1,0 +1,1647 @@
+[
+  {
+    "evidence": {
+      "tables": [
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_concepts",
+          "column": "cost_concept_id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_concepts",
+          "column": "aircraft_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_concepts",
+          "column": "name",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_concepts",
+          "column": "cost_class",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_concepts",
+          "column": "default_allocation_method",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_concepts",
+          "column": "status",
+          "default": "'ACTIVE'::text",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_concepts",
+          "column": "financial_scope_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_event_types",
+          "column": "cost_event_type_id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_event_types",
+          "column": "aircraft_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_event_types",
+          "column": "name",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_event_types",
+          "column": "boundary_basis",
+          "default": "'NONE'::text",
+          "nullable": "NO"
+        },
+        {
+          "udt": "int2",
+          "type": "smallint",
+          "table": "cost_event_types",
+          "column": "component_position",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_event_types",
+          "column": "status",
+          "default": "'ACTIVE'::text",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_event_types",
+          "column": "financial_scope_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_expense_corrections",
+          "column": "cost_expense_correction_id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_expense_corrections",
+          "column": "expense_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "int8",
+          "type": "bigint",
+          "table": "cost_expense_corrections",
+          "column": "base_details_version",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_expense_corrections",
+          "column": "request_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_expense_corrections",
+          "column": "actor_user_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "timestamptz",
+          "type": "timestamp with time zone",
+          "table": "cost_expense_corrections",
+          "column": "corrected_at",
+          "default": "now()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_expense_corrections",
+          "column": "reason",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_authorities",
+          "column": "financial_authority_id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_authorities",
+          "column": "financial_scope_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_authorities",
+          "column": "user_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_financial_authorities",
+          "column": "approval_reference",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_authorities",
+          "column": "authorized_by_user_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "timestamptz",
+          "type": "timestamp with time zone",
+          "table": "cost_financial_authorities",
+          "column": "authorized_at",
+          "default": "now()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_authority_revocations",
+          "column": "financial_authority_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_authority_revocations",
+          "column": "revoked_by_user_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "timestamptz",
+          "type": "timestamp with time zone",
+          "table": "cost_financial_authority_revocations",
+          "column": "revoked_at",
+          "default": "now()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_financial_authority_revocations",
+          "column": "reason",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_records",
+          "column": "financial_record_id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_records",
+          "column": "financial_scope_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_records",
+          "column": "aircraft_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_records",
+          "column": "cost_concept_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_records",
+          "column": "cost_event_type_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_records",
+          "column": "cost_event_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_records",
+          "column": "expense_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_records",
+          "column": "cost_settlement_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_records",
+          "column": "registered_by_user_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "timestamptz",
+          "type": "timestamp with time zone",
+          "table": "cost_financial_records",
+          "column": "registered_at",
+          "default": "now()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_financial_records",
+          "column": "provenance_reference",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_scopes",
+          "column": "financial_scope_id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_scopes",
+          "column": "aircraft_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_financial_scopes",
+          "column": "label",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "cost_financial_scopes",
+          "column": "approval_reference",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "cost_financial_scopes",
+          "column": "created_by_user_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "timestamptz",
+          "type": "timestamp with time zone",
+          "table": "cost_financial_scopes",
+          "column": "created_at",
+          "default": "now()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_allocations",
+          "column": "expense_allocation_id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_allocations",
+          "column": "expense_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_allocations",
+          "column": "party_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "numeric",
+          "type": "numeric",
+          "table": "expense_allocations",
+          "column": "allocation_percent",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "numeric",
+          "type": "numeric",
+          "table": "expense_allocations",
+          "column": "allocated_amount",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "expense_allocations",
+          "column": "source_method",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_allocations",
+          "column": "created_correction_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_allocations",
+          "column": "retired_correction_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "timestamptz",
+          "type": "timestamp with time zone",
+          "table": "expense_allocations",
+          "column": "retired_at",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_allocations",
+          "column": "retired_by_user_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_payments",
+          "column": "expense_payment_id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_payments",
+          "column": "expense_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_payments",
+          "column": "payer_party_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "numeric",
+          "type": "numeric",
+          "table": "expense_payments",
+          "column": "amount",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_payments",
+          "column": "created_correction_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_payments",
+          "column": "retired_correction_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "timestamptz",
+          "type": "timestamp with time zone",
+          "table": "expense_payments",
+          "column": "retired_at",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expense_payments",
+          "column": "retired_by_user_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expenses",
+          "column": "expense_id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expenses",
+          "column": "aircraft_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expenses",
+          "column": "cost_event_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "uuid",
+          "type": "uuid",
+          "table": "expenses",
+          "column": "cost_concept_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "date",
+          "type": "date",
+          "table": "expenses",
+          "column": "expense_date",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "numeric",
+          "type": "numeric",
+          "table": "expenses",
+          "column": "amount",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "bpchar",
+          "type": "character",
+          "table": "expenses",
+          "column": "currency_code",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "expenses",
+          "column": "description",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "expenses",
+          "column": "allocation_method",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "expenses",
+          "column": "status",
+          "default": "'OPEN'::text",
+          "nullable": "NO"
+        },
+        {
+          "udt": "text",
+          "type": "text",
+          "table": "expenses",
+          "column": "utilization_metric",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "int2",
+          "type": "smallint",
+          "table": "expenses",
+          "column": "utilization_component_position",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "udt": "int8",
+          "type": "bigint",
+          "table": "expenses",
+          "column": "details_version",
+          "default": "0",
+          "nullable": "NO"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_cost_active_payment_expense",
+          "definition": "CREATE INDEX idx_cost_active_payment_expense ON app.expense_payments USING btree (expense_id) WHERE (retired_at IS NULL)"
+        },
+        {
+          "name": "idx_cost_authority_user_scope",
+          "definition": "CREATE INDEX idx_cost_authority_user_scope ON app.cost_financial_authorities USING btree (user_id, financial_scope_id)"
+        },
+        {
+          "name": "idx_cost_record_scope",
+          "definition": "CREATE INDEX idx_cost_record_scope ON app.cost_financial_records USING btree (financial_scope_id)"
+        },
+        {
+          "name": "uq_active_cost_concept_name",
+          "definition": "CREATE UNIQUE INDEX uq_active_cost_concept_name ON app.cost_concepts USING btree (financial_scope_id, lower(name)) WHERE ((status = 'ACTIVE'::text) AND (financial_scope_id IS NOT NULL))"
+        },
+        {
+          "name": "uq_active_cost_event_type_name",
+          "definition": "CREATE UNIQUE INDEX uq_active_cost_event_type_name ON app.cost_event_types USING btree (financial_scope_id, lower(name)) WHERE ((status = 'ACTIVE'::text) AND (financial_scope_id IS NOT NULL))"
+        },
+        {
+          "name": "uq_cost_active_allocation_party",
+          "definition": "CREATE UNIQUE INDEX uq_cost_active_allocation_party ON app.expense_allocations USING btree (expense_id, party_id) WHERE (retired_at IS NULL)"
+        }
+      ],
+      "database": "app_horas",
+      "function": "CREATE OR REPLACE FUNCTION app.guard_cost_open_detail()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog', 'app'\nAS $function$\nDECLARE\n  parent app.expenses%ROWTYPE;\n  correction app.cost_expense_corrections%ROWTYPE;\n  batch_id uuid;\nBEGIN\n  SELECT * INTO parent FROM app.expenses WHERE expense_id = NEW.expense_id FOR UPDATE;\n  IF NOT FOUND OR parent.status <> 'OPEN' THEN\n    RAISE EXCEPTION 'COST_EXPENSE_NOT_MODIFIABLE' USING ERRCODE = '23514';\n  END IF;\n  IF EXISTS (SELECT 1 FROM app.cost_settlement_expense_lines WHERE expense_id = NEW.expense_id)\n    OR EXISTS (SELECT 1 FROM app.cost_events\n      WHERE cost_event_id = parent.cost_event_id AND status <> 'OPEN') THEN\n    RAISE EXCEPTION 'COST_EXPENSE_FROZEN' USING ERRCODE = '23514';\n  END IF;\n  IF TG_OP = 'INSERT' THEN\n    IF NEW.retired_at IS NOT NULL OR NEW.created_correction_id IS NULL THEN\n      RAISE EXCEPTION 'COST_DETAIL_INVALID_INSERT' USING ERRCODE = '23514';\n    END IF;\n    batch_id := NEW.created_correction_id;\n  ELSE\n    IF OLD.retired_at IS NOT NULL OR NEW.retired_at IS NULL\n      OR (to_jsonb(OLD) - ARRAY['retired_correction_id','retired_at','retired_by_user_id'])\n        IS DISTINCT FROM\n        (to_jsonb(NEW) - ARRAY['retired_correction_id','retired_at','retired_by_user_id']) THEN\n      RAISE EXCEPTION 'COST_DETAIL_IMMUTABLE_VALUES' USING ERRCODE = '23514';\n    END IF;\n    batch_id := NEW.retired_correction_id;\n  END IF;\n  SELECT * INTO correction FROM app.cost_expense_corrections\n    WHERE cost_expense_correction_id = batch_id AND expense_id = NEW.expense_id;\n  IF NOT FOUND OR correction.base_details_version + 1 <> parent.details_version THEN\n    RAISE EXCEPTION 'COST_CORRECTION_VERSION_MISMATCH' USING ERRCODE = '23514';\n  END IF;\n  IF TG_OP = 'UPDATE' AND NEW.retired_by_user_id IS DISTINCT FROM correction.actor_user_id THEN\n    RAISE EXCEPTION 'COST_CORRECTION_ACTOR_MISMATCH' USING ERRCODE = '23514';\n  END IF;\n  RETURN NEW;\nEND;\n$function$\n",
+      "triggers": [
+        "CREATE TRIGGER trg_cost_allocation_open_detail BEFORE INSERT OR UPDATE ON app.expense_allocations FOR EACH ROW EXECUTE FUNCTION app.guard_cost_open_detail()",
+        "CREATE TRIGGER trg_cost_payment_open_detail BEFORE INSERT OR UPDATE ON app.expense_payments FOR EACH ROW EXECUTE FUNCTION app.guard_cost_open_detail()"
+      ],
+      "constraints": [
+        {
+          "name": "ck_cost_concept_values",
+          "type": "c",
+          "table": "app.cost_concepts",
+          "definition": "CHECK (((length(btrim(name)) > 0) AND (cost_class = ANY (ARRAY['FIXED'::text, 'VARIABLE'::text])) AND (default_allocation_method = ANY (ARRAY['OWNERSHIP'::text, 'CUSTOM'::text, 'UTILIZATION'::text, 'DIRECT'::text])) AND (status = ANY (ARRAY['ACTIVE'::text, 'ARCHIVED'::text]))))"
+        },
+        {
+          "name": "cost_concepts_aircraft_id_fkey",
+          "type": "f",
+          "table": "app.cost_concepts",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "cost_concepts_aircraft_id_not_null",
+          "type": "n",
+          "table": "app.cost_concepts",
+          "definition": "NOT NULL aircraft_id"
+        },
+        {
+          "name": "cost_concepts_cost_class_not_null",
+          "type": "n",
+          "table": "app.cost_concepts",
+          "definition": "NOT NULL cost_class"
+        },
+        {
+          "name": "cost_concepts_cost_concept_id_not_null",
+          "type": "n",
+          "table": "app.cost_concepts",
+          "definition": "NOT NULL cost_concept_id"
+        },
+        {
+          "name": "cost_concepts_default_allocation_method_not_null",
+          "type": "n",
+          "table": "app.cost_concepts",
+          "definition": "NOT NULL default_allocation_method"
+        },
+        {
+          "name": "cost_concepts_name_not_null",
+          "type": "n",
+          "table": "app.cost_concepts",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "cost_concepts_pkey",
+          "type": "p",
+          "table": "app.cost_concepts",
+          "definition": "PRIMARY KEY (cost_concept_id)"
+        },
+        {
+          "name": "cost_concepts_status_not_null",
+          "type": "n",
+          "table": "app.cost_concepts",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "fk_cost_concept_scope",
+          "type": "f",
+          "table": "app.cost_concepts",
+          "definition": "FOREIGN KEY (financial_scope_id, aircraft_id) REFERENCES app.cost_financial_scopes(financial_scope_id, aircraft_id)"
+        },
+        {
+          "name": "uq_cost_concept_aircraft",
+          "type": "u",
+          "table": "app.cost_concepts",
+          "definition": "UNIQUE (cost_concept_id, aircraft_id, financial_scope_id)"
+        },
+        {
+          "name": "ck_cost_event_type_values",
+          "type": "c",
+          "table": "app.cost_event_types",
+          "definition": "CHECK (((length(btrim(name)) > 0) AND (boundary_basis = ANY (ARRAY['NONE'::text, 'FLIGHT_TIME'::text, 'LANDINGS'::text, 'PRESSURIZATION_CYCLES'::text, 'ENGINE_CYCLES'::text])) AND (status = ANY (ARRAY['ACTIVE'::text, 'ARCHIVED'::text])) AND (((boundary_basis = 'ENGINE_CYCLES'::text) AND (component_position IS NOT NULL) AND (component_position > 0)) OR ((boundary_basis <> 'ENGINE_CYCLES'::text) AND (component_position IS NULL)))))"
+        },
+        {
+          "name": "cost_event_types_aircraft_id_fkey",
+          "type": "f",
+          "table": "app.cost_event_types",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "cost_event_types_aircraft_id_not_null",
+          "type": "n",
+          "table": "app.cost_event_types",
+          "definition": "NOT NULL aircraft_id"
+        },
+        {
+          "name": "cost_event_types_cost_event_type_id_not_null",
+          "type": "n",
+          "table": "app.cost_event_types",
+          "definition": "NOT NULL cost_event_type_id"
+        },
+        {
+          "name": "cost_event_types_name_not_null",
+          "type": "n",
+          "table": "app.cost_event_types",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "cost_event_types_pkey",
+          "type": "p",
+          "table": "app.cost_event_types",
+          "definition": "PRIMARY KEY (cost_event_type_id)"
+        },
+        {
+          "name": "cost_event_types_status_not_null",
+          "type": "n",
+          "table": "app.cost_event_types",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "cost_event_types_utilization_basis_not_null",
+          "type": "n",
+          "table": "app.cost_event_types",
+          "definition": "NOT NULL boundary_basis"
+        },
+        {
+          "name": "fk_cost_type_scope",
+          "type": "f",
+          "table": "app.cost_event_types",
+          "definition": "FOREIGN KEY (financial_scope_id, aircraft_id) REFERENCES app.cost_financial_scopes(financial_scope_id, aircraft_id)"
+        },
+        {
+          "name": "uq_cost_type_aircraft",
+          "type": "u",
+          "table": "app.cost_event_types",
+          "definition": "UNIQUE (cost_event_type_id, aircraft_id, financial_scope_id)"
+        },
+        {
+          "name": "ck_cost_event_not_self_previous",
+          "type": "c",
+          "table": "app.cost_events",
+          "definition": "CHECK (((previous_cost_event_id IS NULL) OR (previous_cost_event_id <> cost_event_id)))"
+        },
+        {
+          "name": "ck_cost_event_values",
+          "type": "c",
+          "table": "app.cost_events",
+          "definition": "CHECK (((length(btrim(title)) > 0) AND (status = ANY (ARRAY['OPEN'::text, 'SETTLED'::text])) AND (((status = 'OPEN'::text) AND (settled_at IS NULL) AND (settled_by_user_id IS NULL)) OR ((status = 'SETTLED'::text) AND (settled_at IS NOT NULL) AND (settled_by_user_id IS NOT NULL)))))"
+        },
+        {
+          "name": "cost_events_aircraft_id_fkey",
+          "type": "f",
+          "table": "app.cost_events",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "cost_events_aircraft_id_not_null",
+          "type": "n",
+          "table": "app.cost_events",
+          "definition": "NOT NULL aircraft_id"
+        },
+        {
+          "name": "cost_events_boundary_after_flight_id_fkey",
+          "type": "f",
+          "table": "app.cost_events",
+          "definition": "FOREIGN KEY (boundary_after_flight_id) REFERENCES app.flight_records(flight_id)"
+        },
+        {
+          "name": "cost_events_cost_event_id_not_null",
+          "type": "n",
+          "table": "app.cost_events",
+          "definition": "NOT NULL cost_event_id"
+        },
+        {
+          "name": "cost_events_cost_event_type_id_fkey",
+          "type": "f",
+          "table": "app.cost_events",
+          "definition": "FOREIGN KEY (cost_event_type_id) REFERENCES app.cost_event_types(cost_event_type_id)"
+        },
+        {
+          "name": "cost_events_cost_event_type_id_not_null",
+          "type": "n",
+          "table": "app.cost_events",
+          "definition": "NOT NULL cost_event_type_id"
+        },
+        {
+          "name": "cost_events_event_date_not_null",
+          "type": "n",
+          "table": "app.cost_events",
+          "definition": "NOT NULL event_date"
+        },
+        {
+          "name": "cost_events_pkey",
+          "type": "p",
+          "table": "app.cost_events",
+          "definition": "PRIMARY KEY (cost_event_id)"
+        },
+        {
+          "name": "cost_events_previous_cost_event_id_fkey",
+          "type": "f",
+          "table": "app.cost_events",
+          "definition": "FOREIGN KEY (previous_cost_event_id) REFERENCES app.cost_events(cost_event_id)"
+        },
+        {
+          "name": "cost_events_settled_by_user_id_fkey",
+          "type": "f",
+          "table": "app.cost_events",
+          "definition": "FOREIGN KEY (settled_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "cost_events_status_not_null",
+          "type": "n",
+          "table": "app.cost_events",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "cost_events_title_not_null",
+          "type": "n",
+          "table": "app.cost_events",
+          "definition": "NOT NULL title"
+        },
+        {
+          "name": "uq_cost_event_aircraft",
+          "type": "u",
+          "table": "app.cost_events",
+          "definition": "UNIQUE (cost_event_id, aircraft_id)"
+        },
+        {
+          "name": "cost_expense_corrections_actor_user_id_fkey",
+          "type": "f",
+          "table": "app.cost_expense_corrections",
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "cost_expense_corrections_actor_user_id_not_null",
+          "type": "n",
+          "table": "app.cost_expense_corrections",
+          "definition": "NOT NULL actor_user_id"
+        },
+        {
+          "name": "cost_expense_corrections_base_details_version_check",
+          "type": "c",
+          "table": "app.cost_expense_corrections",
+          "definition": "CHECK ((base_details_version >= 0))"
+        },
+        {
+          "name": "cost_expense_corrections_base_details_version_not_null",
+          "type": "n",
+          "table": "app.cost_expense_corrections",
+          "definition": "NOT NULL base_details_version"
+        },
+        {
+          "name": "cost_expense_corrections_corrected_at_not_null",
+          "type": "n",
+          "table": "app.cost_expense_corrections",
+          "definition": "NOT NULL corrected_at"
+        },
+        {
+          "name": "cost_expense_corrections_cost_expense_correction_id_not_null",
+          "type": "n",
+          "table": "app.cost_expense_corrections",
+          "definition": "NOT NULL cost_expense_correction_id"
+        },
+        {
+          "name": "cost_expense_corrections_expense_id_fkey",
+          "type": "f",
+          "table": "app.cost_expense_corrections",
+          "definition": "FOREIGN KEY (expense_id) REFERENCES app.expenses(expense_id)"
+        },
+        {
+          "name": "cost_expense_corrections_expense_id_not_null",
+          "type": "n",
+          "table": "app.cost_expense_corrections",
+          "definition": "NOT NULL expense_id"
+        },
+        {
+          "name": "cost_expense_corrections_pkey",
+          "type": "p",
+          "table": "app.cost_expense_corrections",
+          "definition": "PRIMARY KEY (cost_expense_correction_id)"
+        },
+        {
+          "name": "cost_expense_corrections_reason_check",
+          "type": "c",
+          "table": "app.cost_expense_corrections",
+          "definition": "CHECK ((length(btrim(reason)) > 0))"
+        },
+        {
+          "name": "cost_expense_corrections_reason_not_null",
+          "type": "n",
+          "table": "app.cost_expense_corrections",
+          "definition": "NOT NULL reason"
+        },
+        {
+          "name": "cost_expense_corrections_request_id_key",
+          "type": "u",
+          "table": "app.cost_expense_corrections",
+          "definition": "UNIQUE (request_id)"
+        },
+        {
+          "name": "cost_expense_corrections_request_id_not_null",
+          "type": "n",
+          "table": "app.cost_expense_corrections",
+          "definition": "NOT NULL request_id"
+        },
+        {
+          "name": "uq_cost_correction_expense",
+          "type": "u",
+          "table": "app.cost_expense_corrections",
+          "definition": "UNIQUE (cost_expense_correction_id, expense_id)"
+        },
+        {
+          "name": "uq_cost_correction_version",
+          "type": "u",
+          "table": "app.cost_expense_corrections",
+          "definition": "UNIQUE (expense_id, base_details_version)"
+        },
+        {
+          "name": "cost_financial_authorities_approval_reference_check",
+          "type": "c",
+          "table": "app.cost_financial_authorities",
+          "definition": "CHECK ((length(btrim(approval_reference)) > 0))"
+        },
+        {
+          "name": "cost_financial_authorities_approval_reference_not_null",
+          "type": "n",
+          "table": "app.cost_financial_authorities",
+          "definition": "NOT NULL approval_reference"
+        },
+        {
+          "name": "cost_financial_authorities_authorized_at_not_null",
+          "type": "n",
+          "table": "app.cost_financial_authorities",
+          "definition": "NOT NULL authorized_at"
+        },
+        {
+          "name": "cost_financial_authorities_authorized_by_user_id_fkey",
+          "type": "f",
+          "table": "app.cost_financial_authorities",
+          "definition": "FOREIGN KEY (authorized_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "cost_financial_authorities_authorized_by_user_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_authorities",
+          "definition": "NOT NULL authorized_by_user_id"
+        },
+        {
+          "name": "cost_financial_authorities_financial_authority_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_authorities",
+          "definition": "NOT NULL financial_authority_id"
+        },
+        {
+          "name": "cost_financial_authorities_financial_scope_id_fkey",
+          "type": "f",
+          "table": "app.cost_financial_authorities",
+          "definition": "FOREIGN KEY (financial_scope_id) REFERENCES app.cost_financial_scopes(financial_scope_id)"
+        },
+        {
+          "name": "cost_financial_authorities_financial_scope_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_authorities",
+          "definition": "NOT NULL financial_scope_id"
+        },
+        {
+          "name": "cost_financial_authorities_pkey",
+          "type": "p",
+          "table": "app.cost_financial_authorities",
+          "definition": "PRIMARY KEY (financial_authority_id)"
+        },
+        {
+          "name": "cost_financial_authorities_user_id_fkey",
+          "type": "f",
+          "table": "app.cost_financial_authorities",
+          "definition": "FOREIGN KEY (user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "cost_financial_authorities_user_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_authorities",
+          "definition": "NOT NULL user_id"
+        },
+        {
+          "name": "uq_cost_authority_scope",
+          "type": "u",
+          "table": "app.cost_financial_authorities",
+          "definition": "UNIQUE (financial_authority_id, financial_scope_id)"
+        },
+        {
+          "name": "cost_financial_authority_revoca_financial_authority_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_authority_revocations",
+          "definition": "NOT NULL financial_authority_id"
+        },
+        {
+          "name": "cost_financial_authority_revocation_financial_authority_id_fkey",
+          "type": "f",
+          "table": "app.cost_financial_authority_revocations",
+          "definition": "FOREIGN KEY (financial_authority_id) REFERENCES app.cost_financial_authorities(financial_authority_id)"
+        },
+        {
+          "name": "cost_financial_authority_revocation_revoked_by_user_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_authority_revocations",
+          "definition": "NOT NULL revoked_by_user_id"
+        },
+        {
+          "name": "cost_financial_authority_revocations_pkey",
+          "type": "p",
+          "table": "app.cost_financial_authority_revocations",
+          "definition": "PRIMARY KEY (financial_authority_id)"
+        },
+        {
+          "name": "cost_financial_authority_revocations_reason_check",
+          "type": "c",
+          "table": "app.cost_financial_authority_revocations",
+          "definition": "CHECK ((length(btrim(reason)) > 0))"
+        },
+        {
+          "name": "cost_financial_authority_revocations_reason_not_null",
+          "type": "n",
+          "table": "app.cost_financial_authority_revocations",
+          "definition": "NOT NULL reason"
+        },
+        {
+          "name": "cost_financial_authority_revocations_revoked_at_not_null",
+          "type": "n",
+          "table": "app.cost_financial_authority_revocations",
+          "definition": "NOT NULL revoked_at"
+        },
+        {
+          "name": "cost_financial_authority_revocations_revoked_by_user_id_fkey",
+          "type": "f",
+          "table": "app.cost_financial_authority_revocations",
+          "definition": "FOREIGN KEY (revoked_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "ck_cost_record_one_root",
+          "type": "c",
+          "table": "app.cost_financial_records",
+          "definition": "CHECK ((num_nonnulls(cost_concept_id, cost_event_type_id, cost_event_id, expense_id, cost_settlement_id) = 1))"
+        },
+        {
+          "name": "cost_financial_records_aircraft_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_records",
+          "definition": "NOT NULL aircraft_id"
+        },
+        {
+          "name": "cost_financial_records_cost_concept_id_key",
+          "type": "u",
+          "table": "app.cost_financial_records",
+          "definition": "UNIQUE (cost_concept_id)"
+        },
+        {
+          "name": "cost_financial_records_cost_event_id_key",
+          "type": "u",
+          "table": "app.cost_financial_records",
+          "definition": "UNIQUE (cost_event_id)"
+        },
+        {
+          "name": "cost_financial_records_cost_event_type_id_key",
+          "type": "u",
+          "table": "app.cost_financial_records",
+          "definition": "UNIQUE (cost_event_type_id)"
+        },
+        {
+          "name": "cost_financial_records_cost_settlement_id_key",
+          "type": "u",
+          "table": "app.cost_financial_records",
+          "definition": "UNIQUE (cost_settlement_id)"
+        },
+        {
+          "name": "cost_financial_records_expense_id_key",
+          "type": "u",
+          "table": "app.cost_financial_records",
+          "definition": "UNIQUE (expense_id)"
+        },
+        {
+          "name": "cost_financial_records_financial_record_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_records",
+          "definition": "NOT NULL financial_record_id"
+        },
+        {
+          "name": "cost_financial_records_financial_scope_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_records",
+          "definition": "NOT NULL financial_scope_id"
+        },
+        {
+          "name": "cost_financial_records_pkey",
+          "type": "p",
+          "table": "app.cost_financial_records",
+          "definition": "PRIMARY KEY (financial_record_id)"
+        },
+        {
+          "name": "cost_financial_records_provenance_reference_check",
+          "type": "c",
+          "table": "app.cost_financial_records",
+          "definition": "CHECK ((length(btrim(provenance_reference)) > 0))"
+        },
+        {
+          "name": "cost_financial_records_provenance_reference_not_null",
+          "type": "n",
+          "table": "app.cost_financial_records",
+          "definition": "NOT NULL provenance_reference"
+        },
+        {
+          "name": "cost_financial_records_registered_at_not_null",
+          "type": "n",
+          "table": "app.cost_financial_records",
+          "definition": "NOT NULL registered_at"
+        },
+        {
+          "name": "cost_financial_records_registered_by_user_id_fkey",
+          "type": "f",
+          "table": "app.cost_financial_records",
+          "definition": "FOREIGN KEY (registered_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "cost_financial_records_registered_by_user_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_records",
+          "definition": "NOT NULL registered_by_user_id"
+        },
+        {
+          "name": "fk_cost_record_concept",
+          "type": "f",
+          "table": "app.cost_financial_records",
+          "definition": "FOREIGN KEY (cost_concept_id, aircraft_id, financial_scope_id) REFERENCES app.cost_concepts(cost_concept_id, aircraft_id, financial_scope_id)"
+        },
+        {
+          "name": "fk_cost_record_event",
+          "type": "f",
+          "table": "app.cost_financial_records",
+          "definition": "FOREIGN KEY (cost_event_id, aircraft_id) REFERENCES app.cost_events(cost_event_id, aircraft_id)"
+        },
+        {
+          "name": "fk_cost_record_expense",
+          "type": "f",
+          "table": "app.cost_financial_records",
+          "definition": "FOREIGN KEY (expense_id, aircraft_id) REFERENCES app.expenses(expense_id, aircraft_id)"
+        },
+        {
+          "name": "fk_cost_record_scope",
+          "type": "f",
+          "table": "app.cost_financial_records",
+          "definition": "FOREIGN KEY (financial_scope_id, aircraft_id) REFERENCES app.cost_financial_scopes(financial_scope_id, aircraft_id)"
+        },
+        {
+          "name": "fk_cost_record_settlement",
+          "type": "f",
+          "table": "app.cost_financial_records",
+          "definition": "FOREIGN KEY (cost_settlement_id, aircraft_id) REFERENCES app.cost_settlements(cost_settlement_id, aircraft_id)"
+        },
+        {
+          "name": "fk_cost_record_type",
+          "type": "f",
+          "table": "app.cost_financial_records",
+          "definition": "FOREIGN KEY (cost_event_type_id, aircraft_id, financial_scope_id) REFERENCES app.cost_event_types(cost_event_type_id, aircraft_id, financial_scope_id)"
+        },
+        {
+          "name": "uq_cost_record_scope",
+          "type": "u",
+          "table": "app.cost_financial_records",
+          "definition": "UNIQUE (financial_record_id, financial_scope_id)"
+        },
+        {
+          "name": "cost_financial_scopes_aircraft_id_fkey",
+          "type": "f",
+          "table": "app.cost_financial_scopes",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "cost_financial_scopes_aircraft_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_scopes",
+          "definition": "NOT NULL aircraft_id"
+        },
+        {
+          "name": "cost_financial_scopes_approval_reference_check",
+          "type": "c",
+          "table": "app.cost_financial_scopes",
+          "definition": "CHECK ((length(btrim(approval_reference)) > 0))"
+        },
+        {
+          "name": "cost_financial_scopes_approval_reference_not_null",
+          "type": "n",
+          "table": "app.cost_financial_scopes",
+          "definition": "NOT NULL approval_reference"
+        },
+        {
+          "name": "cost_financial_scopes_created_at_not_null",
+          "type": "n",
+          "table": "app.cost_financial_scopes",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "cost_financial_scopes_created_by_user_id_fkey",
+          "type": "f",
+          "table": "app.cost_financial_scopes",
+          "definition": "FOREIGN KEY (created_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "cost_financial_scopes_created_by_user_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_scopes",
+          "definition": "NOT NULL created_by_user_id"
+        },
+        {
+          "name": "cost_financial_scopes_financial_scope_id_not_null",
+          "type": "n",
+          "table": "app.cost_financial_scopes",
+          "definition": "NOT NULL financial_scope_id"
+        },
+        {
+          "name": "cost_financial_scopes_label_check",
+          "type": "c",
+          "table": "app.cost_financial_scopes",
+          "definition": "CHECK ((length(btrim(label)) > 0))"
+        },
+        {
+          "name": "cost_financial_scopes_label_not_null",
+          "type": "n",
+          "table": "app.cost_financial_scopes",
+          "definition": "NOT NULL label"
+        },
+        {
+          "name": "cost_financial_scopes_pkey",
+          "type": "p",
+          "table": "app.cost_financial_scopes",
+          "definition": "PRIMARY KEY (financial_scope_id)"
+        },
+        {
+          "name": "uq_cost_scope_aircraft",
+          "type": "u",
+          "table": "app.cost_financial_scopes",
+          "definition": "UNIQUE (financial_scope_id, aircraft_id)"
+        },
+        {
+          "name": "ck_cost_settlement_not_self_adjustment",
+          "type": "c",
+          "table": "app.cost_settlements",
+          "definition": "CHECK (((adjusts_settlement_id IS NULL) OR (adjusts_settlement_id <> cost_settlement_id)))"
+        },
+        {
+          "name": "ck_cost_settlement_values",
+          "type": "c",
+          "table": "app.cost_settlements",
+          "definition": "CHECK (((currency_code ~ '^[A-Z]{3}$'::text) AND (jsonb_typeof(source_snapshot) = 'object'::text) AND (((cost_event_id IS NOT NULL) AND (period_start_date IS NULL) AND (period_end_date IS NULL)) OR ((cost_event_id IS NULL) AND (period_start_date IS NOT NULL) AND (period_end_date IS NOT NULL) AND (period_start_date <= period_end_date)))))"
+        },
+        {
+          "name": "cost_settlements_adjusts_settlement_id_fkey",
+          "type": "f",
+          "table": "app.cost_settlements",
+          "definition": "FOREIGN KEY (adjusts_settlement_id) REFERENCES app.cost_settlements(cost_settlement_id)"
+        },
+        {
+          "name": "cost_settlements_aircraft_id_fkey",
+          "type": "f",
+          "table": "app.cost_settlements",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "cost_settlements_aircraft_id_not_null",
+          "type": "n",
+          "table": "app.cost_settlements",
+          "definition": "NOT NULL aircraft_id"
+        },
+        {
+          "name": "cost_settlements_cost_event_id_fkey",
+          "type": "f",
+          "table": "app.cost_settlements",
+          "definition": "FOREIGN KEY (cost_event_id) REFERENCES app.cost_events(cost_event_id)"
+        },
+        {
+          "name": "cost_settlements_cost_settlement_id_not_null",
+          "type": "n",
+          "table": "app.cost_settlements",
+          "definition": "NOT NULL cost_settlement_id"
+        },
+        {
+          "name": "cost_settlements_currency_code_not_null",
+          "type": "n",
+          "table": "app.cost_settlements",
+          "definition": "NOT NULL currency_code"
+        },
+        {
+          "name": "cost_settlements_pkey",
+          "type": "p",
+          "table": "app.cost_settlements",
+          "definition": "PRIMARY KEY (cost_settlement_id)"
+        },
+        {
+          "name": "cost_settlements_settled_at_not_null",
+          "type": "n",
+          "table": "app.cost_settlements",
+          "definition": "NOT NULL settled_at"
+        },
+        {
+          "name": "cost_settlements_settled_by_user_id_fkey",
+          "type": "f",
+          "table": "app.cost_settlements",
+          "definition": "FOREIGN KEY (settled_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "cost_settlements_settled_by_user_id_not_null",
+          "type": "n",
+          "table": "app.cost_settlements",
+          "definition": "NOT NULL settled_by_user_id"
+        },
+        {
+          "name": "cost_settlements_source_snapshot_not_null",
+          "type": "n",
+          "table": "app.cost_settlements",
+          "definition": "NOT NULL source_snapshot"
+        },
+        {
+          "name": "uq_cost_settlement_aircraft",
+          "type": "u",
+          "table": "app.cost_settlements",
+          "definition": "UNIQUE (cost_settlement_id, aircraft_id)"
+        },
+        {
+          "name": "ck_cost_allocation_retirement",
+          "type": "c",
+          "table": "app.expense_allocations",
+          "definition": "CHECK ((((retired_at IS NULL) AND (retired_by_user_id IS NULL) AND (retired_correction_id IS NULL)) OR ((retired_at IS NOT NULL) AND (retired_by_user_id IS NOT NULL) AND (retired_correction_id IS NOT NULL))))"
+        },
+        {
+          "name": "ck_expense_allocation_values",
+          "type": "c",
+          "table": "app.expense_allocations",
+          "definition": "CHECK (((allocation_percent > (0)::numeric) AND (allocation_percent <= (100)::numeric) AND (allocated_amount >= (0)::numeric) AND (source_method = ANY (ARRAY['OWNERSHIP'::text, 'CUSTOM'::text, 'UTILIZATION'::text, 'DIRECT'::text]))))"
+        },
+        {
+          "name": "expense_allocations_allocated_amount_not_null",
+          "type": "n",
+          "table": "app.expense_allocations",
+          "definition": "NOT NULL allocated_amount"
+        },
+        {
+          "name": "expense_allocations_allocation_percent_not_null",
+          "type": "n",
+          "table": "app.expense_allocations",
+          "definition": "NOT NULL allocation_percent"
+        },
+        {
+          "name": "expense_allocations_expense_allocation_id_not_null",
+          "type": "n",
+          "table": "app.expense_allocations",
+          "definition": "NOT NULL expense_allocation_id"
+        },
+        {
+          "name": "expense_allocations_expense_id_fkey",
+          "type": "f",
+          "table": "app.expense_allocations",
+          "definition": "FOREIGN KEY (expense_id) REFERENCES app.expenses(expense_id)"
+        },
+        {
+          "name": "expense_allocations_expense_id_not_null",
+          "type": "n",
+          "table": "app.expense_allocations",
+          "definition": "NOT NULL expense_id"
+        },
+        {
+          "name": "expense_allocations_party_id_fkey",
+          "type": "f",
+          "table": "app.expense_allocations",
+          "definition": "FOREIGN KEY (party_id) REFERENCES app.parties(party_id)"
+        },
+        {
+          "name": "expense_allocations_party_id_not_null",
+          "type": "n",
+          "table": "app.expense_allocations",
+          "definition": "NOT NULL party_id"
+        },
+        {
+          "name": "expense_allocations_pkey",
+          "type": "p",
+          "table": "app.expense_allocations",
+          "definition": "PRIMARY KEY (expense_allocation_id)"
+        },
+        {
+          "name": "expense_allocations_retired_by_user_id_fkey",
+          "type": "f",
+          "table": "app.expense_allocations",
+          "definition": "FOREIGN KEY (retired_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "expense_allocations_source_method_not_null",
+          "type": "n",
+          "table": "app.expense_allocations",
+          "definition": "NOT NULL source_method"
+        },
+        {
+          "name": "fk_cost_allocation_created_correction",
+          "type": "f",
+          "table": "app.expense_allocations",
+          "definition": "FOREIGN KEY (created_correction_id, expense_id) REFERENCES app.cost_expense_corrections(cost_expense_correction_id, expense_id)"
+        },
+        {
+          "name": "fk_cost_allocation_retired_correction",
+          "type": "f",
+          "table": "app.expense_allocations",
+          "definition": "FOREIGN KEY (retired_correction_id, expense_id) REFERENCES app.cost_expense_corrections(cost_expense_correction_id, expense_id)"
+        },
+        {
+          "name": "ck_cost_payment_retirement",
+          "type": "c",
+          "table": "app.expense_payments",
+          "definition": "CHECK ((((retired_at IS NULL) AND (retired_by_user_id IS NULL) AND (retired_correction_id IS NULL)) OR ((retired_at IS NOT NULL) AND (retired_by_user_id IS NOT NULL) AND (retired_correction_id IS NOT NULL))))"
+        },
+        {
+          "name": "ck_expense_payment_amount",
+          "type": "c",
+          "table": "app.expense_payments",
+          "definition": "CHECK ((amount > (0)::numeric))"
+        },
+        {
+          "name": "expense_payments_amount_not_null",
+          "type": "n",
+          "table": "app.expense_payments",
+          "definition": "NOT NULL amount"
+        },
+        {
+          "name": "expense_payments_expense_id_fkey",
+          "type": "f",
+          "table": "app.expense_payments",
+          "definition": "FOREIGN KEY (expense_id) REFERENCES app.expenses(expense_id)"
+        },
+        {
+          "name": "expense_payments_expense_id_not_null",
+          "type": "n",
+          "table": "app.expense_payments",
+          "definition": "NOT NULL expense_id"
+        },
+        {
+          "name": "expense_payments_expense_payment_id_not_null",
+          "type": "n",
+          "table": "app.expense_payments",
+          "definition": "NOT NULL expense_payment_id"
+        },
+        {
+          "name": "expense_payments_payer_party_id_fkey",
+          "type": "f",
+          "table": "app.expense_payments",
+          "definition": "FOREIGN KEY (payer_party_id) REFERENCES app.parties(party_id)"
+        },
+        {
+          "name": "expense_payments_payer_party_id_not_null",
+          "type": "n",
+          "table": "app.expense_payments",
+          "definition": "NOT NULL payer_party_id"
+        },
+        {
+          "name": "expense_payments_pkey",
+          "type": "p",
+          "table": "app.expense_payments",
+          "definition": "PRIMARY KEY (expense_payment_id)"
+        },
+        {
+          "name": "expense_payments_retired_by_user_id_fkey",
+          "type": "f",
+          "table": "app.expense_payments",
+          "definition": "FOREIGN KEY (retired_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "fk_cost_payment_created_correction",
+          "type": "f",
+          "table": "app.expense_payments",
+          "definition": "FOREIGN KEY (created_correction_id, expense_id) REFERENCES app.cost_expense_corrections(cost_expense_correction_id, expense_id)"
+        },
+        {
+          "name": "fk_cost_payment_retired_correction",
+          "type": "f",
+          "table": "app.expense_payments",
+          "definition": "FOREIGN KEY (retired_correction_id, expense_id) REFERENCES app.cost_expense_corrections(cost_expense_correction_id, expense_id)"
+        },
+        {
+          "name": "ck_cost_details_version",
+          "type": "c",
+          "table": "app.expenses",
+          "definition": "CHECK ((details_version >= 0))"
+        },
+        {
+          "name": "ck_expense_utilization_metric",
+          "type": "c",
+          "table": "app.expenses",
+          "definition": "CHECK ((((allocation_method = 'UTILIZATION'::text) AND (utilization_metric = ANY (ARRAY['FLIGHT_TIME'::text, 'LANDINGS'::text, 'PRESSURIZATION_CYCLES'::text, 'ENGINE_CYCLES'::text])) AND (((utilization_metric = 'ENGINE_CYCLES'::text) AND (utilization_component_position IS NOT NULL) AND (utilization_component_position > 0)) OR ((utilization_metric <> 'ENGINE_CYCLES'::text) AND (utilization_component_position IS NULL)))) OR ((allocation_method <> 'UTILIZATION'::text) AND (utilization_metric IS NULL) AND (utilization_component_position IS NULL))))"
+        },
+        {
+          "name": "ck_expense_values",
+          "type": "c",
+          "table": "app.expenses",
+          "definition": "CHECK (((amount > (0)::numeric) AND (currency_code ~ '^[A-Z]{3}$'::text) AND (allocation_method = ANY (ARRAY['OWNERSHIP'::text, 'CUSTOM'::text, 'UTILIZATION'::text, 'DIRECT'::text])) AND (status = ANY (ARRAY['OPEN'::text, 'VOID'::text]))))"
+        },
+        {
+          "name": "expenses_aircraft_id_fkey",
+          "type": "f",
+          "table": "app.expenses",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "expenses_aircraft_id_not_null",
+          "type": "n",
+          "table": "app.expenses",
+          "definition": "NOT NULL aircraft_id"
+        },
+        {
+          "name": "expenses_allocation_method_not_null",
+          "type": "n",
+          "table": "app.expenses",
+          "definition": "NOT NULL allocation_method"
+        },
+        {
+          "name": "expenses_amount_not_null",
+          "type": "n",
+          "table": "app.expenses",
+          "definition": "NOT NULL amount"
+        },
+        {
+          "name": "expenses_cost_concept_id_fkey",
+          "type": "f",
+          "table": "app.expenses",
+          "definition": "FOREIGN KEY (cost_concept_id) REFERENCES app.cost_concepts(cost_concept_id)"
+        },
+        {
+          "name": "expenses_cost_concept_id_not_null",
+          "type": "n",
+          "table": "app.expenses",
+          "definition": "NOT NULL cost_concept_id"
+        },
+        {
+          "name": "expenses_cost_event_id_fkey",
+          "type": "f",
+          "table": "app.expenses",
+          "definition": "FOREIGN KEY (cost_event_id) REFERENCES app.cost_events(cost_event_id)"
+        },
+        {
+          "name": "expenses_currency_code_not_null",
+          "type": "n",
+          "table": "app.expenses",
+          "definition": "NOT NULL currency_code"
+        },
+        {
+          "name": "expenses_details_version_not_null",
+          "type": "n",
+          "table": "app.expenses",
+          "definition": "NOT NULL details_version"
+        },
+        {
+          "name": "expenses_expense_date_not_null",
+          "type": "n",
+          "table": "app.expenses",
+          "definition": "NOT NULL expense_date"
+        },
+        {
+          "name": "expenses_expense_id_not_null",
+          "type": "n",
+          "table": "app.expenses",
+          "definition": "NOT NULL expense_id"
+        },
+        {
+          "name": "expenses_pkey",
+          "type": "p",
+          "table": "app.expenses",
+          "definition": "PRIMARY KEY (expense_id)"
+        },
+        {
+          "name": "expenses_status_not_null",
+          "type": "n",
+          "table": "app.expenses",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "uq_cost_expense_aircraft",
+          "type": "u",
+          "table": "app.expenses",
+          "definition": "UNIQUE (expense_id, aircraft_id)"
+        }
+      ],
+      "current_user": "app_horas_migration"
+    }
+  }
+]

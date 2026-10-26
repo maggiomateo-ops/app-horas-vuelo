@@ -1,3 +1,5 @@
+> Actualización de procedencia: [008 reconciliada y 009 reservada](migration-008-reconciliation.md). El bloqueo de ledger descrito en este checkpoint quedó resuelto mediante SELECT y artefacto byte-exacto; preflight SQL sigue pendiente.
+
 # Hours V2 — preparación final de preflight
 
 2026-10-26. Base `3ace73d12ac1b68217aa68f9ec99d7ab9f6335e5`, árbol inicial limpio, rama `codex/hours-v2-preflight-ready`. **Contrato técnico PROPOSED, SQL preparado y no ejecutado.** Este documento actualiza los bloqueos técnicos de D-309 sin convertir D-307/D-308/D-309 en aprobación de persistencia. No hay cambios en runtime, runner, migraciones, flags, dependencias ni infraestructura.

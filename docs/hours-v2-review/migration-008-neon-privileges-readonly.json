@@ -1,0 +1,379 @@
+[
+  {
+    "evidence": {
+      "roles": [
+        {
+          "name": "app_horas_runtime",
+          "login": true,
+          "super": false,
+          "inherit": true,
+          "createdb": false,
+          "bypassrls": false,
+          "create_app": false,
+          "createrole": false,
+          "replication": false,
+          "create_audit": false
+        },
+        {
+          "name": "app_runtime",
+          "login": false,
+          "super": false,
+          "inherit": true,
+          "createdb": false,
+          "bypassrls": false,
+          "create_app": false,
+          "createrole": false,
+          "replication": false,
+          "create_audit": false
+        }
+      ],
+      "privileges": [
+        {
+          "role": "app_horas_runtime",
+          "table": "app.cost_expense_corrections",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.cost_financial_authorities",
+          "delete": false,
+          "insert": false,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.cost_financial_authority_revocations",
+          "delete": false,
+          "insert": false,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.cost_financial_records",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.cost_financial_scopes",
+          "delete": false,
+          "insert": false,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.cost_settlement_expense_lines",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.cost_settlement_owner_lines",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.cost_settlement_party_lines",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.cost_settlement_utilization_lines",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.cost_settlements",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.expense_allocations",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": [
+            "retired_correction_id",
+            "retired_at",
+            "retired_by_user_id"
+          ]
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "app.expense_payments",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": [
+            "retired_correction_id",
+            "retired_at",
+            "retired_by_user_id"
+          ]
+        },
+        {
+          "role": "app_horas_runtime",
+          "table": "audit.audit_events",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.cost_expense_corrections",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.cost_financial_authorities",
+          "delete": false,
+          "insert": false,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.cost_financial_authority_revocations",
+          "delete": false,
+          "insert": false,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.cost_financial_records",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.cost_financial_scopes",
+          "delete": false,
+          "insert": false,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.cost_settlement_expense_lines",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.cost_settlement_owner_lines",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.cost_settlement_party_lines",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.cost_settlement_utilization_lines",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.cost_settlements",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.expense_allocations",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": [
+            "retired_correction_id",
+            "retired_at",
+            "retired_by_user_id"
+          ]
+        },
+        {
+          "role": "app_runtime",
+          "table": "app.expense_payments",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": [
+            "retired_correction_id",
+            "retired_at",
+            "retired_by_user_id"
+          ]
+        },
+        {
+          "role": "app_runtime",
+          "table": "audit.audit_events",
+          "delete": false,
+          "insert": true,
+          "select": true,
+          "update": false,
+          "trigger": false,
+          "truncate": false,
+          "references": false,
+          "update_columns": []
+        }
+      ],
+      "memberships": [
+        {
+          "role": "app_runtime",
+          "member": "app_horas_runtime"
+        }
+      ],
+      "guard_function": {
+        "config": [
+          "search_path=pg_catalog, app"
+        ],
+        "group_execute": true,
+        "login_execute": true,
+        "public_execute": false,
+        "security_definer": false
+      },
+      "public_table_acl": null,
+      "public_column_acl": null
+    }
+  }
+]

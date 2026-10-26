@@ -1,0 +1,10 @@
+[
+  {
+    "rolname": "app_horas_runtime",
+    "owns_canonical": false
+  },
+  {
+    "rolname": "app_runtime",
+    "owns_canonical": false
+  }
+]

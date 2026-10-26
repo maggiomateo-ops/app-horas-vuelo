@@ -1,0 +1,50 @@
+[
+  {
+    "version": "001",
+    "filename": "001_initial_schema.sql",
+    "checksum_sha256": "7804df1482695e21789bd08226a37a17774b6dd1a53e3432051823cdfb59d375",
+    "applied_at": "2026-09-21T21:41:25.502Z"
+  },
+  {
+    "version": "002",
+    "filename": "002_runtime_grant_hardening.sql",
+    "checksum_sha256": "50ef18aa813cbd061f120aa845221646068e18449f7efc868e8c56659a1c0660",
+    "applied_at": "2026-09-21T21:41:25.502Z"
+  },
+  {
+    "version": "003",
+    "filename": "003_component_installation_historical_date.sql",
+    "checksum_sha256": "bcceccd14273a563709f7cda1ba55422c00897385137264b654f80cc75c4df06",
+    "applied_at": "2026-09-24T22:57:37.120Z"
+  },
+  {
+    "version": "004",
+    "filename": "004_export_direct_response_artifacts.sql",
+    "checksum_sha256": "ffb317637e06040ee0f9cfd56c73ea862fe10f2bbd02d84e227a6fe0e4f63109",
+    "applied_at": "2026-09-28T02:23:57.364Z"
+  },
+  {
+    "version": "005",
+    "filename": "005_aircraft_configuration.sql",
+    "checksum_sha256": "ef423f1c5beaf65b8613b0b458c28a9bd66c14348ac167116851100d057cd2e2",
+    "applied_at": "2026-09-29T13:53:03.739Z"
+  },
+  {
+    "version": "006",
+    "filename": "006_costs.sql",
+    "checksum_sha256": "2c13566e417716ba15dfef4ce26c57e42d6b9c9b0c9ca2907905e6977dc44cd7",
+    "applied_at": "2026-10-02T14:21:00.354Z"
+  },
+  {
+    "version": "007",
+    "filename": "007_costs_allocation_metric_adjustments.sql",
+    "checksum_sha256": "e3b5cc4690fef2bfd49eb425abd3d98f4ca64ecaf6a15026139954d9c1989326",
+    "applied_at": "2026-10-02T15:09:50.512Z"
+  },
+  {
+    "version": "008",
+    "filename": "008_costs_financial_scopes_and_open_corrections.sql",
+    "checksum_sha256": "30df860f6ba51617e93c55be21e8d2355aba734977dfb3db6bf0776b5c07c160",
+    "applied_at": "2026-10-19T21:53:24.663Z"
+  }
+]

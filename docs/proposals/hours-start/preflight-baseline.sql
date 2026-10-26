@@ -5,7 +5,8 @@ SELECT current_database(),current_user,session_user,current_setting('server_vers
 SELECT rolname,rolcanlogin,rolcreaterole,rolbypassrls FROM pg_roles WHERE rolname IN (current_user,session_user,'app_runtime','app_horas_runtime');
 SELECT version,filename,checksum_sha256 FROM public.schema_migrations ORDER BY version;
 -- Coordinator compares exact checkout expected-ledger.json and independently sourced any extra
--- version (roadmap references 008). Missing/extra/changed version HALTS. NO adoption or ledger writes.
+-- version. Baseline 001–008 byte-exact reconciled; 009 reserved for Hours V2 only.
+-- Missing/extra/changed version HALTS. NO adoption or ledger writes.
 SELECT n.nspname,c.relname,c.relkind,pg_get_userbyid(c.relowner) AS owner,c.relrowsecurity,c.relforcerowsecurity,c.relacl
  FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('app','audit','hours_v2_private')
  ORDER BY n.nspname,c.relname;

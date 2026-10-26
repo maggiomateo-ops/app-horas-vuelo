@@ -1,6 +1,6 @@
 {
-  "baseCommit": "3ace73d12ac1b68217aa68f9ec99d7ab9f6335e5",
-  "source": "repository bytes only; NOT observed remote ledger",
+  "baseCommit": "3ed6574c48e1516ee005e7751e8a6f1bcd943500",
+  "source": "repository bytes only; NOT observed remote ledger (live readback recorded separately in migration-008-neon-ledger-readonly.json)",
   "migrations": {
     "001_initial_schema.sql": "7804df1482695e21789bd08226a37a17774b6dd1a53e3432051823cdfb59d375",
     "002_runtime_grant_hardening.sql": "50ef18aa813cbd061f120aa845221646068e18449f7efc868e8c56659a1c0660",
@@ -8,6 +8,7 @@
     "004_export_direct_response_artifacts.sql": "ffb317637e06040ee0f9cfd56c73ea862fe10f2bbd02d84e227a6fe0e4f63109",
     "005_aircraft_configuration.sql": "ef423f1c5beaf65b8613b0b458c28a9bd66c14348ac167116851100d057cd2e2",
     "006_costs.sql": "2c13566e417716ba15dfef4ce26c57e42d6b9c9b0c9ca2907905e6977dc44cd7",
-    "007_costs_allocation_metric_adjustments.sql": "e3b5cc4690fef2bfd49eb425abd3d98f4ca64ecaf6a15026139954d9c1989326"
+    "007_costs_allocation_metric_adjustments.sql": "e3b5cc4690fef2bfd49eb425abd3d98f4ca64ecaf6a15026139954d9c1989326",
+    "008_costs_financial_scopes_and_open_corrections.sql": "30df860f6ba51617e93c55be21e8d2355aba734977dfb3db6bf0776b5c07c160"
   }
 }
