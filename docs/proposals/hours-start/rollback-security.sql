@@ -1,3 +1,17 @@
+-- Explicit BEGIN/ROLLBACK or approved empty disposable teardown transaction required.
+DO $owner_teardown_precheck$
+BEGIN
+  IF current_user<>'app_horas_migration' OR session_user<>current_user
+    OR current_setting('hours_v2.owner_bootstrap',true) IS DISTINCT FROM 'approved-disposable-only'
+    OR NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND rolcreaterole AND NOT rolsuper)
+    OR pg_has_role('app_runtime',current_user,'MEMBER') OR pg_has_role('app_horas_runtime',current_user,'MEMBER') THEN
+    RAISE EXCEPTION 'Controlled migration teardown required' USING ERRCODE='42501';
+  END IF;
+END $owner_teardown_precheck$;
+-- Creator ADMIN (native PostgreSQL grant) must still exist; do not elevate runtime.
+GRANT hours_v2_reader, hours_v2_writer, hours_v2_maintenance, hours_v2_invalidator,
+  hours_v2_security_owner, hours_v2_cleanup_owner TO app_horas_migration
+  WITH INHERIT FALSE, SET TRUE GRANTED BY app_horas_migration;
 -- EMPTY DISPOSABLE PREFLIGHT ONLY. Prefer forced transaction ROLLBACK; never run here.
 DROP TRIGGER hours_v2_batch_guard ON app.flight_import_batches;
 DROP TRIGGER hours_confirmation_complete ON app.hours_reconciliation_confirmations;
@@ -102,32 +116,72 @@ DROP POLICY hours_check_rows ON app.hours_reconciliation_staged_rows;
 DROP POLICY hours_check_lineage ON app.hours_import_committed_rows;
 DROP POLICY hours_check_issues ON app.hours_reconciliation_issues;
 DROP POLICY hours_check_source ON app.hours_import_staged_rows;
+SET LOCAL ROLE hours_v2_cleanup_owner;
 DROP FUNCTION hours_v2_private.due_cleanup(integer);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_security_owner;
 DROP FUNCTION hours_v2_private.batch_confirmed(uuid,uuid);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_security_owner;
 DROP FUNCTION hours_v2_private.check_confirmation_complete();
+RESET ROLE;
 DROP FUNCTION hours_v2_private.guard_batch_lifecycle();
+SET LOCAL ROLE hours_v2_security_owner;
 DROP FUNCTION hours_v2_private.seal_batch(uuid,uuid,uuid);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_cleanup_owner;
 DROP FUNCTION hours_v2_private.finish_raw_cleanup(uuid,uuid,uuid,boolean);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_cleanup_owner;
 DROP FUNCTION hours_v2_private.claim_raw_cleanup(uuid,uuid);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_cleanup_owner;
 DROP FUNCTION hours_v2_private.purge_batch(uuid,uuid);
+RESET ROLE;
 DROP FUNCTION hours_v2_private.guard_history();
+SET LOCAL ROLE hours_v2_security_owner;
 DROP FUNCTION hours_v2_private.fact_visible(uuid,uuid,uuid,uuid);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_security_owner;
 DROP FUNCTION hours_v2_private.cancel_batch(uuid,uuid);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_security_owner;
 DROP FUNCTION hours_v2_private.open_batch(uuid,text);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_security_owner;
 DROP FUNCTION hours_v2_private.batch_open(uuid,uuid);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_security_owner;
 DROP FUNCTION hours_v2_private.write_scope(uuid);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_security_owner;
 DROP FUNCTION hours_v2_private.begin_mutation(uuid,bigint);
+RESET ROLE;
+SET LOCAL ROLE hours_v2_security_owner;
 DROP FUNCTION hours_v2_private.owner_active(uuid);
+RESET ROLE;
 DROP SCHEMA hours_v2_private;
+SET LOCAL ROLE hours_v2_reader;
 DROP OWNED BY hours_v2_reader RESTRICT;
+RESET ROLE;
 DROP ROLE hours_v2_reader;
+SET LOCAL ROLE hours_v2_writer;
 DROP OWNED BY hours_v2_writer RESTRICT;
+RESET ROLE;
 DROP ROLE hours_v2_writer;
+SET LOCAL ROLE hours_v2_maintenance;
 DROP OWNED BY hours_v2_maintenance RESTRICT;
+RESET ROLE;
 DROP ROLE hours_v2_maintenance;
+SET LOCAL ROLE hours_v2_invalidator;
 DROP OWNED BY hours_v2_invalidator RESTRICT;
+RESET ROLE;
 DROP ROLE hours_v2_invalidator;
+SET LOCAL ROLE hours_v2_cleanup_owner;
 DROP OWNED BY hours_v2_cleanup_owner RESTRICT;
+RESET ROLE;
 DROP ROLE hours_v2_cleanup_owner;
+SET LOCAL ROLE hours_v2_security_owner;
 DROP OWNED BY hours_v2_security_owner RESTRICT;
+RESET ROLE;
 DROP ROLE hours_v2_security_owner;

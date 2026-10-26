@@ -1,12 +1,42 @@
 -- PROPOSAL ONLY. NOT A MIGRATION. DO NOT EXECUTE here.
 -- Isolated preflight only: schema.sql, retention.sql, security.sql, synthetic fixtures.
 -- NO membership granted to app_runtime/app_horas_runtime; no LOGIN, passwords or credentials.
+-- PostgreSQL >=16, controlled migration bootstrap ONLY, in one explicit transaction.
+-- Caller must BEGIN and SET LOCAL hours_v2.owner_bootstrap='approved-disposable-only'.
+-- This setting is an operator acknowledgement, NOT application identity or a Vercel flag.
+DO $owner_bootstrap_precheck$
+BEGIN
+  IF current_setting('server_version_num')::integer < 160000
+    OR current_user <> 'app_horas_migration' OR session_user <> current_user
+    OR current_setting('hours_v2.owner_bootstrap',true) IS DISTINCT FROM 'approved-disposable-only'
+    OR NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND rolcreaterole AND NOT rolsuper) THEN
+    RAISE EXCEPTION 'Hours V2 requires the approved migration actor and transaction-local bootstrap' USING ERRCODE='42501';
+  END IF;
+  IF pg_has_role('app_runtime',current_user,'MEMBER') OR pg_has_role('app_horas_runtime',current_user,'MEMBER') THEN
+    RAISE EXCEPTION 'Runtime must not reach the migration actor' USING ERRCODE='42501';
+  END IF;
+END $owner_bootstrap_precheck$;
+-- Prevent ambient createrole_self_grant from silently enabling inheritance/SET.
+-- The native creator ADMIN grant remains; it is administrative, NOT runtime access.
+SET LOCAL createrole_self_grant = '';
 CREATE ROLE hours_v2_reader NOLOGIN NOINHERIT NOBYPASSRLS;
 CREATE ROLE hours_v2_writer NOLOGIN NOINHERIT NOBYPASSRLS;
 CREATE ROLE hours_v2_maintenance NOLOGIN NOINHERIT NOBYPASSRLS;
 CREATE ROLE hours_v2_cleanup_owner NOLOGIN NOINHERIT NOBYPASSRLS;
 CREATE ROLE hours_v2_security_owner NOLOGIN NOINHERIT NOBYPASSRLS;
 CREATE ROLE hours_v2_invalidator NOLOGIN NOINHERIT NOBYPASSRLS;
+-- Temporary SET-only grants by the migration actor, never to runtime/worker roles.
+GRANT hours_v2_security_owner, hours_v2_cleanup_owner TO app_horas_migration
+  WITH INHERIT FALSE, SET TRUE GRANTED BY app_horas_migration;
+DO $owner_bootstrap_ready$
+BEGIN
+  IF NOT pg_has_role(current_user,'hours_v2_security_owner','SET')
+    OR NOT pg_has_role(current_user,'hours_v2_cleanup_owner','SET')
+    OR pg_has_role(current_user,'hours_v2_security_owner','USAGE')
+    OR pg_has_role(current_user,'hours_v2_cleanup_owner','USAGE') THEN
+    RAISE EXCEPTION 'SET-only ownership bootstrap not effective' USING ERRCODE='42501';
+  END IF;
+END $owner_bootstrap_ready$;
 CREATE SCHEMA hours_v2_private;
 REVOKE ALL ON SCHEMA hours_v2_private FROM PUBLIC;
 GRANT CREATE ON SCHEMA hours_v2_private TO hours_v2_security_owner,hours_v2_cleanup_owner;
@@ -38,7 +68,6 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog AS $$
         AND m.user_id=nullif(current_setting('hours_v2.actor_id',true),'')::uuid
         AND m.role='OWNER' AND m.status='ACTIVE' AND u.status='ACTIVE' AND a.status='ACTIVE');
 $$;
-ALTER FUNCTION hours_v2_private.owner_active(uuid) OWNER TO hours_v2_security_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.owner_active(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.owner_active(uuid) TO hours_v2_reader, hours_v2_writer;
 
@@ -62,7 +91,6 @@ BEGIN
   PERFORM set_config('hours_v2.fenced_generation',v::text,true);
   RETURN v;
 END $$;
-ALTER FUNCTION hours_v2_private.begin_mutation(uuid,bigint) OWNER TO hours_v2_security_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.begin_mutation(uuid,bigint) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.begin_mutation(uuid,bigint) TO hours_v2_writer;
 -- Updates the shared row (not just FOR UPDATE), forcing stale SERIALIZABLE waiters to retry.
@@ -77,7 +105,6 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog AS $$
    AND EXISTS(SELECT 1 FROM app.aircraft WHERE aircraft_id=p_aircraft
      AND hours_v2_generation=nullif(current_setting('hours_v2.fenced_generation',true),'')::bigint);
 $$;
-ALTER FUNCTION hours_v2_private.write_scope(uuid) OWNER TO hours_v2_security_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.write_scope(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.write_scope(uuid) TO hours_v2_writer;
 
@@ -89,7 +116,6 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog AS $$
  SELECT 1 FROM app.flight_import_batches b WHERE b.aircraft_id=p_aircraft AND b.import_batch_id=p_batch
    AND b.hours_v2 AND b.hours_v2_stage_state='OPEN' AND b.hours_v2_stage_expires_at>statement_timestamp());
 $$;
-ALTER FUNCTION hours_v2_private.batch_open(uuid,uuid) OWNER TO hours_v2_security_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.batch_open(uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.batch_open(uuid,uuid) TO hours_v2_writer;
 
@@ -107,7 +133,6 @@ BEGIN
    'test/'||p_aircraft||'/'||id||'/'||gen_random_uuid(),t+interval '24 hours',t,true,'OPEN',t+interval '168 hours','hours-retention-v2.1');
  RETURN id;
 END $$;
-ALTER FUNCTION hours_v2_private.open_batch(uuid,text) OWNER TO hours_v2_security_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.open_batch(uuid,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.open_batch(uuid,text) TO hours_v2_writer;
 
@@ -122,7 +147,6 @@ BEGIN
  UPDATE app.flight_import_batches SET hours_v2_stage_state='CANCELLED',hours_v2_cancelled_at=clock_timestamp() WHERE import_batch_id=p_batch;
  RETURN true;
 END $$;
-ALTER FUNCTION hours_v2_private.cancel_batch(uuid,uuid) OWNER TO hours_v2_security_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.cancel_batch(uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.cancel_batch(uuid,uuid) TO hours_v2_writer;
 
@@ -145,7 +169,6 @@ BEGIN
  RETURN EXISTS(SELECT 1 FROM app.flight_import_batches WHERE aircraft_id=p_aircraft AND import_batch_id=b AND hours_v2
   AND (hours_v2_stage_state='CONFIRMED' OR (hours_v2_stage_state='OPEN' AND hours_v2_stage_expires_at>clock_timestamp())));
 END $$;
-ALTER FUNCTION hours_v2_private.fact_visible(uuid,uuid,uuid,uuid) OWNER TO hours_v2_security_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.fact_visible(uuid,uuid,uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.fact_visible(uuid,uuid,uuid,uuid) TO hours_v2_reader,hours_v2_writer;
 
@@ -569,7 +592,6 @@ BEGIN
     VALUES(gen_random_uuid(),'SYSTEM','SYSTEM',p_aircraft,'HOURS_IMPORT',p_batch,'HOURS_STAGING_PURGED',jsonb_build_object('policy','hours-retention-v2.1'));
   RETURN true;
 END $$;
-ALTER FUNCTION hours_v2_private.purge_batch(uuid,uuid) OWNER TO hours_v2_cleanup_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.purge_batch(uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.purge_batch(uuid,uuid) TO hours_v2_maintenance;
 -- Maintenance has no table SELECT/INSERT/UPDATE/DELETE and cannot SET ROLE cleanup_owner.
@@ -595,7 +617,6 @@ BEGIN
   hours_v2_cleanup_attempts=hours_v2_cleanup_attempts+1 WHERE import_batch_id=p_batch;
  RETURN QUERY SELECT token,b.source_storage_key;
 END $$;
-ALTER FUNCTION hours_v2_private.claim_raw_cleanup(uuid,uuid) OWNER TO hours_v2_cleanup_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.claim_raw_cleanup(uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.claim_raw_cleanup(uuid,uuid) TO hours_v2_maintenance;
 
@@ -622,7 +643,6 @@ BEGIN
  END IF;
  RETURN coalesce(p_verified_absent,false);
 END $$;
-ALTER FUNCTION hours_v2_private.finish_raw_cleanup(uuid,uuid,uuid,boolean) OWNER TO hours_v2_cleanup_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.finish_raw_cleanup(uuid,uuid,uuid,boolean) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.finish_raw_cleanup(uuid,uuid,uuid,boolean) TO hours_v2_maintenance;
 
@@ -643,7 +663,6 @@ BEGIN
     AND hours_v2_stage_expires_at>clock_timestamp();
  IF NOT FOUND THEN RAISE EXCEPTION 'Closed or expired batch' USING ERRCODE='23514'; END IF;
 END $$;
-ALTER FUNCTION hours_v2_private.seal_batch(uuid,uuid,uuid) OWNER TO hours_v2_security_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.seal_batch(uuid,uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.seal_batch(uuid,uuid,uuid) TO hours_v2_writer;
 GRANT SELECT ON app.hours_reconciliation_runs, app.hours_reconciliation_confirmations,
@@ -713,14 +732,12 @@ BEGIN
  END IF;
  RETURN NEW;
 END $$;
-ALTER FUNCTION hours_v2_private.check_confirmation_complete() OWNER TO hours_v2_security_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.check_confirmation_complete() FROM PUBLIC;
 CREATE FUNCTION hours_v2_private.batch_confirmed(p_aircraft uuid,p_batch uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
  SELECT coalesce(hours_v2_private.owner_active(p_aircraft),false) AND EXISTS(SELECT 1 FROM app.flight_import_batches
   WHERE aircraft_id=p_aircraft AND import_batch_id=p_batch AND hours_v2 AND status='COMMITTED' AND hours_v2_stage_state='CONFIRMED' AND hours_v2_stage_expires_at>clock_timestamp());
 $$;
-ALTER FUNCTION hours_v2_private.batch_confirmed(uuid,uuid) OWNER TO hours_v2_security_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.batch_confirmed(uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.batch_confirmed(uuid,uuid) TO hours_v2_writer;
 CREATE CONSTRAINT TRIGGER hours_confirmation_complete AFTER INSERT ON app.hours_reconciliation_confirmations
@@ -734,7 +751,6 @@ CREATE POLICY hours_check_lineage ON app.hours_import_committed_rows FOR SELECT 
 CREATE POLICY hours_check_issues ON app.hours_reconciliation_issues FOR SELECT TO hours_v2_security_owner USING(true);
 CREATE POLICY hours_check_source ON app.hours_import_staged_rows FOR SELECT TO hours_v2_security_owner USING(true);
 
-REVOKE CREATE ON SCHEMA hours_v2_private FROM hours_v2_security_owner,hours_v2_cleanup_owner;
 
 CREATE FUNCTION hours_v2_private.due_cleanup(p_limit integer DEFAULT 50)
 RETURNS TABLE(aircraft_id uuid,import_batch_id uuid) LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS $$
@@ -745,9 +761,70 @@ RETURNS TABLE(aircraft_id uuid,import_batch_id uuid) LANGUAGE sql SECURITY DEFIN
   OR (b.hours_v2_stage_state NOT IN ('CONFIRMED','PURGED') AND (b.hours_v2_cancelled_at IS NOT NULL OR b.hours_v2_stage_expires_at<=clock_timestamp())))
  ORDER BY b.created_at,b.import_batch_id LIMIT greatest(0,least(coalesce(p_limit,0),100));
 $$;
--- Temporarily grant CREATE only to transfer this last function, then withdraw it.
-GRANT CREATE ON SCHEMA hours_v2_private TO hours_v2_cleanup_owner;
-ALTER FUNCTION hours_v2_private.due_cleanup(integer) OWNER TO hours_v2_cleanup_owner;
-REVOKE CREATE ON SCHEMA hours_v2_private FROM hours_v2_cleanup_owner;
 REVOKE ALL ON FUNCTION hours_v2_private.due_cleanup(integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION hours_v2_private.due_cleanup(integer) TO hours_v2_maintenance;
+
+-- Finish ACLs while functions still belong to the creator. No implicit INHERIT needed.
+-- All ownership transfers happen last, while both destination roles have schema CREATE.
+ALTER FUNCTION hours_v2_private.owner_active(uuid) OWNER TO hours_v2_security_owner;
+ALTER FUNCTION hours_v2_private.begin_mutation(uuid,bigint) OWNER TO hours_v2_security_owner;
+ALTER FUNCTION hours_v2_private.write_scope(uuid) OWNER TO hours_v2_security_owner;
+ALTER FUNCTION hours_v2_private.batch_open(uuid,uuid) OWNER TO hours_v2_security_owner;
+ALTER FUNCTION hours_v2_private.open_batch(uuid,text) OWNER TO hours_v2_security_owner;
+ALTER FUNCTION hours_v2_private.cancel_batch(uuid,uuid) OWNER TO hours_v2_security_owner;
+ALTER FUNCTION hours_v2_private.fact_visible(uuid,uuid,uuid,uuid) OWNER TO hours_v2_security_owner;
+ALTER FUNCTION hours_v2_private.purge_batch(uuid,uuid) OWNER TO hours_v2_cleanup_owner;
+ALTER FUNCTION hours_v2_private.claim_raw_cleanup(uuid,uuid) OWNER TO hours_v2_cleanup_owner;
+ALTER FUNCTION hours_v2_private.finish_raw_cleanup(uuid,uuid,uuid,boolean) OWNER TO hours_v2_cleanup_owner;
+ALTER FUNCTION hours_v2_private.seal_batch(uuid,uuid,uuid) OWNER TO hours_v2_security_owner;
+ALTER FUNCTION hours_v2_private.check_confirmation_complete() OWNER TO hours_v2_security_owner;
+ALTER FUNCTION hours_v2_private.batch_confirmed(uuid,uuid) OWNER TO hours_v2_security_owner;
+ALTER FUNCTION hours_v2_private.due_cleanup(integer) OWNER TO hours_v2_cleanup_owner;
+REVOKE CREATE ON SCHEMA hours_v2_private FROM hours_v2_security_owner,hours_v2_cleanup_owner;
+-- Remove ONLY the temporary SET rights issued by this grantor; native creator ADMIN remains.
+REVOKE SET OPTION FOR hours_v2_security_owner, hours_v2_cleanup_owner
+  FROM app_horas_migration GRANTED BY app_horas_migration RESTRICT;
+DO $owner_bootstrap_closed$
+DECLARE r text; f record;
+BEGIN
+  FOREACH r IN ARRAY ARRAY['hours_v2_reader','hours_v2_writer','hours_v2_maintenance',
+    'hours_v2_invalidator','hours_v2_security_owner','hours_v2_cleanup_owner'] LOOP
+    IF pg_has_role(current_user,r,'SET') OR pg_has_role(current_user,r,'USAGE')
+      OR pg_has_role('app_runtime',r,'MEMBER') OR pg_has_role('app_horas_runtime',r,'MEMBER')
+      OR EXISTS(SELECT 1 FROM pg_auth_members m WHERE m.roleid=r::regrole
+        AND (m.member<>current_user::regrole OR m.inherit_option OR m.set_option)) THEN
+      RAISE EXCEPTION 'Unexpected Hours V2 membership after bootstrap: %',r USING ERRCODE='42501';
+    END IF;
+  END LOOP;
+  IF has_schema_privilege('hours_v2_security_owner','hours_v2_private','CREATE')
+    OR has_schema_privilege('hours_v2_cleanup_owner','hours_v2_private','CREATE') THEN
+    RAISE EXCEPTION 'Temporary schema CREATE not removed' USING ERRCODE='42501';
+  END IF;
+  FOR f IN SELECT * FROM (VALUES
+    ('owner_active(uuid)','hours_v2_security_owner',true),
+    ('begin_mutation(uuid,bigint)','hours_v2_security_owner',true),
+    ('write_scope(uuid)','hours_v2_security_owner',true),
+    ('batch_open(uuid,uuid)','hours_v2_security_owner',true),
+    ('open_batch(uuid,text)','hours_v2_security_owner',true),
+    ('cancel_batch(uuid,uuid)','hours_v2_security_owner',true),
+    ('fact_visible(uuid,uuid,uuid,uuid)','hours_v2_security_owner',true),
+    ('purge_batch(uuid,uuid)','hours_v2_cleanup_owner',true),
+    ('claim_raw_cleanup(uuid,uuid)','hours_v2_cleanup_owner',true),
+    ('finish_raw_cleanup(uuid,uuid,uuid,boolean)','hours_v2_cleanup_owner',true),
+    ('seal_batch(uuid,uuid,uuid)','hours_v2_security_owner',true),
+    ('check_confirmation_complete()','hours_v2_security_owner',true),
+    ('batch_confirmed(uuid,uuid)','hours_v2_security_owner',true),
+    ('due_cleanup(integer)','hours_v2_cleanup_owner',true)
+    ,('guard_history()','app_horas_migration',false)
+    ,('guard_batch_lifecycle()','app_horas_migration',false)
+  ) expected(signature,owner_role,is_definer) LOOP
+    IF NOT EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid=to_regprocedure('hours_v2_private.'||f.signature)
+      AND p.proowner=f.owner_role::regrole AND p.prosecdef=f.is_definer
+      AND p.proconfig=ARRAY['search_path=pg_catalog']::text[]
+      AND NOT EXISTS(SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+        WHERE a.grantee=0 AND a.privilege_type='EXECUTE')) THEN
+      RAISE EXCEPTION 'Function ownership/security contract mismatch: %',f.signature USING ERRCODE='42501';
+    END IF;
+  END LOOP;
+END $owner_bootstrap_closed$;
+-- Caller MUST verify metadata, force rollback and use independent readback before any PASS.

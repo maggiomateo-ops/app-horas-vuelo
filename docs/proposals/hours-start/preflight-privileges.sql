@@ -1,10 +1,20 @@
 -- PREPARED ONLY / NOT EXECUTED. Run after proposed SQL on approved disposable synthetic target.
 -- Role names are proposals, not existing production grants. All queries are metadata-only.
 SELECT rolname,rolcanlogin,rolinherit,rolbypassrls FROM pg_roles WHERE rolname LIKE 'hours_v2_%' ORDER BY rolname;
-SELECT r.rolname,member.rolname AS member FROM pg_auth_members m
+SELECT r.rolname,member.rolname AS member,grantor.rolname AS grantor,
+ m.admin_option,m.inherit_option,m.set_option FROM pg_auth_members m
  JOIN pg_roles r ON r.oid=m.roleid JOIN pg_roles member ON member.oid=m.member
+ JOIN pg_roles grantor ON grantor.oid=m.grantor
  WHERE r.rolname LIKE 'hours_v2_%' OR member.rolname LIKE 'hours_v2_%';
--- Expected: no runtime/user membership or path into security_owner/cleanup_owner.
+-- Expected final: only migration creator memberships (native ADMIN may remain),
+-- inherit_option=false, set_option=false on every edge. NO runtime/worker membership.
+SELECT actor,owner_role,pg_has_role(actor,owner_role,'MEMBER') AS member,
+ pg_has_role(actor,owner_role,'SET') AS can_set,pg_has_role(actor,owner_role,'USAGE') AS inherited
+ FROM (VALUES ('app_horas_migration'),('app_runtime'),('app_horas_runtime'),('hours_v2_maintenance')) a(actor)
+ CROSS JOIN (VALUES ('hours_v2_security_owner'),('hours_v2_cleanup_owner')) o(owner_role);
+-- Migration creator: MEMBER true, SET/USAGE false at end; runtime and worker: all false.
+-- During the controlled transfer window only the migration actor has SET true.
+
 SELECT table_name,has_table_privilege('hours_v2_maintenance','app.'||table_name,'SELECT') AS worker_select,
  has_table_privilege('hours_v2_maintenance','app.'||table_name,'DELETE') AS worker_delete,
  has_table_privilege('hours_v2_writer','app.'||table_name,'UPDATE') AS writer_update,

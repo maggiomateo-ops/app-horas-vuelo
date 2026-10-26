@@ -58,7 +58,7 @@ Orden de propuesta: schema.sql → retention.sql → security.sql. Fuera del run
 
 ## 4. Permisos por operación y tabla
 
-SQL propuesto crea **solo roles NOLOGIN, NOINHERIT, NOBYPASSRLS**, sin miembros ni passwords. No concede membresía a app_runtime/app_horas_runtime. Reader SELECT únicamente de tablas V2 con OWNER ACTIVE + actor/scope de sesión. Writer SELECT/INSERT de evidencia nueva, nunca UPDATE/DELETE; RLS, sello de snapshot y actor coincidente. Invalidation solo INSERT para rol interno separado. Roles dueños de funciones no se conceden a usuarios/runtime/worker; función SECURITY DEFINER tiene search_path pg_catalog, referencias calificadas y EXECUTE PUBLIC revocado, sin SQL dinámico por input.
+SQL propuesto crea **solo roles NOLOGIN, NOINHERIT, NOBYPASSRLS**, sin passwords; únicamente membresía ADMIN nativa del creador de migración, con SET/INHERIT FALSE al cierre (ver revisión de bootstrap). No concede membresía a app_runtime/app_horas_runtime. Reader SELECT únicamente de tablas V2 con OWNER ACTIVE + actor/scope de sesión. Writer SELECT/INSERT de evidencia nueva, nunca UPDATE/DELETE; RLS, sello de snapshot y actor coincidente. Invalidation solo INSERT para rol interno separado. Roles dueños de funciones no se conceden a usuarios/runtime/worker; función SECURITY DEFINER tiene search_path pg_catalog, referencias calificadas y EXECUTE PUBLIC revocado, sin SQL dinámico por input.
 
 **Frontera de confianza:** custom GUC no autentica. Actor, scope, canary y verified_preview_test solo se vinculan por backend después de validar sesión/gates canónicos; jamás del payload ni de parámetros URL. Quien obtiene acceso SQL al rol de backend puede falsificar GUC: no se ofrece esta solución como RLS de cliente público. Ninguna credencial SQL se expone a navegadores. Habilitación real exige revisión del código de binding por transacción/retry y del grafo efectivo de membresías. No confiar solo en declaraciones GRANT del archivo: probar login efectivo, table y column privileges, owners, funciones y FORCE RLS.
 
@@ -141,3 +141,7 @@ Scripts de sesiones usan solo avance de fence como caso base. **No demuestran a�
 Contrato técnico revisado y propuesta SQL de permisos/purga/concurrencia lista para revisión independiente. Recomiendo autorizar después un **preflight aislado, sintético y sin Blob**, condicionado a validar target, deriva/ledger, capacidad de crear roles y diff exacto. Los resultados de ese preflight pueden exigir correcciones del SQL: no se declara SQL PASS por tests de texto/modelos.
 
 Migración NO aplicada; permisos NO desplegados; canary LV-SIM NO ejecutado; flags NO activados. Aprobación definitiva de política/retención, DPA/plan/subprocesadores/backups y datos reales siguen pendientes. Documentación en Sheets distingue PROPOSED de intención CONFIRMED; no hay aceptación funcional autenticada.
+
+## Corrección del preflight de ownership
+
+Ver [bootstrap de dueños y matriz de rollback](hours-v2-review/security-owner-bootstrap.md). El FAIL reportado requiere SET temporal únicamente para app_horas_migration; security PASS sigue pendiente de repetición independiente.

@@ -1,0 +1,22 @@
+{
+  "baseCommit": "449c0a603f0d35e38a5bde98e39e6df9c004b2f4",
+  "functionsSha256": {
+    "owner_active": "cc2f0f0b371e378e4f834c699e03620d459df34156ec639c4edf371e0a074543",
+    "begin_mutation": "7fa765ad051a32042ae1e605049d3deb80709d643818faeccde6ff7a227a2fa9",
+    "write_scope": "3849b021018ce09927d240574cee0af1e8f6ff2d94e74ebfa9d26004cb2ae708",
+    "batch_open": "156873bde4ab2dcd5610d12fb3562c84131a23b77fd4382a75cba109cebb7927",
+    "open_batch": "b0e683efd5ba3b4d53bf45014166a2d985b420e6e267a03df9e2252444ee676b",
+    "cancel_batch": "b36b58a25b875341ba1f867fbf6c8133009aab12ad530d850d5f742c70dbf77d",
+    "fact_visible": "1551a6062c8a3a1e97c2022055ffb6cd7518d152a87fb8cb03badaab42b7330c",
+    "guard_history": "261d9c0f6a9da06cadacccda7401789d28b14226c5955a7a4a5ab6d8f9dd8797",
+    "purge_batch": "b052375aed35564bdc454c1ae56205c23072c9ebc057a68254d0375732931186",
+    "claim_raw_cleanup": "7be15206558da8cf2541ed010200b8595095fb72ddaed04cbd975215586b7205",
+    "finish_raw_cleanup": "a3edd7858425536e5bede8c2eeb29200cde38f88ea0c9b25911412da10142ad3",
+    "seal_batch": "ae45e0e1e77a12928f9a72293a18cff8f6c2d8d7a27b469accfe24e4d4ea6af4",
+    "guard_batch_lifecycle": "39d7ab5004e98e556bd5de326927d15c634eae97208067ede4b5529fd2ad17c0",
+    "check_confirmation_complete": "a7277035ee0c48422516428445b7f985eda290469ccc4099ac9c2be3fe20b107",
+    "batch_confirmed": "b26f24e62a0274bbeddda418a63cade7f51f26eb8430a2117c3fdeeea324b176",
+    "due_cleanup": "b9f9b0ec322aa6db13c0e68307497da8adffde386fb8ef9bfc718634cbb43f7c"
+  },
+  "policiesSha256": "3d66265479707ef14ad1fc7fcb251646255d018ee46524d73ceb7db2429ae122"
+}

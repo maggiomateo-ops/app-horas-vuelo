@@ -2,6 +2,7 @@
 -- Coordinator first reads/verifies branch identity, ledger hashes, DDL privileges and empty fixture state.
 \set ON_ERROR_STOP on
 BEGIN;
+SET LOCAL hours_v2.owner_bootstrap='approved-disposable-only';
 \ir schema.sql
 \ir retention.sql
 \ir security.sql
