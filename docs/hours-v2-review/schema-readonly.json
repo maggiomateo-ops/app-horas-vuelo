@@ -1,0 +1,769 @@
+{
+  "environment": "Neon TEST; SELECT metadata only; no business rows read",
+  "project": "red-pine-78283204",
+  "branch": "br-billowing-band-b62jj1ab",
+  "role": "app_horas_runtime",
+  "tables": [
+    {
+      "table_name": "aircraft_utilization_baselines",
+      "columns": [
+        {
+          "type": "uuid",
+          "column": "aircraft_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "numeric",
+          "column": "baseline_tis_hours",
+          "nullable": "YES"
+        },
+        {
+          "type": "date",
+          "column": "baseline_effective_date",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "first_tracked_flight_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "source",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "notes",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "created_by_user_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "created_at",
+          "nullable": "NO"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "updated_at",
+          "nullable": "NO"
+        }
+      ],
+      "keys": [
+        {
+          "name": "aircraft_utilization_baselines_aircraft_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "aircraft_utilization_baselines_created_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (created_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "aircraft_utilization_baselines_first_tracked_flight_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (first_tracked_flight_id) REFERENCES app.flight_records(flight_id)"
+        },
+        {
+          "name": "aircraft_utilization_baselines_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (aircraft_id)"
+        }
+      ]
+    },
+    {
+      "table_name": "component_installations",
+      "columns": [
+        {
+          "type": "uuid",
+          "column": "component_installation_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "component_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "aircraft_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "smallint",
+          "column": "position_index",
+          "nullable": "NO"
+        },
+        {
+          "type": "date",
+          "column": "installed_on",
+          "nullable": "YES"
+        },
+        {
+          "type": "date",
+          "column": "removed_on",
+          "nullable": "YES"
+        },
+        {
+          "type": "numeric",
+          "column": "opening_tis_hours",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "first_applicable_flight_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "last_applicable_flight_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "created_by_user_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "created_at",
+          "nullable": "NO"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "updated_at",
+          "nullable": "NO"
+        }
+      ],
+      "keys": [
+        {
+          "name": "component_installations_aircraft_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "component_installations_component_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (component_id) REFERENCES app.components(component_id)"
+        },
+        {
+          "name": "component_installations_created_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (created_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "component_installations_first_applicable_flight_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (first_applicable_flight_id) REFERENCES app.flight_records(flight_id)"
+        },
+        {
+          "name": "component_installations_last_applicable_flight_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (last_applicable_flight_id) REFERENCES app.flight_records(flight_id)"
+        },
+        {
+          "name": "component_installations_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (component_installation_id)"
+        }
+      ]
+    },
+    {
+      "table_name": "flight_import_batches",
+      "columns": [
+        {
+          "type": "uuid",
+          "column": "import_batch_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "aircraft_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "initiated_by_user_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "template_version",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "source_filename",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "source_file_sha256",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "status",
+          "nullable": "NO"
+        },
+        {
+          "type": "integer",
+          "column": "total_rows",
+          "nullable": "NO"
+        },
+        {
+          "type": "integer",
+          "column": "valid_rows",
+          "nullable": "NO"
+        },
+        {
+          "type": "integer",
+          "column": "error_rows",
+          "nullable": "NO"
+        },
+        {
+          "type": "integer",
+          "column": "warning_count",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "source_storage_key",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "source_expires_at",
+          "nullable": "YES"
+        },
+        {
+          "type": "jsonb",
+          "column": "mapping_snapshot",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "created_at",
+          "nullable": "NO"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "validated_at",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "committed_at",
+          "nullable": "YES"
+        }
+      ],
+      "keys": [
+        {
+          "name": "flight_import_batches_aircraft_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "flight_import_batches_initiated_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (initiated_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "flight_import_batches_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (import_batch_id)"
+        }
+      ]
+    },
+    {
+      "table_name": "flight_import_issues",
+      "columns": [
+        {
+          "type": "uuid",
+          "column": "import_issue_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "import_batch_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "integer",
+          "column": "row_number",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "column_name",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "severity",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "issue_code",
+          "nullable": "NO"
+        },
+        {
+          "type": "jsonb",
+          "column": "message_params",
+          "nullable": "NO"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "created_at",
+          "nullable": "NO"
+        }
+      ],
+      "keys": [
+        {
+          "name": "flight_import_issues_import_batch_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (import_batch_id) REFERENCES app.flight_import_batches(import_batch_id)"
+        },
+        {
+          "name": "flight_import_issues_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (import_issue_id)"
+        }
+      ]
+    },
+    {
+      "table_name": "flight_record_revisions",
+      "columns": [
+        {
+          "type": "uuid",
+          "column": "flight_revision_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "flight_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "integer",
+          "column": "revision_number",
+          "nullable": "NO"
+        },
+        {
+          "type": "date",
+          "column": "flight_date",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "departure_location",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "arrival_location",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "pilot_person_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "utilization_owner_party_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "flight_purpose_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "capture_method",
+          "nullable": "YES"
+        },
+        {
+          "type": "numeric",
+          "column": "flight_time_hours",
+          "nullable": "YES"
+        },
+        {
+          "type": "numeric",
+          "column": "time_in_service_hours",
+          "nullable": "YES"
+        },
+        {
+          "type": "numeric",
+          "column": "tach_start",
+          "nullable": "YES"
+        },
+        {
+          "type": "numeric",
+          "column": "tach_end",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "movement_start_at",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "takeoff_at",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "landing_at",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "final_stop_at",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "remarks",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "created_by_user_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "created_at",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "correction_reason",
+          "nullable": "YES"
+        }
+      ],
+      "keys": [
+        {
+          "name": "flight_record_revisions_created_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (created_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "flight_record_revisions_flight_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (flight_id) REFERENCES app.flight_records(flight_id)"
+        },
+        {
+          "name": "flight_record_revisions_flight_purpose_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (flight_purpose_id) REFERENCES app.aircraft_flight_purposes(flight_purpose_id)"
+        },
+        {
+          "name": "flight_record_revisions_pilot_person_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (pilot_person_id) REFERENCES app.persons(person_id)"
+        },
+        {
+          "name": "flight_record_revisions_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (flight_revision_id)"
+        },
+        {
+          "name": "flight_record_revisions_utilization_owner_party_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (utilization_owner_party_id) REFERENCES app.parties(party_id)"
+        },
+        {
+          "name": "uq_flight_revision_number",
+          "type": "u",
+          "definition": "UNIQUE (flight_id, revision_number)"
+        },
+        {
+          "name": "uq_flight_revision_pair",
+          "type": "u",
+          "definition": "UNIQUE (flight_id, flight_revision_id)"
+        }
+      ]
+    },
+    {
+      "table_name": "flight_records",
+      "columns": [
+        {
+          "type": "uuid",
+          "column": "flight_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "aircraft_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "current_revision_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "status",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "record_source",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "created_by_user_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "created_at",
+          "nullable": "NO"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "voided_at",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "voided_by_user_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "void_reason",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "import_batch_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "integer",
+          "column": "import_row_number",
+          "nullable": "YES"
+        }
+      ],
+      "keys": [
+        {
+          "name": "fk_flight_current_revision",
+          "type": "f",
+          "definition": "FOREIGN KEY (flight_id, current_revision_id) REFERENCES app.flight_record_revisions(flight_id, flight_revision_id) DEFERRABLE INITIALLY DEFERRED"
+        },
+        {
+          "name": "flight_records_aircraft_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "flight_records_created_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (created_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "flight_records_import_batch_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (import_batch_id) REFERENCES app.flight_import_batches(import_batch_id)"
+        },
+        {
+          "name": "flight_records_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (flight_id)"
+        },
+        {
+          "name": "flight_records_voided_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (voided_by_user_id) REFERENCES app.users(user_id)"
+        }
+      ]
+    },
+    {
+      "table_name": "utilization_adjustments",
+      "columns": [
+        {
+          "type": "uuid",
+          "column": "utilization_adjustment_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "aircraft_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "component_installation_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "numeric",
+          "column": "adjustment_hours",
+          "nullable": "NO"
+        },
+        {
+          "type": "date",
+          "column": "effective_date",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "after_flight_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "reason",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "source_reference",
+          "nullable": "YES"
+        },
+        {
+          "type": "uuid",
+          "column": "created_by_user_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "created_at",
+          "nullable": "NO"
+        }
+      ],
+      "keys": [
+        {
+          "name": "utilization_adjustments_after_flight_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (after_flight_id) REFERENCES app.flight_records(flight_id)"
+        },
+        {
+          "name": "utilization_adjustments_aircraft_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (aircraft_id) REFERENCES app.aircraft(aircraft_id)"
+        },
+        {
+          "name": "utilization_adjustments_component_installation_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (component_installation_id) REFERENCES app.component_installations(component_installation_id)"
+        },
+        {
+          "name": "utilization_adjustments_created_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (created_by_user_id) REFERENCES app.users(user_id)"
+        },
+        {
+          "name": "utilization_adjustments_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (utilization_adjustment_id)"
+        }
+      ]
+    },
+    {
+      "table_name": "audit_events",
+      "columns": [
+        {
+          "type": "uuid",
+          "column": "audit_event_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "timestamp with time zone",
+          "column": "occurred_at",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "request_id",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "actor_type",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "actor_user_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "operation_source",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "aircraft_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "entity_type",
+          "nullable": "NO"
+        },
+        {
+          "type": "uuid",
+          "column": "entity_id",
+          "nullable": "YES"
+        },
+        {
+          "type": "jsonb",
+          "column": "entity_key",
+          "nullable": "NO"
+        },
+        {
+          "type": "text",
+          "column": "action_code",
+          "nullable": "NO"
+        },
+        {
+          "type": "jsonb",
+          "column": "before_state",
+          "nullable": "YES"
+        },
+        {
+          "type": "jsonb",
+          "column": "after_state",
+          "nullable": "YES"
+        },
+        {
+          "type": "text",
+          "column": "reason",
+          "nullable": "YES"
+        },
+        {
+          "type": "jsonb",
+          "column": "metadata",
+          "nullable": "NO"
+        },
+        {
+          "type": "smallint",
+          "column": "payload_version",
+          "nullable": "NO"
+        }
+      ],
+      "keys": [
+        {
+          "name": "audit_events_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (audit_event_id)"
+        }
+      ]
+    }
+  ]
+}

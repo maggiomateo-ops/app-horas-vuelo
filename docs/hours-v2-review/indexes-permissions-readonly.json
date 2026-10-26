@@ -1,0 +1,35 @@
+{
+  "environment": "Neon TEST metadata only; no changes",
+  "checks": [
+    {
+      "kind": "index",
+      "subject": "flight_import_batches",
+      "name": "uq_committed_import_hash",
+      "detail": "CREATE UNIQUE INDEX uq_committed_import_hash ON app.flight_import_batches USING btree (aircraft_id, source_file_sha256) WHERE (status = 'COMMITTED'::text)"
+    },
+    {
+      "kind": "index",
+      "subject": "flight_records",
+      "name": "uq_flight_import_row",
+      "detail": "CREATE UNIQUE INDEX uq_flight_import_row ON app.flight_records USING btree (import_batch_id, import_row_number) WHERE (import_batch_id IS NOT NULL)"
+    },
+    {
+      "kind": "index",
+      "subject": "component_installations",
+      "name": "uq_open_component_installation",
+      "detail": "CREATE UNIQUE INDEX uq_open_component_installation ON app.component_installations USING btree (component_id) WHERE (removed_on IS NULL)"
+    },
+    {
+      "kind": "privilege",
+      "subject": "audit.audit_events",
+      "name": "append_only",
+      "detail": "INSERT=true,UPDATE=false,DELETE=false"
+    },
+    {
+      "kind": "privilege",
+      "subject": "app.flight_record_revisions",
+      "name": "immutable",
+      "detail": "UPDATE=false,DELETE=false"
+    }
+  ]
+}
