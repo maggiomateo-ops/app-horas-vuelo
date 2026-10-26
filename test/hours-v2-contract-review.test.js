@@ -126,16 +126,16 @@ test('rollback lista toda tabla propuesta en orden inverso, sin CASCADE; no SQL 
   assert.equal([...sql.matchAll(/ADD CONSTRAINT uq_hours_/g)].length,3);
   assert.equal([...rollback.matchAll(/DROP CONSTRAINT uq_hours_/g)].length,3);
 });
-test('una tolerancia hipotética no admite diferencias sin reconocimiento individual',()=>{
+test('F4 rechaza tolerancias positivas incluso con reconocimiento individual',()=>{
   const hypotheticalPolicy={...fixturePolicy,toleranceHours:'0.1'}; // conditional fixture, never an approved tolerance
-  assert.equal(assessAcceptance({derived:'100.1',observed:'100.0',policy:hypotheticalPolicy,explicitlyReviewed:true}).issue,'DISCREPANCY_ACK_REQUIRED');
-  assert.equal(assessAcceptance({derived:'100.1',observed:'100.0',policy:hypotheticalPolicy,explicitlyReviewed:true,discrepancyAcknowledged:true}).confirmable,true);
+  assert.equal(assessAcceptance({derived:'100.1',observed:'100.0',policy:hypotheticalPolicy,explicitlyReviewed:true}).issue,'UNAPPROVED_TOLERANCE');
+  assert.equal(assessAcceptance({derived:'100.1',observed:'100.0',policy:hypotheticalPolicy,explicitlyReviewed:true,discrepancyAcknowledged:true}).confirmable,false);
 });
 test('DDL exige episodio TSO conocido y FK al mismo componente físico/aeronave',async()=>{
   const sql=await readFile(new URL('../docs/proposals/hours-start/schema.sql',import.meta.url),'utf8');
   assert.match(sql,/CREATE TABLE app.hours_component_overhaul_episodes/);
   assert.match(sql,/FOREIGN KEY\(aircraft_id,component_id,overhaul_episode_id\) REFERENCES app.hours_component_overhaul_episodes/);
-  assert.match(sql,/metric<>'TSO' OR value_hours IS NULL OR overhaul_episode_id IS NOT NULL/);
+  assert.match(sql,/metric<>'TSO' OR value_seconds IS NULL OR overhaul_episode_id IS NOT NULL/);
   assert.match(sql,/CREATE TABLE app.hours_reconciliation_issues/);
 });
 test('fingerprint incompleto nunca equivale a aceptación vigente',()=>{

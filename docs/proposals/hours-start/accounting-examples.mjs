@@ -1,4 +1,5 @@
 // Executable PROPOSAL examples only. No runtime imports, IO, SQL, writes or authorization.
+// Legacy one-decimal regression fixtures only; precision-policy.mjs defines V2 source normalization.
 // Tenths are exact integers. Policy parameters in tests are fixtures, NOT approval.
 export function tenths(value) {
   if (value === null || value === undefined || value === '') return null;
@@ -51,7 +52,7 @@ export function reviewImportRows(rows, { aircraftId, accountedIdentities = new S
     return { ...row, disposition: 'INCLUDE', issue: null };
   });
 }
-export function assessAcceptance({ derived, observed, policy, issues = [], explicitlyReviewed = false, discrepancyAcknowledged = false }) {
+export function assessAcceptance({ derived, observed, policy, issues = [], explicitlyReviewed = false }) {
   const a = tenths(derived), b = tenths(observed);
   if (a === null || b === null) return { confirmable: false, difference: null, issue: 'UNKNOWN_REFERENCE_OR_TOTAL' };
   const difference = a - b;
@@ -60,9 +61,9 @@ export function assessAcceptance({ derived, observed, policy, issues = [], expli
   }
   if (issues.length) return { confirmable: false, difference: hours(difference), issue: 'UNRESOLVED_ISSUES' };
   const tolerance = tenths(policy.toleranceHours);
+  if (tolerance !== 0n) return { confirmable: false, difference: hours(difference), issue: 'UNAPPROVED_TOLERANCE' };
   if ((difference < 0n ? -difference : difference) > tolerance) return { confirmable: false, difference: hours(difference), issue: 'DISCREPANCY' };
   if (!explicitlyReviewed) return { confirmable: false, difference: hours(difference), issue: 'EXPLICIT_REVIEW_REQUIRED' };
-  if (difference !== 0n && !discrepancyAcknowledged) return { confirmable: false, difference: hours(difference), issue: 'DISCREPANCY_ACK_REQUIRED' };
   return { confirmable: true, difference: hours(difference), issue: null };
 }
 export function acceptanceIsCurrent(snapshot, current) {

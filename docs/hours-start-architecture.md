@@ -1,3 +1,5 @@
+> Revisión vigente F2/F4/F6: [contrato técnico](hours-v2-technical-closure.md). Sustituye precisión preliminar en décimas para referencias/diferencias por segundos exactos y política sin tolerancia. SQL no ejecutado.
+
 # Horas V2 — revisión de arquitectura, NO aprobado para migrar
 
 Esta revisión sustituye la propuesta arquitectónica del commit `8577d7324cf5f41c54bd555dbdafce2c9f02c758`, sin cambiar el prototipo ni el runtime V1. Base local/remota verificada; árbol inicial limpio. Rama: `codex/hours-v2-contract-review`.
@@ -129,7 +131,7 @@ Reglas adicionales:
 
 ## 6. Criterios concretos de aceptación — propuesta, no aprobación
 
-La política candidata es **coincidencia exacta a la precisión canónica de 0.1 h**. Se propone tolerancia 0.0 h, pero **no se declara aprobada ni se activa por defecto**. Sin policy_version, referencia de aprobación funcional y tolerancia explícita, confirmable=false incluso con diferencia cero. Los tests usan una policy fixture identificada como NO FUNCTIONAL APPROVAL.
+La política candidata es **coincidencia exacta en segundos normalizados sin pérdida de precisión de fuente**; FT/TIS canónicos siguen en décimas por vuelo según D-024/D-098. Se propone tolerancia 0 segundos, pero **no se declara aprobada ni se activa por defecto**. Sin policy_version, referencia de aprobación funcional y tolerancia explícita, confirmable=false incluso con diferencia cero. Los tests usan una policy fixture identificada como NO FUNCTIONAL APPROVAL.
 
 Para confirmar deben cumplirse simultáneamente:
 
@@ -138,7 +140,7 @@ Para confirmar deben cumplirse simultáneamente:
 3. Archivo/row hashes, revisiones, estados, instalaciones, episodios, referencias, ajustes y política/algoritmo verificados y sin cambios desde preview.
 4. Sin ERROR, REQUIRES_REVIEW, tramo desconocido o atribución ambigua. Un warning revisable requiere reconocimiento explícito; no puede encubrir un bloqueo de integridad.
 5. Cada comparación presenta observación, derivado, diferencia con signo, base, borde, cobertura y fuente. NULL se muestra como desconocido; no como diferencia 0.0.
-6. Reconocimiento de la preview exacta y petición de confirmación explícita. Si una futura política funcional autoriza tolerancia positiva, cada diferencia no cero debe reconocerse individualmente; estar dentro de una banda nunca equivale a aceptación automática. Los tests prueban esa condición con una tolerancia **hipotética**.
+6. Reconocimiento de la preview exacta y petición de confirmación explícita. No se admiten tolerancias positivas en este contrato ni mediante reconocimiento individual. El redondeo documentado clasifica una diferencia y no la convierte en coincidencia; ver hours-reconcile-exact-v2.1.
 7. Referencias aceptadas no se corrigen automáticamente para lograr igualdad. Resolver una discrepancia requiere evidencia nueva o ajuste explícito aprobado; entonces se genera otra validación/run.
 
 D-029 permite Flight Records históricos con campos NULL; no se elimina esa posibilidad canónica. Para la incorporación V2 que habilita conciliación operativa se propone dejar el lote pendiente si un INCLUDE tiene fecha/período sin resolver. Una variante de admisión archival-only de registros con fecha incompleta requiere aprobación funcional y estado/lectura propios antes de implementarse. No se confunde archivo de evidencia con vuelo operativo.

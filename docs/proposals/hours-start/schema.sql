@@ -1,5 +1,5 @@
 -- PROPOSAL ONLY. NOT A MIGRATION. DO NOT EXECUTE; outside db/migrations.
--- Revision V2-review: D-307 is product intent, NOT approval of this DDL/policy.
+-- Revision F2/F4/F6: D-307 is product intent, NOT approval of this DDL/policy.
 -- No grants, triggers, backfill, business writes or runner registration in this proposal.
 -- Supporting candidate keys on existing canonical tables: no business-value changes.
 ALTER TABLE app.flight_records ADD CONSTRAINT uq_hours_flight_aircraft UNIQUE (aircraft_id, flight_id);
@@ -82,6 +82,8 @@ CREATE TABLE app.hours_import_staged_rows (
   arrival_location text,
   flight_time_hours numeric(8,1) CHECK(flight_time_hours >= 0),
   time_in_service_hours numeric(8,1) CHECK(time_in_service_hours >= 0),
+  duration_evidence jsonb NOT NULL CHECK(jsonb_typeof(duration_evidence)='object'),
+  -- Typed DTO validation must enforce raw/unit/resolution/exact seconds/canonical rounding per mapped field.
   created_at timestamptz NOT NULL DEFAULT now(),
   FOREIGN KEY(aircraft_id,mapping_version_id) REFERENCES app.hours_import_mapping_versions(aircraft_id,mapping_version_id),
   UNIQUE(aircraft_id,staged_row_id),
@@ -102,7 +104,12 @@ CREATE TABLE app.hours_counter_references (
   metric text NOT NULL CHECK(metric IN ('AIRFRAME_TIS','TSN','TSO')),
   usage_basis text NOT NULL CHECK(usage_basis IN ('TIS','ENGINE_RUNTIME','DECLARED_ONLY')),
   raw_value_text text,
-  value_hours numeric(10,1) CHECK(value_hours >= 0),
+  source_unit text CHECK(source_unit IN ('HOURS','HH_MM','MINUTES','SECONDS')),
+  source_decimal_places smallint CHECK(source_decimal_places BETWEEN 0 AND 1000),
+  source_resolution_text text, -- physical resolution declared by evidence, never inferred
+  conversion_version text,
+  CHECK((value_seconds IS NULL) OR (raw_value_text IS NOT NULL AND source_unit IS NOT NULL AND conversion_version IS NOT NULL AND (source_unit='HH_MM' OR (source_decimal_places IS NOT NULL AND source_decimal_places BETWEEN 0 AND 6)))),
+  value_seconds numeric(24,6) CHECK(value_seconds >= 0),
   anchor_kind text NOT NULL CHECK(anchor_kind IN ('INSTALLATION','DATE_START','BEFORE_FLIGHT','AFTER_FLIGHT','UNRESOLVED')),
   reference_date date,
   boundary_flight_id uuid,
@@ -127,7 +134,7 @@ CREATE TABLE app.hours_counter_references (
     OR (anchor_kind='DATE_START' AND reference_date IS NOT NULL AND boundary_flight_id IS NULL AND boundary_flight_revision_id IS NULL)
     OR (anchor_kind IN ('BEFORE_FLIGHT','AFTER_FLIGHT') AND reference_date IS NOT NULL AND boundary_flight_id IS NOT NULL AND boundary_flight_revision_id IS NOT NULL)),
   CHECK(overhaul_episode_id IS NULL OR (metric='TSO' AND component_id IS NOT NULL)),
-  CHECK(metric<>'TSO' OR value_hours IS NULL OR overhaul_episode_id IS NOT NULL)
+  CHECK(metric<>'TSO' OR value_seconds IS NULL OR overhaul_episode_id IS NOT NULL)
 );
 CREATE TABLE app.hours_reconciliation_runs (
   reconciliation_run_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -139,7 +146,7 @@ CREATE TABLE app.hours_reconciliation_runs (
   episode_manifest_sha256 text NOT NULL CHECK(episode_manifest_sha256 ~ '^[a-f0-9]{64}$'),
   algorithm_version text NOT NULL CHECK(length(btrim(algorithm_version)) > 0),
   policy_version text NOT NULL CHECK(length(btrim(policy_version)) > 0),
-  tolerance_hours numeric(10,1) CHECK(tolerance_hours >= 0), -- NULL = no approved tolerance
+  tolerance_seconds numeric(24,6) CHECK(tolerance_seconds = 0), -- NULL = no approved policy; zero only, no epsilon
   policy_approval_reference text,
   status text NOT NULL CHECK(status IN ('VALIDATED','REJECTED')),
   confirmable boolean NOT NULL DEFAULT false,
@@ -151,9 +158,9 @@ CREATE TABLE app.hours_reconciliation_runs (
   UNIQUE(aircraft_id,hours_plan_id,reconciliation_run_id),
   UNIQUE(aircraft_id,reconciliation_run_id,confirmable),
   UNIQUE(hours_plan_revision_id,input_sha256,algorithm_version,policy_version),
-  CHECK((tolerance_hours IS NULL) = (policy_approval_reference IS NULL)),
+  CHECK((tolerance_seconds IS NULL) = (policy_approval_reference IS NULL)),
   CHECK(policy_approval_reference IS NULL OR length(btrim(policy_approval_reference)) > 0),
-  CHECK(NOT confirmable OR (status='VALIDATED' AND tolerance_hours IS NOT NULL))
+  CHECK(NOT confirmable OR (status='VALIDATED' AND tolerance_seconds IS NOT NULL))
 );
 CREATE TABLE app.hours_reconciliation_flights (
   aircraft_id uuid NOT NULL,
@@ -215,13 +222,13 @@ CREATE TABLE app.flight_component_utilization_attributions (
   flight_revision_id uuid NOT NULL,
   component_installation_id uuid NOT NULL,
   usage_basis text NOT NULL CHECK(usage_basis IN ('TIS','ENGINE_RUNTIME')),
-  attributed_hours numeric(10,1) CHECK(attributed_hours >= 0),
+  attributed_seconds numeric(24,6) CHECK(attributed_seconds >= 0),
   resolution text NOT NULL CHECK(resolution IN ('RESOLVED','UNKNOWN','AMBIGUOUS')),
   source_reference text NOT NULL,
   PRIMARY KEY(reconciliation_run_id,flight_revision_id,component_installation_id,usage_basis),
   FOREIGN KEY(aircraft_id,reconciliation_run_id,flight_id,flight_revision_id) REFERENCES app.hours_reconciliation_flights(aircraft_id,reconciliation_run_id,flight_id,flight_revision_id),
   FOREIGN KEY(aircraft_id,reconciliation_run_id,component_installation_id) REFERENCES app.hours_reconciliation_installations(aircraft_id,reconciliation_run_id,component_installation_id),
-  CHECK((resolution='RESOLVED' AND attributed_hours IS NOT NULL) OR (resolution<>'RESOLVED' AND attributed_hours IS NULL))
+  CHECK((resolution='RESOLVED' AND attributed_seconds IS NOT NULL) OR (resolution<>'RESOLVED' AND attributed_seconds IS NULL))
 );
 CREATE TABLE app.hours_candidate_component_attributions (
   aircraft_id uuid NOT NULL,
@@ -229,27 +236,31 @@ CREATE TABLE app.hours_candidate_component_attributions (
   staged_row_id uuid NOT NULL,
   component_installation_id uuid NOT NULL,
   usage_basis text NOT NULL CHECK(usage_basis IN ('TIS','ENGINE_RUNTIME')),
-  attributed_hours numeric(10,1) CHECK(attributed_hours >= 0),
+  attributed_seconds numeric(24,6) CHECK(attributed_seconds >= 0),
   resolution text NOT NULL CHECK(resolution IN ('RESOLVED','UNKNOWN','AMBIGUOUS')),
   PRIMARY KEY(reconciliation_run_id,staged_row_id,component_installation_id,usage_basis),
   FOREIGN KEY(aircraft_id,reconciliation_run_id,staged_row_id) REFERENCES app.hours_reconciliation_staged_rows(aircraft_id,reconciliation_run_id,staged_row_id),
   FOREIGN KEY(aircraft_id,reconciliation_run_id,component_installation_id) REFERENCES app.hours_reconciliation_installations(aircraft_id,reconciliation_run_id,component_installation_id),
-  CHECK((resolution='RESOLVED' AND attributed_hours IS NOT NULL) OR (resolution<>'RESOLVED' AND attributed_hours IS NULL))
+  CHECK((resolution='RESOLVED' AND attributed_seconds IS NOT NULL) OR (resolution<>'RESOLVED' AND attributed_seconds IS NULL))
 );
 CREATE TABLE app.hours_reconciliation_differences (
   aircraft_id uuid NOT NULL,
   reconciliation_run_id uuid NOT NULL,
   counter_reference_id uuid NOT NULL,
-  derived_hours numeric(10,1),
-  difference_hours numeric(10,1),
+  derived_seconds numeric(24,6),
+  difference_seconds numeric(24,6),
   result text NOT NULL CHECK(result IN ('MATCH','DISCREPANCY','UNKNOWN','GAP','CONFLICT')),
+  cause text NOT NULL CHECK(cause IN ('EXACT_EQUIVALENCE','DOCUMENTED_ROUNDING','REAL_DIFFERENCE','INSUFFICIENT_EVIDENCE','INCOMPATIBLE_BASIS')),
+  observed_seconds numeric(24,6),
+  comparison_evidence jsonb NOT NULL CHECK(jsonb_typeof(comparison_evidence)='object'),
   explanation text NOT NULL,
   PRIMARY KEY(aircraft_id,reconciliation_run_id,counter_reference_id),
   FOREIGN KEY(aircraft_id,reconciliation_run_id,counter_reference_id) REFERENCES app.hours_reconciliation_references(aircraft_id,reconciliation_run_id,counter_reference_id),
-  CHECK(derived_hours IS NULL OR derived_hours >= 0),
-  CHECK(result NOT IN ('UNKNOWN','GAP','CONFLICT') OR (derived_hours IS NULL AND difference_hours IS NULL)),
-  CHECK(result NOT IN ('MATCH','DISCREPANCY') OR (derived_hours IS NOT NULL AND difference_hours IS NOT NULL)),
-  CHECK(result<>'MATCH' OR difference_hours=0)
+  CHECK(derived_seconds IS NULL OR derived_seconds >= 0),
+  CHECK(observed_seconds IS NULL OR observed_seconds >= 0),
+  CHECK(result NOT IN ('UNKNOWN','GAP','CONFLICT') OR (derived_seconds IS NULL AND difference_seconds IS NULL)),
+  CHECK(result NOT IN ('MATCH','DISCREPANCY') OR (derived_seconds IS NOT NULL AND observed_seconds IS NOT NULL AND difference_seconds IS NOT NULL AND difference_seconds=derived_seconds-observed_seconds)),
+  CHECK(result<>'MATCH' OR (difference_seconds=0 AND cause='EXACT_EQUIVALENCE'))
 );
 -- Validation diagnostics are immutable business evidence, not technical Audit.
 CREATE TABLE app.hours_reconciliation_issues (
@@ -321,3 +332,11 @@ CREATE TABLE app.hours_acceptance_invalidations (
 -- Those checks need one aircraft-locked SERIALIZABLE transaction + hash/current-state recheck.
 -- No function/trigger/grant is implemented here. Immutable evidence still requires approved
 -- append-only privileges and audited mutation paths before any migration/apply.
+
+-- F2: all *_seconds values are exact normalized seconds, max microsecond representation.
+-- Bound DTO inputs to <=12 integer and <=6 fractional source digits BEFORE numeric casts;
+-- PostgreSQL numeric(p,s) rounds excess scale, so column type alone is NOT input validation.
+-- SQL cannot verify evidence conversion, source authority, DTO JSON shape, same physical basis,
+-- complete coverage, current revisions or manifest freshness. SERIALIZABLE confirmation must
+-- revalidate these under shared aircraft locks used by ALL competing mutators (see preflight.md).
+-- No DDL execution, grants, policy approval or raw-file storage provisioning authorized here.
