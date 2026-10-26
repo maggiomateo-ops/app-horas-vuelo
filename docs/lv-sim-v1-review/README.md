@@ -69,7 +69,6 @@ Capturas:
 - [Desktop completo](desktop-form.png)
 - [Móvil completo](mobile-form.png)
 - [Readback ficticio tras recarga](desktop-readback.png)
-- [Desktop viewport](desktop-viewport.png), [Móvil viewport](mobile-viewport.png)
 
 ## Gate posterior exacto
 
