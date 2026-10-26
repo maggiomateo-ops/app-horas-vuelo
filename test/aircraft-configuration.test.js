@@ -81,6 +81,7 @@ function createMockRepository({
   let transactionOptions;
   let committed = false;
   let componentInsertCount = 0;
+  let configurationExists = existingConfiguration;
   const client = {
     async query(text, params = []) {
       queries.push({ text, params });
@@ -88,11 +89,12 @@ function createMockRepository({
         return { rows: ownerAllowed ? [{ aircraft_id: AIRCRAFT_ID }] : [] };
       }
       if (text.includes("FROM app.aircraft_configuration")) {
-        return { rows: existingConfiguration ? [{ aircraft_id: AIRCRAFT_ID }] : [] };
+        return { rows: configurationExists ? [{ aircraft_id: AIRCRAFT_ID }] : [] };
       }
       if (text.includes("FROM app.component_installations installation")) {
         return { rows: existingInstallations };
       }
+      if (text.includes("INSERT INTO app.aircraft_configuration")) configurationExists = true;
       if (text.includes("INSERT INTO app.components")) {
         componentInsertCount += 1;
         if (failOnComponentInsert && componentInsertCount === 2) {
@@ -105,11 +107,13 @@ function createMockRepository({
   const setup = createPostgresAircraftConfigurationRepository({
     transaction: async (work, options) => {
       transactionOptions = options;
+      const beforeConfiguration = configurationExists;
       try {
         const result = await work(client);
         committed = true;
         return result;
       } catch (error) {
+        configurationExists = beforeConfiguration;
         committed = false;
         throw error;
       }
@@ -539,8 +543,8 @@ test("UI genera componentes dinámicos, fecha explícita y unknown como NULL", (
     propellerCount: "0",
     installedOn: "2026-09-29",
     components: [
-      { componentType: "ENGINE", positionIndex: 1, manufacturer: "GE", openingTisHours: "" },
-      { componentType: "ENGINE", positionIndex: 2, serialNumber: "SN-2", openingTisHours: "5.5" },
+      { componentType: "ENGINE", positionIndex: 1, manufacturer: "GE", openingTisHours: "", installedOn: "2026-09-29" },
+      { componentType: "ENGINE", positionIndex: 2, serialNumber: "SN-2", openingTisHours: "5.5", installedOn: "2026-09-28" },
     ],
   };
   assert.equal(validateAircraftConfiguration(values).valid, true);
@@ -633,4 +637,44 @@ test("la extensión consolidada conserva el límite de 12 funciones Vercel", asy
   );
   assert.equal(functions.length, 12);
   assert.equal(functions.some((entry) => /configuration/i.test(entry.name)), false);
+});
+
+test("persistencia V1 2+2 conserva cada fecha, identidad y NULL en instalaciones y Audit", async () => {
+  const mock = createMockRepository();
+  const input = validInput();
+  const dates = ["2024-02-29", "2025-05-06", "2023-08-09", "2026-09-30"];
+  input.components = input.components.map((c, i) => ({ ...c, installedOn: dates[i], serialNumber: i === 0 ? "SYNTH-ENGINE-1" : null }));
+  const result = await mock.setup({ userId: USER_ID, input });
+  const inserts = mock.queries.filter(q => q.text.includes("INSERT INTO app.component_installations"));
+  assert.equal(inserts.length, 4);
+  assert.deepEqual(inserts.map(q => q.params[4]), dates);
+  assert.deepEqual(inserts.map(q => q.params[5]), [null, 12.3, null, null]);
+  assert.ok(inserts.every(q => q.params[2] === AIRCRAFT_ID));
+  assert.equal(new Set(inserts.map(q => q.params[0])).size, 4);
+  const audit = mock.queries.filter(q => q.text.includes("INSERT INTO audit.audit_events"));
+  assert.equal(audit.length, 1);
+  assert.deepEqual(JSON.parse(audit[0].params[4]).installations, result.componentInstallations);
+  assert.deepEqual(result.componentInstallations.map(i => i.installedOn), dates);
+  assert.equal(result.componentInstallations[0].serialNumber, "SYNTH-ENGINE-1");
+  assert.equal(mock.getCommitted(), true);
+  assert.deepEqual(mock.getTransactionOptions(), { isolationLevel: "SERIALIZABLE" });
+});
+
+
+test("segunda configuración V1 devuelve conflicto sin duplicar componentes ni Audit", async () => {
+  const mock = createMockRepository();
+  await mock.setup({ userId: USER_ID, input: validInput() });
+  const before = mock.queries.filter(q => q.text.includes("INSERT INTO")).length;
+  await assert.rejects(mock.setup({ userId: USER_ID, input: validInput() }), { code: "AIRCRAFT_CONFIGURATION_ALREADY_EXISTS", statusCode: 409 });
+  assert.equal(mock.queries.filter(q => q.text.includes("INSERT INTO")).length, before);
+  assert.equal(mock.queries.filter(q => q.text.includes("INSERT INTO audit.audit_events")).length, 1);
+});
+
+test("repositorio V1 monomotor guarda solo motor 1 y hélice 1 con sus propias fechas", async () => {
+  const mock = createMockRepository();
+  const result = await mock.setup({ userId: USER_ID, input: validInput({ engineCount: 1, propellerCount: 1,
+    components: [component("ENGINE", 1, { installedOn: "2023-05-01" }), component("PROPELLER", 1, { installedOn: "2024-06-02" })] }) });
+  assert.deepEqual(result.componentInstallations.map(i => [i.componentType, i.positionIndex, i.installedOn]), [["ENGINE",1,"2023-05-01"],["PROPELLER",1,"2024-06-02"]]);
+  assert.equal(mock.queries.filter(q => q.text.includes("INSERT INTO app.components")).length, 2);
+  assert.equal(mock.queries.filter(q => q.text.includes("INSERT INTO app.component_installations")).length, 2);
 });

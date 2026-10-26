@@ -388,7 +388,6 @@ export function validateAircraftConfiguration(values) {
   const propulsionType = String(values?.propulsionType || "").trim().toUpperCase();
   const engineCount = configurationCount(values?.engineCount);
   const propellerCount = configurationCount(values?.propellerCount);
-  const installedOn = String(values?.installedOn || "").trim();
   const adoptExisting = values?.adoptExisting === true;
   const errors = {};
 
@@ -397,9 +396,6 @@ export function validateAircraftConfiguration(values) {
   }
   if (engineCount === null) errors.engineCount = "Ingresá una cantidad válida.";
   if (propellerCount === null) errors.propellerCount = "Ingresá una cantidad válida.";
-  if (!adoptExisting && !/^\d{4}-\d{2}-\d{2}$/.test(installedOn)) {
-    errors.installedOn = "Ingresá la fecha efectiva de instalación.";
-  }
   if (
     ["PISTON", "TURBOPROP"].includes(propulsionType)
     && (engineCount < 1 || propellerCount < 1)
@@ -411,6 +407,34 @@ export function validateAircraftConfiguration(values) {
     && (engineCount < 1 || propellerCount !== 0)
   ) {
     errors.topology = "Esta propulsión requiere al menos un motor y cero hélices.";
+  }
+
+  if (!adoptExisting && engineCount !== null && propellerCount !== null) {
+    const components = Array.isArray(values?.components) ? values.components : [];
+    const seen = new Set();
+    for (const component of components) {
+      const key = `${component.componentType}:${component.positionIndex}`;
+      const count = component.componentType === "ENGINE" ? engineCount
+        : component.componentType === "PROPELLER" ? propellerCount : 0;
+      if (!Number.isInteger(component.positionIndex) || component.positionIndex < 1
+        || component.positionIndex > count || seen.has(key)) {
+        errors.topology = "Revisá las posiciones de los componentes.";
+      }
+      seen.add(key);
+      const date = String(component.installedOn || "").trim();
+      const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : null;
+      if (!parsed || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date
+        || Number(date.slice(0, 4)) < 100) {
+        errors[`${key}.installedOn`] = "Ingresá una fecha de instalación válida.";
+      }
+      const hours = String(component.openingTisHours ?? "").trim();
+      if (hours !== "" && (!/^\d+(?:\.\d)?$/.test(hours) || Number(hours) > 999_999_999.9)) {
+        errors[`${key}.openingTisHours`] = "Usá horas positivas o cero, con hasta un decimal.";
+      }
+    }
+    if (components.length !== engineCount + propellerCount) {
+      errors.topology = "Completá cada posición declarada.";
+    }
   }
 
   return {
@@ -439,7 +463,7 @@ function buildConfigurationComponents(values, componentType, count) {
       serialNumber: String(component.serialNumber || "").trim() || null,
       notes: null,
       openingTisHours: openingTis === "" ? null : Number(openingTis),
-      installedOn: String(values.installedOn || "").trim(),
+      installedOn: String(component.installedOn || "").trim(),
     };
   });
 }

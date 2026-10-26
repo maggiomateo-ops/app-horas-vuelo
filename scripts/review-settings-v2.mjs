@@ -25,6 +25,10 @@ const onboardingAvailable = ['enabled','disabled'].includes(params.get('onboardi
 const onboardingEnabled = params.get('onboarding') === 'enabled';
 const aircraft = (id,matricula) => ({aircraft_id:id,matricula,modelo:'PA-28 Demo',rol:role,ownershipConfigured:true,configurationConfigured:true,flightWritesReady:true,trackingAvailable:true,configuration:{propulsionType:'PISTON',engineCount:1,propellerCount:1},componentInstallations:[],componentInstallationHistory:[], ...(params.get('setup') === '1' ? {configurationSetupAvailable:params.get('canary')==='1'?id==='fixture-two'&&role==='OWNER':true,configurationConfigured:params.get('canary')==='1'?false:id==='fixture-one',ownershipConfigured:id==='fixture-one',flightWritesReady:id==='fixture-one',configuration:id==='fixture-one'?{propulsionType:'PISTON',engineCount:1,propellerCount:1}:null,ownershipInterests:role==='OWNER'?(id==='fixture-one'?[{ownershipInterestId:'fictional-legal',partyId:'fictional-party',partyType:'PERSON',name:'Titular ficticio',share:100,effectiveFrom:'2026-01-01T00:00:00Z',effectiveTo:null,partyStatus:'ACTIVE'}]:[]):undefined}: {})});
 let reviewAircrafts = params.get('count') === '0' ? [] : [aircraft('fixture-one',params.get('canary')==='1'?'LV-MHZ':'LV-DEMO'), ...(params.get('count') === '1' ? [] : [aircraft('fixture-two',params.get('setup')==='1'?'LV-SIM':'LV-OTHER')])];
+if(params.get('simulateSetup')==='1') {
+  const saved=JSON.parse(sessionStorage.getItem('lv-sim-v1-fixture')||'null');
+  if(saved) reviewAircrafts=reviewAircrafts.map(a=>a.aircraft_id===saved.aircraft_id?saved:a);
+}
 window.fetch = async (url,options={}) => {
   if(url === '/api/aircraft' && options.method === 'POST') {
     if(!onboardingEnabled) return Response.json({ok:false,code:'POSTGRES_ONBOARDING_WRITES_NOT_ENABLED'},{status:503});
@@ -33,6 +37,19 @@ window.fetch = async (url,options={}) => {
     const created = {aircraft_id:'fixture-created',matricula:input.registration,fabricante:input.manufacturer,modelo:input.model,rol:'OWNER',ownershipConfigured:false,configurationConfigured:false,flightWritesReady:false,configurationSetupAvailable:false,trackingAvailable:true,componentInstallations:[]};
     reviewAircrafts = [...reviewAircrafts,created];
     return Response.json({ok:true,aircraft:created,onboarding:{ownershipConfigured:false,flightWritesReady:false}},{status:201});
+  }
+  if(url === '/api/aircraft' && options.method === 'PATCH' && params.get('simulateSetup') === '1') {
+    const input=JSON.parse(options.body);
+    const selected=reviewAircrafts.find(a=>a.aircraft_id===input.aircraftId);
+    if(input.action!=='setup-configuration'||!selected||selected.rol!=='OWNER'||!selected.configurationSetupAvailable) return Response.json({ok:false,code:'AIRCRAFT_CONFIGURATION_CANARY_DENIED'},{status:403});
+    if(selected.configurationConfigured) return Response.json({ok:false,code:'AIRCRAFT_CONFIGURATION_ALREADY_EXISTS'},{status:409});
+    if(params.get('failure')==='1') return Response.json({ok:false,error:'Fallo ficticio; no se guardó la configuración.'},{status:503});
+    const installations=input.components.map((c,i)=>({...c,componentId:'fixture-component-'+i,componentInstallationId:'fixture-installation-'+i}));
+    const configuration={propulsionType:input.propulsionType,engineCount:input.engineCount,propellerCount:input.propellerCount};
+    Object.assign(selected,{configurationConfigured:true,configurationSetupAvailable:false,configuration,componentInstallations:installations});
+    // Browser-local fixture storage only: supports a page reload without any server/business write.
+    sessionStorage.setItem('lv-sim-v1-fixture',JSON.stringify(selected));
+    return Response.json({ok:true,aircraftId:input.aircraftId,configurationConfigured:true,configuration,componentInstallations:installations},{status:201});
   }
   if(options.method && options.method !== 'GET') throw new Error('Local fixture: mutations blocked');
   let data;

@@ -17,7 +17,8 @@ const PROPULSION_OPTIONS = [
   ["OTHER", "Otra"],
 ];
 
-function ComponentFields({ component, disabled, onChange }) {
+function ComponentFields({ component, disabled, errors, onChange }) {
+  const key = componentKey(component.componentType, component.positionIndex);
   const label = component.componentType === "ENGINE" ? "Motor" : "Hélice";
   return (
     <fieldset className="aircraft-component-card" disabled={disabled}>
@@ -48,7 +49,15 @@ function ComponentFields({ component, disabled, onChange }) {
           />
         </label>
         <label>
-          <span>TIS inicial</span>
+          <span>Fecha de instalación *</span>
+          <input type="date" required value={component.installedOn}
+            aria-invalid={Boolean(errors[`${key}.installedOn`])}
+            aria-describedby={errors[`${key}.installedOn`] ? `${key}-date-error` : undefined}
+            onChange={(event) => onChange("installedOn", event.target.value)} />
+          {errors[`${key}.installedOn`] ? <small id={`${key}-date-error`} className="component-field-error">{errors[`${key}.installedOn`]}</small> : null}
+        </label>
+        <label>
+          <span>TIS al instalar (h)</span>
           <input
             type="number"
             inputMode="decimal"
@@ -57,7 +66,11 @@ function ComponentFields({ component, disabled, onChange }) {
             value={component.openingTisHours}
             onChange={(event) => onChange("openingTisHours", event.target.value)}
             placeholder="Desconocido"
+            aria-invalid={Boolean(errors[`${key}.openingTisHours`])}
+            aria-describedby={`${key}-tis-help${errors[`${key}.openingTisHours`] ? ` ${key}-tis-error` : ""}`}
           />
+          <small id={`${key}-tis-help`}>TIS del componente al instalarlo. No es TSN ni TSO. Vacío si no se conoce.</small>
+          {errors[`${key}.openingTisHours`] ? <small id={`${key}-tis-error`} className="component-field-error">{errors[`${key}.openingTisHours`]}</small> : null}
         </label>
       </div>
     </fieldset>
@@ -81,7 +94,6 @@ export default function AircraftConfigurationOnboarding({
     propulsionType: "",
     engineCount: "",
     propellerCount: "",
-    installedOn: "",
     components: [],
     adoptExisting: adoptingExisting,
   });
@@ -118,6 +130,7 @@ export default function AircraftConfigurationOnboarding({
       ),
     }));
     setReviewing(false);
+    setErrors({});
     setSubmitError("");
   };
 
@@ -164,8 +177,9 @@ export default function AircraftConfigurationOnboarding({
                 {installation.componentType === "ENGINE" ? "Motor" : "Hélice"} {installation.positionIndex}
               </strong>
               <span>{[installation.manufacturer, installation.model].filter(Boolean).join(" ") || "Identidad física desconocida"}</span>
+              <span>Serie: {installation.serialNumber || "Desconocida"}</span>
               <small>
-                Instalado: {installation.installedOn || "—"} · TIS inicial: {installation.openingTisHours ?? "Desconocido"}
+                Instalado: {installation.installedOn || "Desconocido"} · TIS al instalar: {installation.openingTisHours == null ? "Desconocido" : `${installation.openingTisHours} h`}
               </small>
             </article>
           ))}
@@ -205,7 +219,7 @@ export default function AircraftConfigurationOnboarding({
                 </strong>
                 <span>{[installation.manufacturer, installation.model].filter(Boolean).join(" ") || "Identidad física desconocida"}</span>
                 <small>
-                  Instalado: {installation.installedOn || "—"} · TIS inicial: {installation.openingTisHours ?? "Desconocido"}
+                  Instalado: {installation.installedOn || "Desconocido"} · TIS al instalar: {installation.openingTisHours == null ? "Desconocido" : `${installation.openingTisHours} h`}
                 </small>
               </article>
             ))}
@@ -268,22 +282,7 @@ export default function AircraftConfigurationOnboarding({
               />
               {errors.propellerCount ? <small>{errors.propellerCount}</small> : null}
             </label>
-            {!adoptingExisting ? (
-              <label>
-                <span>Fecha de instalación efectiva *</span>
-                <input
-                  type="date"
-                  value={values.installedOn}
-                  onChange={(event) => {
-                    setValues((current) => ({ ...current, installedOn: event.target.value }));
-                    setReviewing(false);
-                    setErrors({});
-                  }}
-                  disabled={submitting}
-                />
-                {errors.installedOn ? <small>{errors.installedOn}</small> : null}
-              </label>
-            ) : null}
+
           </div>
 
           {errors.topology ? <p className="flight-form-message is-error">{errors.topology}</p> : null}
@@ -295,6 +294,7 @@ export default function AircraftConfigurationOnboarding({
                   key={componentKey(component.componentType, component.positionIndex)}
                   component={component}
                   disabled={submitting}
+                  errors={errors}
                   onChange={(field, value) => updateComponent(component, field, value)}
                 />
               ))}
@@ -309,6 +309,16 @@ export default function AircraftConfigurationOnboarding({
                   ? `Se vincularán los componentes existentes a una topología de ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s). No se modificarán sus datos físicos.`
                   : `Se crearán ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s). Los cambios posteriores se gestionan en Componentes / Propulsión.`}
               </p>
+              {!adoptingExisting ? (
+                <ul className="configuration-review-list">
+                  {values.components.map((component) => (
+                    <li key={componentKey(component.componentType, component.positionIndex)}>
+                      <strong>{component.componentType === "ENGINE" ? "Motor" : "Hélice"} {component.positionIndex}</strong>
+                      <span>{component.installedOn} · {component.openingTisHours === "" ? "TIS desconocido" : `${component.openingTisHours} h TIS`}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <button
                 type="button"
                 className="form-action-button is-primary"
