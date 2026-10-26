@@ -1,0 +1,13 @@
+.hours-start-choice { margin: 0; padding: 0; border: 0; min-width: 0; }
+.hours-start-choice legend { font-size: 16px; font-weight: 650; margin-bottom: 14px; }
+.hours-start-options { display: grid; gap: 10px; }
+.hours-start-options > label { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border: 1px solid var(--app-border); border-radius: 12px; cursor: pointer; background: var(--app-surface); }
+.hours-start-options > label.is-selected { border-color: var(--app-accent, #3983b5); background: var(--app-surface-muted); }
+.hours-start-options input[type=radio] { width: 18px; height: 18px; min-height: 0; margin: 2px 0 0; flex-shrink: 0; accent-color: #3983b5; }
+.hours-start-options strong { display: block; font-size: 14px; line-height: 1.5; }
+.hours-start-options small { display: block; margin-top: 4px; color: var(--app-text-muted); font-size: 13px; font-weight: 400; line-height: 1.5; }
+.hours-start-plan { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--app-border); }
+.hours-start-plan h3 { margin: 0 0 18px; }
+.hours-start-plan > p { font-size: 14px; line-height: 1.6; }
+.hours-start-plan > small, .hours-import-steps { color: var(--app-text-muted); font-size: 13px; line-height: 1.6; }
+.first-aircraft-form > .hours-start-choice { margin: 0 0 24px; }

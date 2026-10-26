@@ -1,10 +1,7 @@
+import { HoursStartChoice } from './HoursStartChoice';
+import { hoursStartNextAction, isHoursStartMode } from '../utils/hoursStart';
 import CountrySelector from './CountrySelector';
-import { useRef, useState } from "react";
-
-import {
-  createAircraftSubmissionGuard,
-  getAircraftOnboardingErrorMessage,
-} from "../services/aircraftService";
+import { useState } from "react";
 
 const EMPTY_FORM = Object.freeze({
   registration: "",
@@ -12,37 +9,23 @@ const EMPTY_FORM = Object.freeze({
   model: "",
   serialNumber: "",
   countryCode: "",
-  openingTisHours: "",
-  baselineEffectiveDate: "",
 });
 
 function validateForm(values) {
   const errors = {};
-  const openingTis = String(values.openingTisHours).trim();
 
   if (!values.registration.trim()) errors.registration = "Ingresá la matrícula.";
   if (!values.manufacturer.trim()) errors.manufacturer = "Ingresá el fabricante.";
   if (!values.model.trim()) errors.model = "Ingresá el modelo.";
-  if (!values.baselineEffectiveDate) {
-    errors.baselineEffectiveDate = "Elegí la fecha base.";
-  }
   if (values.countryCode && !/^[A-Z]{2}$/.test(values.countryCode)) {
     errors.countryCode = "Usá un código ISO de dos letras.";
-  }
-  if (
-    openingTis !== "" &&
-    (!/^\d+(?:\.\d)?$/.test(openingTis) || Number(openingTis) < 0)
-  ) {
-    errors.openingTisHours = "Ingresá un valor positivo con hasta un decimal.";
   }
 
   return errors;
 }
 
 export default function FirstAircraftOnboarding({
-  onCreate,
   onLogout,
-  onUnauthorized,
   onCancel,
   canCreate = false,
   embedded = false,
@@ -50,14 +33,10 @@ export default function FirstAircraftOnboarding({
 }) {
   const [showForm, setShowForm] = useState(embedded);
   const [values, setValues] = useState(EMPTY_FORM);
+  const [hoursStartMode, setHoursStartMode] = useState("");
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const submitGuardRef = useRef(null);
-
-  if (!submitGuardRef.current) {
-    submitGuardRef.current = createAircraftSubmissionGuard();
-  }
+  const submitting = false;
 
   const updateField = (field, value) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -68,39 +47,17 @@ export default function FirstAircraftOnboarding({
     setSubmitError("");
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
-
     if (!canCreate) return;
-
-    if (!submitGuardRef.current.tryStart()) {
+    if (!isHoursStartMode(hoursStartMode)) {
+      setErrors({ hoursStartMode: "Elegí una opción para continuar." });
       return;
     }
-
-    const nextErrors = validateForm(values);
-
-    if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
-      submitGuardRef.current.finish();
-      return;
-    }
-
-    setSubmitting(true);
-    setSubmitError("");
-
-    try {
-      await onCreate(values);
-    } catch (error) {
-      if (error?.code === "UNAUTHORIZED") {
-        onUnauthorized();
-        return;
-      }
-
-      setSubmitError(getAircraftOnboardingErrorMessage(error));
-    } finally {
-      setSubmitting(false);
-      submitGuardRef.current.finish();
-    }
+    const identityErrors = validateForm(values);
+    setErrors(identityErrors);
+    if (Object.keys(identityErrors).length) return;
+    setSubmitError("El nuevo inicio de seguimiento está pendiente de habilitación. No se guardaron datos.");
   };
 
   const content = (
@@ -138,6 +95,9 @@ export default function FirstAircraftOnboarding({
               Ingresá los datos básicos. La propiedad legal se configura por separado.
             </p>
 
+            <HoursStartChoice value={hoursStartMode} onChange={(mode) => { setHoursStartMode(mode); setErrors({}); setSubmitError(""); }}
+              disabled={!canCreate} error={errors.hoursStartMode} />
+            {hoursStartMode ? <p className="first-aircraft-copy" role="status">{hoursStartNextAction(hoursStartMode)} El nuevo flujo está en preparación; no se guardarán datos.</p> : null}
             <div className="first-aircraft-grid">
               <label className={errors.registration ? "has-error" : ""}>
                 <span>Matrícula *</span>
@@ -187,42 +147,6 @@ export default function FirstAircraftOnboarding({
 
               <CountrySelector value={values.countryCode} onChange={(code) => updateField("countryCode", code)}
                 disabled={submitting || !canCreate} error={errors.countryCode} />
-
-              <label className={errors.openingTisHours ? "has-error" : ""}>
-                <span>TIS inicial</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.1"
-                  value={values.openingTisHours}
-                  onChange={(event) => updateField("openingTisHours", event.target.value)}
-                  placeholder="Desconocido"
-                  disabled={submitting || !canCreate}
-                />
-                {errors.openingTisHours ? (
-                  <small>{errors.openingTisHours}</small>
-                ) : null}
-              </label>
-
-              <label
-                className={`first-aircraft-date ${
-                  errors.baselineEffectiveDate ? "has-error" : ""
-                }`}
-              >
-                <span>Fecha base *</span>
-                <input
-                  type="date"
-                  value={values.baselineEffectiveDate}
-                  onChange={(event) =>
-                    updateField("baselineEffectiveDate", event.target.value)
-                  }
-                  disabled={submitting || !canCreate}
-                />
-                {errors.baselineEffectiveDate ? (
-                  <small>{errors.baselineEffectiveDate}</small>
-                ) : null}
-              </label>
             </div>
 
             {submitError ? (
@@ -233,7 +157,7 @@ export default function FirstAircraftOnboarding({
 
             <div className="first-aircraft-actions first-aircraft-form-actions">
               <button type="submit" className="login-button" disabled={submitting || !canCreate}>
-                {submitting ? "Creando aeronave..." : "Crear aeronave"}
+                Preparar inicio
               </button>
               <button
                 type="button"

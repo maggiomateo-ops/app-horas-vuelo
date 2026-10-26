@@ -1,0 +1,24 @@
+{
+  "environment": "Local isolated fixture; fetch intercepted; fictitious aircraft only",
+  "desktop": "1280px, light",
+  "mobile": "390px iframe, dark",
+  "observed": [
+    "Initial onboarding has neither mode selected",
+    "Prepare without a mode reports required choice",
+    "Historical mode and valid identity remain in prototype; no aircraft created",
+    "Current-reference mode shown on mobile without arbitrary baseline date",
+    "Existing fictional LV-SIM offers the same two choices in Settings",
+    "Engine 2020-01-02 and propeller 2023-04-05 retain independent dates",
+    "Unknown TSN/TSO stay empty; review save disabled",
+    "Additional-aircraft dialog uses same required choice",
+    "Cancel preserves LV-DEMO selection and SADF draft"
+  ],
+  "not_executed": ["authenticated Preview acceptance", "real LV-SIM setup", "SQL preflight or apply", "XLSX import or reconciliation commit"],
+  "canonical_readback": {
+    "decision": "D-307: 01_Decisions!A309:H309",
+    "change_log": "09_Change_Log!A103:I103",
+    "schema": "Settings Matrix!A99:J99",
+    "result": "values and WRAP format verified via connector",
+    "visual_limitation": "Google browser requested sign-in; no login attempted"
+  }
+}

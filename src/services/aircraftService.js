@@ -1,3 +1,4 @@
+import { rejectUnsupportedHoursPlan } from '../utils/hoursStart.js';
 export const ADD_AIRCRAFT_OPTION = "__add_aircraft__";
 
 export async function fetchAircrafts(signal) {
@@ -24,6 +25,7 @@ export async function fetchAircrafts(signal) {
 }
 
 export function buildAircraftOnboardingPayload(values) {
+  rejectUnsupportedHoursPlan(values);
   const openingTisValue = String(values?.openingTisHours ?? "").trim();
 
   return {
@@ -397,9 +399,20 @@ export function validateAircraftConfiguration(values) {
   }
   if (engineCount === null) errors.engineCount = "Ingresá una cantidad válida.";
   if (propellerCount === null) errors.propellerCount = "Ingresá una cantidad válida.";
-  if (!adoptExisting && !/^\d{4}-\d{2}-\d{2}$/.test(installedOn)) {
-    errors.installedOn = "Ingresá la fecha efectiva de instalación.";
+  const validDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+  if (!adoptExisting) {
+    if (values.components?.length) {
+      if (values.components.some((component) => !validDate(String(component.installedOn ?? installedOn)))) {
+        errors.installations = "Ingresá una fecha válida de instalación para cada motor y hélice.";
+      }
+    } else if (!validDate(installedOn)) {
+      errors.installedOn = "Ingresá la fecha efectiva de instalación.";
+    }
   }
+  if (values.components?.some((component) => ["installationTsnHours", "installationTsoHours"].some((field) => {
+    const raw = String(component[field] ?? "").trim();
+    return raw !== "" && (!/^\d+(?:\.\d)?$/.test(raw) || !Number.isFinite(Number(raw)));
+  }))) errors.componentHours = "Ingresá TSN/TSO positivos con hasta un decimal, o dejalos vacíos si no los conocés.";
   if (
     ["PISTON", "TURBOPROP"].includes(propulsionType)
     && (engineCount < 1 || propellerCount < 1)
@@ -439,12 +452,13 @@ function buildConfigurationComponents(values, componentType, count) {
       serialNumber: String(component.serialNumber || "").trim() || null,
       notes: null,
       openingTisHours: openingTis === "" ? null : Number(openingTis),
-      installedOn: String(values.installedOn || "").trim(),
+      installedOn: String(component.installedOn ?? values.installedOn ?? "").trim(),
     };
   });
 }
 
 export function buildAircraftConfigurationPayload(aircraftId, values) {
+  rejectUnsupportedHoursPlan(values);
   const engineCount = Number(values?.engineCount);
   const propellerCount = Number(values?.propellerCount);
   return {

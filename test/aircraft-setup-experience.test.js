@@ -41,9 +41,11 @@ test('vigencia legal distingue programada, vigente, finalizada y titular inactiv
 test('N posiciones conserva borradores por tipo/posición y horas desconocidas null',()=>{
   const components=syncComponents([{componentType:'ENGINE',positionIndex:2,serialNumber:'motor-2',openingTisHours:'15.2'}],3,2);
   assert.deepEqual(components.map(c=>`${c.componentType}:${c.positionIndex}`),['ENGINE:1','ENGINE:2','ENGINE:3','PROPELLER:1','PROPELLER:2']);
-  const values={propulsionType:'PISTON',engineCount:3,propellerCount:2,installedOn:'2026-10-20',components};
+  const values={propulsionType:'PISTON',engineCount:3,propellerCount:2,installedOn:'2026-10-20',components:components.map(c=>({...c,installedOn:'2026-10-20'}))};
   assert.equal(validateAircraftConfiguration(values).valid,true);
-  const payload=buildAircraftConfigurationPayload('sim',values);
+  assert.throws(()=>buildAircraftConfigurationPayload('sim',values),{code:'HOURS_START_CONTRACT_PENDING'});
+  const legacyValues={...values,components:values.components.map(component=>({componentType:component.componentType,positionIndex:component.positionIndex,serialNumber:component.serialNumber,openingTisHours:component.openingTisHours,installedOn:component.installedOn}))};
+  const payload=buildAircraftConfigurationPayload('sim',legacyValues);
   assert.equal(payload.components[1].serialNumber,'motor-2');
   assert.equal(payload.components[1].openingTisHours,15.2);
   assert.equal(payload.components[0].openingTisHours,null);

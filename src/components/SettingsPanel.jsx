@@ -1,3 +1,4 @@
+import HoursStartPlan from './HoursStartChoice';
 import AircraftOwnershipSummary from './AircraftOwnershipSummary';
 import { useEffect, useId, useMemo, useState } from "react";
 import SettingsUsersPanel from "./SettingsUsersPanel";
@@ -564,6 +565,7 @@ function SettingsPanel({
         ) : null}
           </form>
       </div>
+      {activeTab === "app" ? <HoursStartPlan key={aircraftId} /> : null}
       {aircraftConfigurationPanel && visitedPages.has("components") ? <div hidden={activeTab !== "components"}>{aircraftConfigurationPanel}</div> : null}
       {canViewUsers && visitedPages.has("users") ? <div hidden={activeTab !== "users"}>
         <SettingsUsersPanel

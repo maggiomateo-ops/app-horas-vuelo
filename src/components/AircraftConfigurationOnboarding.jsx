@@ -1,9 +1,7 @@
 import { componentKey, syncComponents } from '../utils/aircraftConfigurationDraft';
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import {
-  createAircraftSubmissionGuard,
-  getAircraftConfigurationErrorMessage,
   validateAircraftConfiguration,
 } from "../services/aircraftService";
 import AircraftComponentLifecyclePanel from "./AircraftComponentLifecyclePanel";
@@ -48,17 +46,13 @@ function ComponentFields({ component, disabled, onChange }) {
           />
         </label>
         <label>
-          <span>TIS inicial</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.1"
-            value={component.openingTisHours}
-            onChange={(event) => onChange("openingTisHours", event.target.value)}
-            placeholder="Desconocido"
-          />
+          <span>Fecha de instalación *</span>
+          <input type="date" value={component.installedOn} onChange={(event) => onChange("installedOn", event.target.value)} />
         </label>
+        <label><span>TSN al instalar</span><input type="number" min="0" step="0.1" inputMode="decimal"
+          value={component.installationTsnHours} onChange={(event) => onChange("installationTsnHours", event.target.value)} placeholder="Desconocido" /></label>
+        <label><span>TSO al instalar</span><input type="number" min="0" step="0.1" inputMode="decimal"
+          value={component.installationTsoHours} onChange={(event) => onChange("installationTsoHours", event.target.value)} placeholder="Desconocido" /></label>
       </div>
     </fieldset>
   );
@@ -71,7 +65,6 @@ export default function AircraftConfigurationOnboarding({
   componentInstallationHistory = [],
   canManageComponents = false,
   onComponentMutate,
-  onComplete,
   onUnauthorized,
 }) {
   const adoptingExisting = componentInstallations.length > 0;
@@ -86,10 +79,8 @@ export default function AircraftConfigurationOnboarding({
     adoptExisting: adoptingExisting,
   });
   const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
+  const submitting = false;
   const [submitError, setSubmitError] = useState("");
-  const guardRef = useRef(null);
-  if (!guardRef.current) guardRef.current = createAircraftSubmissionGuard();
 
   const updateCount = (field, rawValue) => {
     setValues((current) => {
@@ -127,24 +118,6 @@ export default function AircraftConfigurationOnboarding({
     setErrors(validation.errors);
     setSubmitError("");
     if (validation.valid) setReviewing(true);
-  };
-
-  const handleConfirm = async () => {
-    if (!guardRef.current.tryStart()) return;
-    setSubmitting(true);
-    setSubmitError("");
-    try {
-      await onComplete(values);
-    } catch (error) {
-      if (error?.code === "UNAUTHORIZED" || error?.statusCode === 401) {
-        onUnauthorized();
-        return;
-      }
-      setSubmitError(getAircraftConfigurationErrorMessage(error));
-    } finally {
-      setSubmitting(false);
-      guardRef.current.finish();
-    }
   };
 
   if (configurationConfigured) {
@@ -268,24 +241,12 @@ export default function AircraftConfigurationOnboarding({
               />
               {errors.propellerCount ? <small>{errors.propellerCount}</small> : null}
             </label>
-            {!adoptingExisting ? (
-              <label>
-                <span>Fecha de instalación efectiva *</span>
-                <input
-                  type="date"
-                  value={values.installedOn}
-                  onChange={(event) => {
-                    setValues((current) => ({ ...current, installedOn: event.target.value }));
-                    setReviewing(false);
-                    setErrors({});
-                  }}
-                  disabled={submitting}
-                />
-                {errors.installedOn ? <small>{errors.installedOn}</small> : null}
-              </label>
-            ) : null}
+
           </div>
 
+          <p className="dashboard-inline-note">Preparación local · TSN: horas desde nuevo. TSO: horas desde recorrida. Sin datos, dejá el campo vacío.</p>
+          {errors.componentHours ? <p className="flight-form-message is-error">{errors.componentHours}</p> : null}
+          {errors.installations ? <p className="flight-form-message is-error">{errors.installations}</p> : null}
           {errors.topology ? <p className="flight-form-message is-error">{errors.topology}</p> : null}
 
           {!adoptingExisting ? (
@@ -303,20 +264,14 @@ export default function AircraftConfigurationOnboarding({
 
           {reviewing ? (
             <div className="aircraft-configuration-confirmation" role="status">
-              <strong>Confirmá la configuración inicial</strong>
+              <strong>Revisión del borrador</strong>
               <p>
                 {adoptingExisting
-                  ? `Se vincularán los componentes existentes a una topología de ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s). No se modificarán sus datos físicos.`
-                  : `Se crearán ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s). Los cambios posteriores se gestionan en Componentes / Propulsión.`}
+                  ? `Borrador de adopción de componentes existentes: ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s). No se modificarán sus datos físicos.`
+                  : `Borrador: ${values.engineCount} motor(es) y ${values.propellerCount} hélice(s).`}
               </p>
-              <button
-                type="button"
-                className="form-action-button is-primary"
-                onClick={handleConfirm}
-                disabled={submitting}
-              >
-                {submitting ? "Guardando configuración..." : "Confirmar y guardar"}
-              </button>
+              <p>TSN/TSO y el inicio de seguimiento están pendientes de aprobación. Estos datos no se guardan.</p>
+              <button type="button" className="form-action-button is-primary" disabled>Guardado pendiente de habilitación</button>
             </div>
           ) : (
             <button type="submit" className="form-action-button is-primary" disabled={submitting}>

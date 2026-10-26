@@ -21,6 +21,9 @@ export function syncComponents(current, engineCount, propellerCount) {
     model: "",
     serialNumber: "",
     openingTisHours: "",
+    installedOn: "",
+    installationTsnHours: "",
+    installationTsoHours: "",
     ...identity,
     ...(byKey.get(componentKey(identity.componentType, identity.positionIndex)) || {}),
   }));
