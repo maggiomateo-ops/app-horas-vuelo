@@ -18,9 +18,9 @@ SET LOCAL app.v1_tracking_migration = 'approved_test';
 -- Temp-only fixtures. LIKE copies CHECK constraints but not foreign keys.
 CREATE TEMP TABLE tracking_fixture (LIKE app.component_installations INCLUDING ALL) ON COMMIT DROP;
 INSERT INTO tracking_fixture (component_installation_id,component_id,aircraft_id,position_index,
-  installed_on,opening_tis_hours,tracking_started_on,tracking_reference_tis_hours)
+  installed_on,opening_tis_hours,tracking_started_on,tracking_reference_tis_hours,updated_at)
 SELECT gen_random_uuid(),gen_random_uuid(),gen_random_uuid(),p,NULL,NULL,DATE '2026-10-20',
-  CASE WHEN p=1 THEN 100.1 ELSE NULL END FROM generate_series(1,4) p;
+  CASE WHEN p=1 THEN 100.1 ELSE NULL END, transaction_timestamp() FROM generate_series(1,4) p;
 DO $$ BEGIN
   IF (SELECT count(*) FROM tracking_fixture) <> 4 THEN RAISE EXCEPTION 'fixture count'; END IF;
   BEGIN
