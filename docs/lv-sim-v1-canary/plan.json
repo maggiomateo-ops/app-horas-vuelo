@@ -6,9 +6,9 @@
   "identity": {
     "observed": { "manufacturer": "Cessna", "model": "C182", "serialState": "EXISTING_REQUIRES_EXPLICIT_REVIEW" },
     "proposed": { "manufacturer": "Piper", "model": "PA-34 Seneca" },
-    "writeOperation": "PROPOSED_NOT_IMPLEMENTED",
-    "serialDecision": "PENDING_DO_NOT_INFER_OR_COPY",
-    "auditActionProposed": "AIRCRAFT_IDENTITY_CORRECTED"
+    "writeOperation": "IMPLEMENTED_FLAG_OFF",
+    "serialDecision": "EXPLICIT_NULL_APPROVED_EXECUTION_PENDING",
+    "auditAction": "AIRCRAFT_IDENTITY_CORRECTED"
   },
   "configuration": {
     "propulsionType": "PISTON", "engineCount": 2, "propellerCount": 2,
@@ -39,7 +39,8 @@
       "POSTGRES_TRACKING_WRITES_ENABLED": "false",
       "POSTGRES_SQUAWK_WRITES_ENABLED": "false",
       "POSTGRES_SELF_SERVICE_USER_CREATION_ENABLED": "false",
-      "USER_MANAGEMENT_WRITES_ENABLED": "false"
+      "USER_MANAGEMENT_WRITES_ENABLED": "false",
+      "POSTGRES_AIRCRAFT_IDENTITY_CORRECTIONS_ENABLED": "false"
     },
     "managedBindingsRequired": ["DATABASE_URL", "SESSION_SECRET", "GOOGLE_CLIENT_ID", "VITE_GOOGLE_CLIENT_ID"],
     "authenticationPrerequisites": ["GOOGLE_AUTH_ENABLED=true", "VITE_GOOGLE_AUTH_ENABLED=true", "Approved Google authorized origin for the exact Preview hostname"],

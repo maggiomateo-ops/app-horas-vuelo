@@ -1,3 +1,5 @@
+import { correctAircraftIdentityInPostgres } from './_postgresAircraftIdentityRepository.js';
+import { identityCorrectionReadAllowed } from './_aircraftIdentityCorrectionPolicy.js';
 import { requireAircraftConfigurationCanary, aircraftConfigurationSetupAvailable } from "./_aircraftConfigurationCanary.js";
 import { requireAuth } from "./_auth.js";
 import { getAircraftsForUser } from "./_adminRepository.js";
@@ -24,6 +26,7 @@ const AIRCRAFT_RESPONSE_FIELDS = [
   "matricula",
   "fabricante",
   "modelo",
+  "identityCorrectionSnapshot",
   "rol",
   "ownershipConfigured",
   "ownershipInterests",
@@ -54,6 +57,8 @@ async function loadAircrafts(userId, session) {
   const aircrafts = await getAircraftsForUserFromPostgres(userId);
   return aircrafts.map((aircraft) => ({
     ...aircraft,
+    identityCorrectionSnapshot: aircraft.rol === 'OWNER' && identityCorrectionReadAllowed({ source, session, aircraftId: aircraft.aircraft_id })
+      ? aircraft.identityCorrectionSnapshot : undefined,
     configurationSetupAvailable: aircraftConfigurationSetupAvailable({ source, session, aircraft }),
     componentLifecycleWritesAvailable: componentLifecycleCapability.enabled,
     trackingAvailable,
@@ -90,6 +95,21 @@ export default async function handler(req, res) {
 
   if (req.method === "PATCH") {
     const action = String(req.body?.action || "").trim();
+
+    if (action === "correct-pending-aircraft-identity") {
+      const input = { ...(req.body || {}) };
+      delete input.action;
+      try {
+        const result = await correctAircraftIdentityInPostgres({ source, session, input });
+        return res.status(200).json(result);
+      } catch (error) {
+        const statusCode = error.statusCode || 502;
+        const expose = [400, 403, 409, 422, 503].includes(statusCode);
+        return res.status(statusCode).json({ ok: false,
+          error: expose ? error.message : "No se pudo corregir la identidad de la aeronave.",
+          code: expose ? error.code : undefined });
+      }
+    }
 
     if (COMPONENT_LIFECYCLE_ACTIONS.has(action)) {
       let capability;

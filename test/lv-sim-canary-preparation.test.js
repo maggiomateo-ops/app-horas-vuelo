@@ -16,7 +16,7 @@ function proposedEnvironment(t){
 }
 test('canary preparation is non-executable and contains no secret values or automatic dates/hours',()=>{
   assert.equal(plan.executionAuthorization,false);assert.equal(plan.environmentProposal.apply,false);
-  assert.equal(plan.identity.writeOperation,'PROPOSED_NOT_IMPLEMENTED');
+  assert.equal(plan.identity.writeOperation,'IMPLEMENTED_FLAG_OFF');
   assert.deepEqual(plan.identity.proposed,{manufacturer:'Piper',model:'PA-34 Seneca'});
   assert.equal(plan.configuration.components.length,4);
   assert.deepEqual(plan.configuration.components.map(c=>`${c.componentType}:${c.positionIndex}`),['ENGINE:1','ENGINE:2','PROPELLER:1','PROPELLER:2']);

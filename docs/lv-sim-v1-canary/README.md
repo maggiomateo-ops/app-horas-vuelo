@@ -2,7 +2,7 @@
 
 **Preparación publicada; ejecución NO autorizada por esta entrega.** Sin escrituras Neon, cambios Vercel/flags/roles, SQL Hours V2, migraciones, datos LV-MHZ, main, Production ni cambios funcionales de Costs.
 
-Base GitHub verificada por ls-remote: `codex/lv-sim-v1-configuration` = `f5e8934861cd1dd83b897af7f4c66f51c1cff452`; operativa `codex/settings-v2-preview` = `eea761bc52b141a734f1f3b6b41fbe2f0732b6fe`. Rama de preparación: `codex/lv-sim-v1-canary-preparation`, descendiente exacta de la base solicitada. No modifica el código runtime existente.
+Base GitHub verificada por ls-remote: `codex/lv-sim-v1-configuration` = `f5e8934861cd1dd83b897af7f4c66f51c1cff452`; operativa `codex/settings-v2-preview` = `eea761bc52b141a734f1f3b6b41fbe2f0732b6fe`. Rama de preparación: `codex/lv-sim-v1-canary-preparation`, descendiente exacta de la base solicitada. La preparación original no modificó runtime; la revisión actual agrega la corrección mínima según [contrato implementado](identity-correction.md).
 
 ## Autoridad consultada
 
@@ -34,22 +34,9 @@ El baseline cero y su fecha son preexistentes: esta preparación no los genera, 
 
 Permisos efectivos leídos para app_horas_runtime: UPDATE manufacturer/model en app.aircraft; INSERT en aircraft_configuration/components/component_installations y Audit. Audit UPDATE/DELETE denegados. Privilegio SQL no implica que exista una operación de negocio autorizada. No se concedió ningún permiso.
 
-## Identidad de prueba: propuesta mínima, no implementación
+## Identidad de prueba: implementación con flag OFF
 
-Intención aprobada: fabricante **Piper**, modelo **PA-34 Seneca**, escenario ficticio PISTON 2 motores + 2 hélices. No se infiere identidad de los cuatro componentes a partir del modelo ni de LV-TST. Se necesita decidir explícitamente qué hacer con la serie de casco previa: preservarla sin atribuir evidencia, o declarar desconocido y corregirla a NULL con Audit. No se asigna una serie nueva ni se limpia el dato automáticamente.
-
-Inspección: api/aircraft.js ofrece onboarding, setup-configuration, ownership y lifecycle; no corrección de identidad. El subset PostgreSQL de Settings solo admite unidad de aceite y ciertos parámetros de inspección. Nombre en la app no cambia manufacturer/model. No usar Settings legacy, onboarding duplicado ni SQL manual para eludir esta carencia.
-
-Propuesta de operación futura `PATCH /api/aircraft`, `action=correct-pending-aircraft-identity`:
-
-1. Sesión canónica validada; OWNER ACTIVE, usuario/aeronave ACTIVE; POSTGRES; Preview; mismo UUID servidor del canary. Revalidar dentro de la transacción.
-2. Habilitación específica adicional, por defecto desactivada, aprobada para esa operación; no reutilizar el permiso de configuración como autorización implícita de identidad. Es una propuesta, sin flag nuevo creado ni código activado.
-3. Whitelist manufacturer/model, motivo y snapshot esperado de manufacturer/model/serial/updated_at. Valores explícitos no vacíos. Serie fuera del cambio por defecto; solo permitir corrección explícita a NULL si se aprueba ese contrato. Sin cambios de UUID, matrícula, ownership, membresías, baseline ni instalaciones.
-4. SERIALIZABLE + lock de aeronave; comprobar snapshot previo exacto, ausencia de configuración/instalaciones/vuelos/imports/ajustes. Si cambió algo, 409, sin escrituras. Este caso acotado no es un editor general de identidad histórica.
-5. Actualizar únicamente campos autorizados y updated_at; insertar Audit USER/MANUAL, entity AIRCRAFT, acción propuesta AIRCRAFT_IDENTITY_CORRECTED, before/after completos y motivo indicando corrección ficticia TEST. Conserva AIRCRAFT_CREATED y sus datos originales; no reescribe historia. Error Audit => rollback. No-op => sin nueva escritura/Audit; conflicto ante snapshot obsoleto.
-6. GET tras commit y verificación independiente de datos/Audit. Tests de rol, canary, stale input, ausencia de historial, repetición/no-op y rollback antes de habilitar.
-
-El schema y privilegios observados permiten proponerlo sin DDL ni GRANT. **La operación no está implementada y requiere revisión/aprobación adicional antes del cambio real.** No se entrega SQL UPDATE ejecutable. Son dos operaciones futuras distintas: corrección de identidad con su propio Audit, y bootstrap técnico con exactamente un AIRCRAFT_CONFIGURATION_CREATED; no afirmar que habrá un único evento Audit total.
+La operación mínima ya está implementada en el endpoint existente. [Contrato, payload, guards, idempotencia y validación](identity-correction.md). Solo admite Cessna/C182 → Piper/PA-34 Seneca con serie NULL explícita y motivo fijo. La ejecución real sigue sin autorización; ni la identidad ni su evidencia histórica se modificaron. La decisión de serie NULL está expresamente aprobada por el contrato funcional de esta implementación; no se ejecuta automáticamente.
 
 ## Preview: comparación y conjunto propuesto
 
@@ -102,8 +89,8 @@ Después de revisar y autorizar código/datos/entorno: aplicar identidad mediant
 | Categoría | Bloqueo actual | Resolución necesaria |
 |---|---|---|
 | Datos | Cuatro fechas faltantes | Declaración explícita por posición; identidad/TIS pueden permanecer desconocidos |
-| Identidad | Cessna/C182 y serie previa no describen la Piper ficticia aprobada | Aprobar/implementar corrección mínima + decidir serie; preservar Audit |
-| Código | Falta operación segura de corrección de identidad | Implementación y tests de la propuesta anterior; setup técnico existente preparado |
+| Identidad | Cessna/C182 y serie previa no describen la Piper ficticia aprobada | Ejecutar corrección implementada solo tras gate explícito; serie NULL aprobada, Audit preservado |
+| Código | Operación de identidad implementada con flag OFF | Revisión independiente del commit y posterior gate autenticado; setup técnico preparado |
 | Entorno | Rama UI cae a selectores Sheets compartidos y no tiene binding TEST/canary propios verificados | Autorizar/configurar únicamente overrides Preview de rama elegida; auth/binding y snapshot runtime efectivos por verificar |
 | Autorización | No hay autorización de escritura real ni de cambios de variables/flags en este bloque | Autorización posterior específica para identidad, entorno y único bootstrap técnico |
 | Operación posterior | Titularidad legal vacía, Flights writes false; baseline previo requiere evidencia | Gates propios, no ampliar el alcance de setup técnico |

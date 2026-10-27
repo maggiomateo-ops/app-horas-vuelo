@@ -140,9 +140,10 @@ const CURRENT_CONFIGURATION_JOIN = `
 `;
 
 export function mapPostgresAircraftRow(row) {
-  const { ownershipInterests, ...aircraft } = row || {};
+  const { ownershipInterests, identityCorrectionSnapshot, ...aircraft } = row || {};
   return {
     ...aircraft,
+    ...(row?.rol === "OWNER" && identityCorrectionSnapshot ? { identityCorrectionSnapshot } : {}),
     ...(row?.rol === "OWNER" && Array.isArray(ownershipInterests) ? { ownershipInterests } : {}),
     configurationConfigured: row?.configurationConfigured === true,
     configuration: row?.configurationConfigured === true
@@ -166,6 +167,10 @@ export async function getAircraftsForUserFromPostgres(userId) {
         COALESCE(current_registration.registration, '') AS matricula,
         aircraft.manufacturer AS fabricante,
         aircraft.model AS modelo,
+        CASE WHEN membership.role='OWNER' AND aircraft.aircraft_id='96d849aa-2827-4aa3-b02b-6671577444a7'::uuid
+          THEN jsonb_build_object('manufacturer',aircraft.manufacturer,'model',aircraft.model,
+            'serialNumber',aircraft.serial_number,'updatedAt',to_char(aircraft.updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'))
+          ELSE NULL END AS "identityCorrectionSnapshot",
         membership.role AS rol,
         legal_ownership.interests AS "ownershipInterests",
         current_ownership.ownership_count > 0 AS "ownershipConfigured",
