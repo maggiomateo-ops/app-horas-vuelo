@@ -1,3 +1,4 @@
+import { requireFunctionalCanaryIfConfigured } from './_functionalCanary.js';
 import { requireAuth } from "./_auth.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import {
@@ -203,6 +204,11 @@ export default async function handler(req, res) {
       ok: false,
       error: "La fuente o capacidad de escritura de Settings no esta configurada correctamente.",
     });
+  }
+
+  if (req.method !== 'GET') {
+    try { requireFunctionalCanaryIfConfigured({source,session,aircraftId}); }
+    catch(error) {return res.status(error.statusCode).json({ok:false,code:error.code,error:error.message});}
   }
 
   if (resource === "tracking") {

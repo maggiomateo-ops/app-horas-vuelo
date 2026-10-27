@@ -54,6 +54,10 @@ function sanitizeAircraft(aircraft) {
 
 async function loadAircrafts(userId, session) {
   const source = resolveDataSource("AIRCRAFT_DATA_SOURCE");
+  if (process.env.VERCEL_GIT_COMMIT_REF === 'codex/lv-sim-v1-functional'
+    && !functionalCanaryAllows({source,session,aircraftId:'96d849aa-2827-4aa3-b02b-6671577444a7'})) {
+    throw Object.assign(new Error('Este Preview TEST todavía no está configurado para LV-SIM.'),{statusCode:503,code:'FUNCTIONAL_PREVIEW_NOT_CONFIGURED'});
+  }
   if (source !== DATA_SOURCE.POSTGRES) return getAircraftsForUser(userId);
   const componentLifecycleCapability =
     resolvePostgresComponentLifecycleWriteCapability(source);
@@ -90,8 +94,8 @@ export default async function handler(req, res) {
     try {
       const aircrafts = await loadAircrafts(userId, session);
       return res.status(200).json({ ok: true, aircrafts: aircrafts.map(sanitizeAircraft) });
-    } catch {
-      return res.status(500).json({ ok: false, error: "No se pudieron cargar las aeronaves." });
+    } catch (error) {
+      return res.status(error.statusCode === 503 ? 503 : 500).json({ ok: false, code:error.statusCode === 503 ? error.code : undefined, error: error.statusCode === 503 ? error.message : "No se pudieron cargar las aeronaves." });
     }
   }
 

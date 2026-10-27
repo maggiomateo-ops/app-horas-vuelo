@@ -1,0 +1,36 @@
+{
+  "status": "AUTO_REVIEW_REJECTED_NOT_APPLIED",
+  "project": "app-horas-vuelo",
+  "gitBranch": "codex/lv-sim-v1-functional",
+  "target": "preview",
+  "managedBinding": {
+    "name": "DATABASE_URL",
+    "sourceBranch": "codex/lv-sim-identity-correction",
+    "expectedRole": "app_horas_runtime",
+    "expectedDatabase": "app_horas",
+    "expectedNeonProject": "red-pine-78283204",
+    "expectedNeonBranch": "br-billowing-band-b62jj1ab",
+    "secretValueIncluded": false
+  },
+  "values": {
+    "GOOGLE_USER_RESOLUTION_SOURCE": "POSTGRES",
+    "AIRCRAFT_DATA_SOURCE": "POSTGRES",
+    "SETTINGS_DATA_SOURCE": "POSTGRES",
+    "HISTORIALES_DATA_SOURCE": "POSTGRES",
+    "FLIGHT_DATA_SOURCE": "POSTGRES",
+    "POSTGRES_V1_FUNCTIONAL_CANARY_AIRCRAFT_ID": "96d849aa-2827-4aa3-b02b-6671577444a7",
+    "POSTGRES_AIRCRAFT_CONFIGURATION_CANARY_AIRCRAFT_ID": "96d849aa-2827-4aa3-b02b-6671577444a7",
+    "POSTGRES_AIRCRAFT_IDENTITY_CORRECTIONS_ENABLED": "true",
+    "POSTGRES_AIRCRAFT_CONFIGURATION_WRITES_ENABLED": "true",
+    "POSTGRES_FLIGHT_WRITES_ENABLED": "true",
+    "POSTGRES_OWNERSHIP_WRITES_ENABLED": "true",
+    "POSTGRES_COMPONENT_LIFECYCLE_WRITES_ENABLED": "false",
+    "POSTGRES_ONBOARDING_WRITES_ENABLED": "false",
+    "POSTGRES_SETTINGS_WRITES_ENABLED": "false",
+    "POSTGRES_TRACKING_WRITES_ENABLED": "false",
+    "POSTGRES_SQUAWK_WRITES_ENABLED": "false",
+    "POSTGRES_SELF_SERVICE_USER_CREATION_ENABLED": "false",
+    "USER_MANAGEMENT_WRITES_ENABLED": "false"
+  },
+  "forbidden": ["DATABASE_MIGRATION_URL", "production", "global overrides", "other branches"]
+}

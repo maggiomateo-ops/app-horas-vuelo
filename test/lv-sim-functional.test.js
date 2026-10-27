@@ -59,3 +59,22 @@ test('canary ownership UI requires explicit legal input and acceptance, not infe
   assert.match(source,/explicit \? "PERSON"/);assert.match(source,/explicit && !accepted/);
   const app=await readFile(new URL('../src/App.jsx',import.meta.url),'utf8');assert.match(app,/flightMutationAvailable !== false/);
 });
+
+test('real HTTP flight and ownership endpoints reject another aircraft before repository access',async t=>{
+  const context=scoped(t);
+  const {createSessionCookie}=await import('../api/_auth.js');
+  const {default:saveFlight}=await import('../api/guardar-vuelo.js');
+  const {default:aircraftHandler}=await import('../api/aircraft.js');
+  const keys={SESSION_SECRET:'functional-test-only',FLIGHT_DATA_SOURCE:'POSTGRES',AIRCRAFT_DATA_SOURCE:'POSTGRES',POSTGRES_OWNERSHIP_WRITES_ENABLED:'true'};
+  const old=Object.fromEntries(Object.keys(keys).map(k=>[k,process.env[k]]));Object.assign(process.env,keys);
+  t.after(()=>{for(const[k,v]of Object.entries(old)){if(v===undefined)delete process.env[k];else process.env[k]=v;}});
+  const headers={cookie:createSessionCookie(context.session).split(';')[0]};
+  const response=()=>({statusCode:0,status(code){this.statusCode=code;return this;},json(data){this.data=data;return this;}});
+  let res=response();await saveFlight({method:'POST',headers,body:{aircraft_id:'33333333-3333-4333-8333-333333333333'}},res);
+  assert.equal(res.statusCode,403);assert.equal(res.data.code,'FUNCTIONAL_CANARY_DENIED');
+  res=response();await aircraftHandler({method:'PATCH',headers,body:{action:'setup-ownership',aircraftId:'33333333-3333-4333-8333-333333333333',owners:[]}},res);
+  assert.equal(res.statusCode,403);assert.equal(res.data.code,'FUNCTIONAL_CANARY_DENIED');
+  delete process.env.POSTGRES_V1_FUNCTIONAL_CANARY_AIRCRAFT_ID;
+  res=response();await aircraftHandler({method:'GET',headers},res);
+  assert.equal(res.statusCode,503);assert.equal(res.data.code,'FUNCTIONAL_PREVIEW_NOT_CONFIGURED');
+});
