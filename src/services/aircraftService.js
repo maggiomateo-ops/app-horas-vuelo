@@ -390,6 +390,7 @@ export function validateAircraftConfiguration(values) {
   const propellerCount = configurationCount(values?.propellerCount);
   const adoptExisting = values?.adoptExisting === true;
   const errors = {};
+  if (!adoptExisting && values?.trackingMode !== "CURRENT_REFERENCE") errors.trackingMode = "Elegí cómo comenzar el seguimiento.";
 
   if (!AIRCRAFT_PROPULSION_TYPES.has(propulsionType)) {
     errors.propulsionType = "Seleccioná un tipo de propulsión.";
@@ -421,15 +422,19 @@ export function validateAircraftConfiguration(values) {
         errors.topology = "Revisá las posiciones de los componentes.";
       }
       seen.add(key);
-      const date = String(component.installedOn || "").trim();
-      const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : null;
-      if (!parsed || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date
-        || Number(date.slice(0, 4)) < 100) {
-        errors[`${key}.installedOn`] = "Ingresá una fecha de instalación válida.";
+      for (const field of ["installedOn", "trackingStartedOn"]) {
+        const date = String(component[field] || "").trim();
+        if (!date && field === "installedOn") continue;
+        const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : null;
+        if (!parsed || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date
+          || Number(date.slice(0, 4)) < 100) errors[`${key}.${field}`] = "Ingresá una fecha válida.";
       }
-      const hours = String(component.openingTisHours ?? "").trim();
+      if (component.installedOn && component.trackingStartedOn < component.installedOn) {
+        errors[`${key}.trackingStartedOn`] = "El seguimiento no puede comenzar antes de la instalación.";
+      }
+      const hours = String(component.trackingReferenceTisHours ?? "").trim();
       if (hours !== "" && (!/^\d+(?:\.\d)?$/.test(hours) || Number(hours) > 999_999_999.9)) {
-        errors[`${key}.openingTisHours`] = "Usá horas positivas o cero, con hasta un decimal.";
+        errors[`${key}.trackingReferenceTisHours`] = "Usá horas positivas o cero, con hasta un decimal.";
       }
     }
     if (components.length !== engineCount + propellerCount) {
@@ -454,7 +459,7 @@ function buildConfigurationComponents(values, componentType, count) {
         candidate.componentType === componentType
         && Number(candidate.positionIndex) === positionIndex
     ) || {};
-    const openingTis = String(component.openingTisHours ?? "").trim();
+    const referenceTis = String(component.trackingReferenceTisHours ?? "").trim();
     return {
       componentType,
       positionIndex,
@@ -462,8 +467,10 @@ function buildConfigurationComponents(values, componentType, count) {
       model: String(component.model || "").trim() || null,
       serialNumber: String(component.serialNumber || "").trim() || null,
       notes: null,
-      openingTisHours: openingTis === "" ? null : Number(openingTis),
-      installedOn: String(component.installedOn || "").trim(),
+      openingTisHours: null,
+      installedOn: String(component.installedOn || "").trim() || null,
+      trackingStartedOn: String(component.trackingStartedOn || "").trim(),
+      trackingReferenceTisHours: referenceTis === "" ? null : Number(referenceTis),
     };
   });
 }
@@ -473,6 +480,7 @@ export function buildAircraftConfigurationPayload(aircraftId, values) {
   const propellerCount = Number(values?.propellerCount);
   return {
     action: "setup-configuration",
+    ...(values?.adoptExisting === true ? {} : { trackingMode: values?.trackingMode || null }),
     aircraftId: String(aircraftId || "").trim(),
     propulsionType: String(values?.propulsionType || "").trim().toUpperCase(),
     engineCount,
@@ -516,30 +524,27 @@ export async function configureAircraftTopologyAndRefresh(
   {
     configureRequest = configureAircraftTopology,
     loadAircrafts = fetchAircrafts,
-    currentAircrafts = [],
   } = {}
 ) {
   const result = await configureRequest(aircraftId, values);
   let aircrafts;
   try {
     aircrafts = await loadAircrafts();
+    if (!aircrafts.some(a => a.aircraft_id === aircraftId && a.configurationConfigured === true)) {
+      throw new Error("Missing configuration readback");
+    }
   } catch (error) {
     if (error?.code === "UNAUTHORIZED" || error?.message === "UNAUTHORIZED") throw error;
-    aircrafts = currentAircrafts.map((aircraft) =>
-      aircraft.aircraft_id === aircraftId
-        ? {
-            ...aircraft,
-            configurationConfigured: true,
-            configuration: result.configuration,
-            componentInstallations: result.componentInstallations,
-          }
-        : aircraft
-    );
+    throw Object.assign(new Error("Se guardó la configuración, pero no se pudo verificar su lectura. Recargá la aeronave antes de continuar."), {
+      code: "AIRCRAFT_CONFIGURATION_READBACK_REQUIRED", statusCode: 502,
+    });
   }
   return { ...result, aircrafts };
 }
 
 export function getAircraftConfigurationErrorMessage(error) {
+  if (error?.code === "AIRCRAFT_TRACKING_SCHEMA_REQUIRED") return "El guardado del seguimiento está pendiente de habilitación. Tu borrador se conserva.";
+  if (error?.code === "AIRCRAFT_CONFIGURATION_READBACK_REQUIRED") return error.message;
   if (error?.statusCode === 403) {
     return "Sólo un Owner puede configurar esta aeronave.";
   }

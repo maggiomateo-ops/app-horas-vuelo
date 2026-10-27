@@ -195,8 +195,9 @@ export default function AircraftComponentLifecyclePanel({
                 <div className="aircraft-position-current">
                   <span>{identityText(current)}</span>
                   <small>
-                    Instalado: {current.installedOn || "Desconocido"} · TIS inicial: {current.openingTisHours ?? "Desconocido"}
+                    Instalado: {current.installedOn || "Desconocido"} · TIS al instalar: {current.openingTisHours ?? "Desconocido"}
                   </small>
+                  {current.trackingStartedOn ? <small>Seguimiento: {current.trackingStartedOn} · Referencia TIS: {current.trackingReferenceTisHours ?? "Desconocida"}</small> : null}
                 </div>
               ) : null}
 
@@ -255,7 +256,7 @@ export default function AircraftComponentLifecyclePanel({
                 <label><span>Fabricante</span><input value={values.manufacturer} onChange={(event) => setValues((current) => ({ ...current, manufacturer: event.target.value }))} disabled={submitting} /></label>
                 <label><span>Modelo</span><input value={values.model} onChange={(event) => setValues((current) => ({ ...current, model: event.target.value }))} disabled={submitting} /></label>
                 <label><span>Número de serie</span><input value={values.serialNumber} onChange={(event) => setValues((current) => ({ ...current, serialNumber: event.target.value }))} disabled={submitting} /></label>
-                <label><span>TIS inicial</span><input type="number" min="0" step="0.1" value={values.openingTisHours} onChange={(event) => setValues((current) => ({ ...current, openingTisHours: event.target.value }))} disabled={submitting} placeholder="Desconocido" /></label>
+                <label><span>TIS al instalar</span><input type="number" min="0" step="0.1" value={values.openingTisHours} onChange={(event) => setValues((current) => ({ ...current, openingTisHours: event.target.value }))} disabled={submitting} placeholder="Desconocido" /></label>
                 <label className="aircraft-lifecycle-notes"><span>Notas</span><textarea value={values.notes} onChange={(event) => setValues((current) => ({ ...current, notes: event.target.value }))} disabled={submitting} /></label>
               </>
             ) : null}

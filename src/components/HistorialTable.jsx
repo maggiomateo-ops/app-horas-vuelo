@@ -5,6 +5,7 @@ const NUMERIC_COLUMNS = new Set([
   "tiempoTotalEnServicio",
   "tiempoDeVuelo",
   "durg",
+  "utilizacionDesdeInicio",
 ]);
 
 function formatNumericValue(value) {

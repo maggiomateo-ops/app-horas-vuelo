@@ -163,15 +163,20 @@ function HistorialesPanel({
   const visibleRows = activeHistorial !== 'aeronave' && installation ? installation.rows : historiales[currentTab.responseKey];
   const currentRows = getLatestRecords(visibleRows, recordsLimit);
 
-  const displayColumns = installation && activeHistorial === 'helice'
-    ? HISTORIAL_COLUMNS.helice.map(c => ({...c,label:c.key === 'tiempoTotalEnServicio' ? 'TIS casco' : c.key === 'durg' ? 'TIS componente (V1)' : c.label}))
-    : HISTORIAL_COLUMNS[currentTab.id];
+  const displayColumns = useMemo(() => {
+    const columns = activeHistorial === 'helice' && installation
+      ? HISTORIAL_COLUMNS.helice.map(c => ({ ...c, label: c.key === 'tiempoTotalEnServicio' ? 'TIS casco' : c.key === 'durg' ? 'TIS componente (V1)' : c.label }))
+      : HISTORIAL_COLUMNS[currentTab.id];
+    return installation?.trackingStartedOn && activeHistorial !== 'aeronave'
+      ? [...columns, { key: 'utilizacionDesdeInicio', label: 'TIS registrado desde inicio' }]
+      : columns;
+  }, [activeHistorial, currentTab.id, installation]);
 
   const printableSections = useMemo(() => {
     if (printMode === "all") {
       const componentSections = (historiales.componentHistories || []).map(i => ({
         id:i.componentInstallationId,label:`${i.componentType === 'ENGINE' ? 'Motor' : 'Hélice'} ${i.positionIndex} · ${i.installedOn || 'Fecha desconocida'}`,
-        columns:i.componentType === 'ENGINE' ? HISTORIAL_COLUMNS.motor : HISTORIAL_COLUMNS.helice.map(c=>({...c,label:c.key==='durg'?'TIS componente (V1)':c.key==='tiempoTotalEnServicio'?'TIS casco':c.label})),
+        columns:[...(i.componentType === 'ENGINE' ? HISTORIAL_COLUMNS.motor : HISTORIAL_COLUMNS.helice.map(c=>({...c,label:c.key==='durg'?'TIS componente (V1)':c.key==='tiempoTotalEnServicio'?'TIS casco':c.label}))), ...(i.trackingStartedOn ? [{key:'utilizacionDesdeInicio',label:'TIS registrado desde inicio'}] : [])],
         rows:getLatestRecords(i.rows,recordsLimit),
       }));
       return [{id:'aeronave',label:'Aeronave',columns:HISTORIAL_COLUMNS.aeronave,rows:getLatestRecords(historiales.historialAeronave,recordsLimit)},
@@ -237,7 +242,9 @@ function HistorialesPanel({
             {installations.map(i=><option key={i.componentInstallationId} value={i.componentInstallationId}>{i.componentType === 'ENGINE' ? 'Motor' : 'Hélice'} {i.positionIndex} · {i.installedOn || 'Fecha desconocida'}{i.removedOn ? ` → ${i.removedOn}` : ' · Actual'}</option>)}
           </select>
         </label> : null}
-        {activeHistorial !== 'aeronave' && installations.length ? <p className="dashboard-meta">TIS V1 del período de instalación. Un acumulado desconocido sigue vacío. No representa tiempo de operación, TSN ni TSO; esas referencias requieren otro contrato.</p> : null}
+        {activeHistorial !== 'aeronave' && installations.length ? <p className="dashboard-meta">{installation?.trackingStartedOn
+          ? `Seguimiento desde ${installation.trackingStartedOn} · Referencia TIS: ${installation.trackingReferenceTisHours == null ? 'desconocida' : `${installation.trackingReferenceTisHours} h`} · Utilización V1 atribuida desde TIS del casco.`
+          : 'TIS V1 del período de instalación. No equivale a tiempo de operación, TSN ni TSO.'}</p> : null}
         <div className="history-topbar">
           <div className="history-subtabs" role="tablist" aria-label="Tipos de historial">
             {HISTORIAL_TABS.map((tab) => (

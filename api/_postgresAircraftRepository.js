@@ -94,6 +94,8 @@ const CURRENT_CONFIGURATION_JOIN = `
           'installedOn', installation.installed_on,
           'removedOn', installation.removed_on,
           'openingTisHours', installation.opening_tis_hours,
+          'trackingStartedOn', to_jsonb(installation)->>'tracking_started_on',
+          'trackingReferenceTisHours', (to_jsonb(installation)->>'tracking_reference_tis_hours')::numeric,
           'firstApplicableFlightId', installation.first_applicable_flight_id,
           'lastApplicableFlightId', installation.last_applicable_flight_id
         )
@@ -124,6 +126,8 @@ const CURRENT_CONFIGURATION_JOIN = `
           'installedOn', installation.installed_on,
           'removedOn', installation.removed_on,
           'openingTisHours', installation.opening_tis_hours,
+          'trackingStartedOn', to_jsonb(installation)->>'tracking_started_on',
+          'trackingReferenceTisHours', (to_jsonb(installation)->>'tracking_reference_tis_hours')::numeric,
           'firstApplicableFlightId', installation.first_applicable_flight_id,
           'lastApplicableFlightId', installation.last_applicable_flight_id
         )

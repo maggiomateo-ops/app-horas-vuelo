@@ -129,6 +129,8 @@ async function loadComponentInstallations(aircraftId) {
         installation.installed_on,
         installation.removed_on,
         installation.opening_tis_hours,
+        to_jsonb(installation)->>'tracking_started_on' AS tracking_started_on,
+        (to_jsonb(installation)->>'tracking_reference_tis_hours')::numeric AS tracking_reference_tis_hours,
         installation.first_applicable_flight_id,
         installation.last_applicable_flight_id,
         installation.created_at,

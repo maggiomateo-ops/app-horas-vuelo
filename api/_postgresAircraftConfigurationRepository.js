@@ -21,6 +21,7 @@ const ALLOWED_INPUT_FIELDS = new Set([
   "engineCount",
   "propellerCount",
   "components",
+  "trackingMode",
 ]);
 const ALLOWED_COMPONENT_FIELDS = new Set([
   "componentType",
@@ -31,6 +32,8 @@ const ALLOWED_COMPONENT_FIELDS = new Set([
   "notes",
   "openingTisHours",
   "installedOn",
+  "trackingStartedOn",
+  "trackingReferenceTisHours",
 ]);
 
 function repositoryError(message, code, statusCode = 500) {
@@ -88,12 +91,12 @@ function normalizeOpeningTisHours(value) {
   return normalized;
 }
 
-function normalizeIsoDate(value) {
+function normalizeIsoDate(value, field = "installedOn") {
   const normalized = String(value || "").trim();
   const match = ISO_DATE_PATTERN.exec(normalized);
   if (!match) {
     throw repositoryError(
-      "installedOn debe tener formato YYYY-MM-DD.",
+      `${field} debe tener formato YYYY-MM-DD.`,
       "INVALID_AIRCRAFT_CONFIGURATION",
       400
     );
@@ -106,7 +109,7 @@ function normalizeIsoDate(value) {
     || parsed.getUTCDate() !== Number(day)
   ) {
     throw repositoryError(
-      "installedOn no es una fecha valida.",
+      `${field} no es una fecha valida.`,
       "INVALID_AIRCRAFT_CONFIGURATION",
       400
     );
@@ -174,8 +177,12 @@ function normalizeComponent(component) {
     model: optionalString(component.model, "model"),
     serialNumber: optionalString(component.serialNumber, "serialNumber"),
     notes: optionalString(component.notes, "notes"),
+    // Installation balance and current tracking reference are different facts.
     openingTisHours: normalizeOpeningTisHours(component.openingTisHours),
-    installedOn: normalizeIsoDate(component.installedOn),
+    installedOn: component.installedOn == null || String(component.installedOn).trim() === ""
+      ? null : normalizeIsoDate(component.installedOn),
+    trackingStartedOn: normalizeIsoDate(component.trackingStartedOn, "trackingStartedOn"),
+    trackingReferenceTisHours: normalizeOpeningTisHours(component.trackingReferenceTisHours),
   };
 }
 
@@ -231,7 +238,18 @@ export function normalizeAircraftConfigurationInput(input) {
       400
     );
   }
+  if ((input.components.length || engineCount + propellerCount === 0) && input.trackingMode !== "CURRENT_REFERENCE") {
+    throw repositoryError("Elegí comenzar desde una referencia actual.", "INVALID_AIRCRAFT_CONFIGURATION", 400);
+  }
   const components = input.components.map(normalizeComponent);
+  for (const component of components) {
+    if (component.installedOn && component.trackingStartedOn < component.installedOn) {
+      throw repositoryError("El seguimiento no puede comenzar antes de la instalación conocida.", "INVALID_AIRCRAFT_CONFIGURATION", 400);
+    }
+    if (component.openingTisHours !== null) {
+      throw repositoryError("El alta desde referencia actual no admite TIS al instalar.", "INVALID_AIRCRAFT_CONFIGURATION", 400);
+    }
+  }
   if (components.length > 0) {
     if (components.length !== engineCount + propellerCount) {
       throw repositoryError(
@@ -267,6 +285,8 @@ function mapExistingInstallation(row) {
     manufacturer: row.manufacturer ?? null,
     model: row.model ?? null,
     serialNumber: row.serial_number ?? null,
+    trackingStartedOn: row.tracking_started_on ?? null,
+    trackingReferenceTisHours: row.tracking_reference_tis_hours == null ? null : Number(row.tracking_reference_tis_hours),
     installedOn: row.installed_on instanceof Date
       ? row.installed_on.toISOString().slice(0, 10)
       : String(row.installed_on || "") || null,
@@ -369,6 +389,8 @@ export function createPostgresAircraftConfigurationRepository({
             component.serial_number,
             installation.installed_on,
             installation.opening_tis_hours,
+            to_jsonb(installation)->>'tracking_started_on' AS tracking_started_on,
+            (to_jsonb(installation)->>'tracking_reference_tis_hours')::numeric AS tracking_reference_tis_hours,
             component.status AS component_status
           FROM app.component_installations installation
           JOIN app.components component
@@ -390,6 +412,14 @@ export function createPostgresAircraftConfigurationRepository({
         installations = assertExistingTopology(existingInstallationRows, normalizedInput);
       } else {
         assertCreateComponents(normalizedInput);
+        const { rows: schemaRows } = await client.query(`
+          SELECT count(*)::integer AS field_count FROM information_schema.columns
+          WHERE table_schema = 'app' AND table_name = 'component_installations'
+            AND column_name IN ('tracking_started_on', 'tracking_reference_tis_hours')
+        `);
+        if (Number(schemaRows[0]?.field_count) !== 2) {
+          throw repositoryError("El inicio de seguimiento requiere la extensión V1 pendiente de aprobación.", "AIRCRAFT_TRACKING_SCHEMA_REQUIRED", 409);
+        }
         installations = [];
       }
 
@@ -441,11 +471,13 @@ export function createPostgresAircraftConfigurationRepository({
             INSERT INTO app.component_installations (
               component_installation_id, component_id, aircraft_id,
               position_index, installed_on, removed_on, opening_tis_hours,
+              tracking_started_on, tracking_reference_tis_hours,
               first_applicable_flight_id, last_applicable_flight_id,
               created_by_user_id, created_at, updated_at
             ) VALUES (
               $1::uuid, $2::uuid, $3::uuid,
               $4::smallint, $5::date, NULL, $6::numeric,
+              $8::date, $9::numeric,
               NULL, NULL,
               $7::uuid, transaction_timestamp(), transaction_timestamp()
             )
@@ -458,6 +490,8 @@ export function createPostgresAircraftConfigurationRepository({
             component.installedOn,
             component.openingTisHours,
             normalizedUserId,
+            component.trackingStartedOn,
+            component.trackingReferenceTisHours,
           ]
         );
         installations.push({
@@ -470,6 +504,8 @@ export function createPostgresAircraftConfigurationRepository({
           serialNumber: component.serialNumber,
           installedOn: component.installedOn,
           openingTisHours: component.openingTisHours,
+          trackingStartedOn: component.trackingStartedOn,
+          trackingReferenceTisHours: component.trackingReferenceTisHours,
         });
       }
 

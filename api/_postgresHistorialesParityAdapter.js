@@ -189,7 +189,7 @@ function adjustmentDate(adjustment) {
   return dateText(adjustment.effective_date);
 }
 
-function buildRunningTotals(flights, openingValue, adjustments = []) {
+function buildRunningTotals(flights, openingValue, adjustments = [], strictUnknown = false) {
   const totals = new Map();
   let current = asNumber(openingValue);
   const pending = [...adjustments];
@@ -227,6 +227,7 @@ function buildRunningTotals(flights, openingValue, adjustments = []) {
     });
 
     const tis = asNumber(flight.time_in_service_hours);
+    if (strictUnknown && tis === null) current = null;
     if (current !== null && tis !== null) {
       current += tis;
     }
@@ -257,9 +258,11 @@ function applicableFlightsForInstallation(flights, installation) {
     : -1;
   const installedOn = dateText(installation.installed_on);
   const removedOn = dateText(installation.removed_on);
+  const trackingStartedOn = dateText(installation.tracking_started_on);
 
   return flights.filter((flight, index) => {
     const flightDate = dateText(flight.flight_date);
+    if (trackingStartedOn && (!flightDate || flightDate < trackingStartedOn)) return false;
 
     if (firstIndex >= 0 && index < firstIndex) {
       return false;
@@ -383,16 +386,31 @@ function buildComputacionRows(
 export function buildInstallationHistories(flights, installations, aircraftTotals, provenanceByFlight = new Map()) {
   return installations.map(installation => {
     const applicable = applicableFlightsForInstallation(flights, installation);
-    const totals = buildRunningTotals(applicable, installation.opening_tis_hours, installation.adjustments);
+    const tracking = Boolean(installation.tracking_started_on);
+    const reference = tracking ? asNumber(installation.tracking_reference_tis_hours) : asNumber(installation.opening_tis_hours);
+    const adjustments = tracking
+      ? (installation.adjustments || []).filter(a => adjustmentDate(a) >= dateText(installation.tracking_started_on))
+      : installation.adjustments;
+    const totals = buildRunningTotals(applicable, reference, adjustments, tracking);
+    // This is explicitly relative V1 TIS attribution, never an unknown absolute balance replaced with zero.
+    const trackedTotals = tracking ? buildRunningTotals(applicable, 0, [], true) : new Map();
+    const rows = installation.component_type === 'ENGINE'
+      ? buildEngineHistoryRows(applicable, totals, provenanceByFlight)
+      : buildPropellerHistoryRows(applicable, aircraftTotals, totals, provenanceByFlight);
+    if (tracking) rows.forEach((row, index) => {
+      row.utilizacionDesdeInicio = trackedTotals.get(String(applicable[index].flight_id));
+    });
     return {
       componentInstallationId: installation.component_installation_id,
       componentType: installation.component_type,
       positionIndex: Number(installation.position_index),
       installedOn: dateText(installation.installed_on) || null,
       removedOn: dateText(installation.removed_on) || null,
-      rows: installation.component_type === 'ENGINE'
-        ? buildEngineHistoryRows(applicable, totals, provenanceByFlight)
-        : buildPropellerHistoryRows(applicable, aircraftTotals, totals, provenanceByFlight),
+      trackingStartedOn: dateText(installation.tracking_started_on) || null,
+      trackingReferenceTisHours: tracking ? reference : null,
+      trackedUtilizationHours: tracking ? (applicable.length ? trackedTotals.get(String(applicable.at(-1).flight_id)) : 0) : null,
+      absoluteTisHours: applicable.length ? totals.get(String(applicable.at(-1).flight_id)) : reference,
+      rows,
     };
   });
 }
@@ -419,26 +437,13 @@ export async function getLegacyHistorialesShapeFromPostgres({ userId, aircraftId
   const installations = componentSources.component_installations || [];
   const engine = primaryInstallation(installations, "ENGINE");
   const propeller = primaryInstallation(installations, "PROPELLER");
-  const engineFlights = engine ? applicableFlightsForInstallation(flights, engine) : [];
-  const propellerFlights = propeller ? applicableFlightsForInstallation(flights, propeller) : [];
-  const engineTotals = engine
-    ? buildRunningTotals(engineFlights, engine.opening_tis_hours, engine.adjustments)
-    : new Map();
-  const propellerTotals = propeller
-    ? buildRunningTotals(propellerFlights, propeller.opening_tis_hours, propeller.adjustments)
-    : new Map();
-
+  const componentHistories = buildInstallationHistories(flights, installations, aircraftTotals, provenanceByFlight);
   const result = {
     ok: true,
-    componentHistories: buildInstallationHistories(flights, installations, aircraftTotals, provenanceByFlight),
+    componentHistories,
     historialAeronave: buildAircraftHistoryRows(flights, aircraftTotals, provenanceByFlight),
-    historialMotor: buildEngineHistoryRows(engineFlights, engineTotals, provenanceByFlight),
-    historialHelice: buildPropellerHistoryRows(
-      propellerFlights,
-      aircraftTotals,
-      propellerTotals,
-      provenanceByFlight
-    ),
+    historialMotor: componentHistories.find(i => i.componentInstallationId === engine?.component_installation_id)?.rows || [],
+    historialHelice: componentHistories.find(i => i.componentInstallationId === propeller?.component_installation_id)?.rows || [],
   };
 
   if (String(mode || "").toLowerCase() !== "historiales") {

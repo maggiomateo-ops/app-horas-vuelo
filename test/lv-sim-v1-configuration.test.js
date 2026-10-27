@@ -9,8 +9,8 @@ import { getPostgresPool, withPostgresTransaction } from '../api/_postgres.js';
 const SIM='96d849aa-2827-4aa3-b02b-6671577444a7';
 const dates=['2024-02-29','2025-01-02','2023-07-03','2026-09-04'];
 function draft(engines=2,propellers=2){
-  return {propulsionType:'PISTON',engineCount:String(engines),propellerCount:String(propellers),
-    components:syncComponents([],engines,propellers).map((c,i)=>({...c,installedOn:dates[i%4]}))};
+  return {trackingMode:'CURRENT_REFERENCE',propulsionType:'PISTON',engineCount:String(engines),propellerCount:String(propellers),
+    components:syncComponents([],engines,propellers).map((c,i)=>({...c,installedOn:dates[i%4],trackingStartedOn:"2026-10-20"}))};
 }
 function normalized(values){const {action: _action,...input}=buildAircraftConfigurationPayload(SIM,values);return normalizeAircraftConfigurationInput(input);}
 
@@ -36,17 +36,17 @@ test('V1 N posiciones y contadores/identidad desconocidos no se inventan ni here
 });
 test('V1 fechas obligatorias e imposibles fallan en cliente y servidor sin fallback global',()=>{
   for(const date of ['',null,'2025-02-29','2026-04-31','2026-13-01','2026-2-03']){
-    const values=draft();values.installedOn='2026-01-01';values.components[1].installedOn=date;
-    assert.ok(validateAircraftConfiguration(values).errors['ENGINE:2.installedOn']);
+    const values=draft();values.installedOn='2026-01-01';values.components[1].trackingStartedOn=date;
+    assert.ok(validateAircraftConfiguration(values).errors['ENGINE:2.trackingStartedOn']);
     assert.throws(()=>normalized(values),{code:'INVALID_AIRCRAFT_CONFIGURATION'});
   }
 });
 test('V1 décimas conservadas; negativos, precisión extra y campos TSN/TSO no compatibles rechazados',()=>{
-  const values=draft();values.components[0].openingTisHours='12.3';
-  assert.equal(normalized(values).components[0].openingTisHours,12.3);
+  const values=draft();values.components[0].trackingReferenceTisHours='12.3';
+  assert.equal(normalized(values).components[0].trackingReferenceTisHours,12.3);
   for(const hours of ['-1','12.34','NaN','1000000000']){
-    values.components[0].openingTisHours=hours;
-    assert.ok(validateAircraftConfiguration(values).errors['ENGINE:1.openingTisHours']);
+    values.components[0].trackingReferenceTisHours=hours;
+    assert.ok(validateAircraftConfiguration(values).errors['ENGINE:1.trackingReferenceTisHours']);
     assert.throws(()=>normalized(values));
   }
   const {action: _action,...input}=buildAircraftConfigurationPayload(SIM,draft());
@@ -56,7 +56,7 @@ test('V1 décimas conservadas; negativos, precisión extra y campos TSN/TSO no c
 test('V1 posiciones repetidas o faltantes no pasan revisión ni contrato de servidor',()=>{
   const values=draft();values.components[1]={...values.components[0]};
   assert.equal(validateAircraftConfiguration(values).valid,false);
-  const input={aircraftId:SIM,propulsionType:'PISTON',engineCount:2,propellerCount:2,components:values.components};
+  const input={trackingMode:'CURRENT_REFERENCE',aircraftId:SIM,propulsionType:'PISTON',engineCount:2,propellerCount:2,components:values.components};
   assert.throws(()=>normalizeAircraftConfigurationInput(input),{code:'INVALID_AIRCRAFT_TOPOLOGY'});
   assert.equal(validateAircraftConfiguration({...draft(),components:[]}).valid,false);
 });

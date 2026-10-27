@@ -395,6 +395,8 @@ export async function resolveComponentInstallationForFlightDate(
        AND component.component_type = $2
        AND installation.position_index = $3
        AND (installation.installed_on IS NULL OR installation.installed_on <= $4::date)
+       AND (to_jsonb(installation)->>'tracking_started_on' IS NULL
+         OR (to_jsonb(installation)->>'tracking_started_on')::date <= $4::date)
        AND (installation.removed_on IS NULL OR $4::date < installation.removed_on)
      ORDER BY installation.component_installation_id
      FOR SHARE OF installation, component`,

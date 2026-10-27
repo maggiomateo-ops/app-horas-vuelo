@@ -143,12 +143,12 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
     },
   ];
 
-  if ((historiales.componentHistories || []).some(i=>i.positionIndex>1)) {
+  if ((historiales.componentHistories || []).some(i=>i.positionIndex>1 || i.trackingStartedOn)) {
     totalCards.splice(1,3,...historiales.componentHistories.filter(i=>!i.removedOn).map(i=>{
       const last=i.rows[i.rows.length-1];
-      const raw=i.componentType==='ENGINE'?last?.tiempoTotalEnServicio:last?.durg;
-      return {title:`${i.componentType==='ENGINE'?'Motor':'Hélice'} ${i.positionIndex} · TIS V1`,
-        value:raw==null||raw===''?'—':String(raw),suffix:'hrs',detail:'No equivale a tiempo de operación, TSN o TSO'};
+      const raw=i.trackingStartedOn ? i.trackedUtilizationHours : i.componentType==='ENGINE'?last?.tiempoTotalEnServicio:last?.durg;
+      return {title:`${i.componentType==='ENGINE'?'Motor':'Hélice'} ${i.positionIndex} · ${i.trackingStartedOn ? 'Desde inicio' : 'TIS V1'}`,
+        value:raw==null||raw===''?'—':String(raw),suffix:'hrs',detail:i.trackingStartedOn ? `Referencia TIS: ${i.trackingReferenceTisHours == null ? 'desconocida' : `${i.trackingReferenceTisHours} h`} · TIS atribuido del casco` : 'No equivale a tiempo de operación, TSN o TSO'};
     }));
   }
 

@@ -31,13 +31,13 @@ test('incomplete four-date input matrix cannot pass V1 review or server normaliz
   const values=plan.configuration;
   const validation=validateAircraftConfiguration(values);
   assert.equal(validation.valid,false);
-  assert.deepEqual(Object.keys(validation.errors).sort(),[...plan.missingInputs].sort());
+  assert.deepEqual(Object.keys(validation.errors).sort(),['trackingMode',...plan.configuration.components.map(c=>`${c.componentType}:${c.positionIndex}.trackingStartedOn`)].sort());
   const {action:_action,...input}=buildAircraftConfigurationPayload(plan.aircraftId,values);
   assert.throws(()=>normalizeAircraftConfigurationInput(input),{code:'INVALID_AIRCRAFT_CONFIGURATION'});
 });
 test('explicit synthetic test dates permit four V1 positions without manufacturing identity or counters',()=>{
   const dates=['2024-02-29','2025-02-28','2023-01-01','2026-01-02'];
-  const values={...plan.configuration,components:plan.configuration.components.map((c,i)=>({...c,installedOn:dates[i]}))};
+  const values={...plan.configuration,trackingMode:"CURRENT_REFERENCE",components:plan.configuration.components.map((c,i)=>({...c,installedOn:dates[i],trackingStartedOn:"2026-10-20"}))};
   assert.equal(validateAircraftConfiguration(values).valid,true);
   const {action:_action,...input}=buildAircraftConfigurationPayload(plan.aircraftId,values);
   const normalized=normalizeAircraftConfigurationInput(input);

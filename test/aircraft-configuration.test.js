@@ -33,6 +33,8 @@ function component(componentType, positionIndex, overrides = {}) {
     serialNumber: null,
     notes: null,
     openingTisHours: null,
+    trackingStartedOn: "2026-10-20",
+    trackingReferenceTisHours: null,
     installedOn: "2026-09-29",
     ...overrides,
   };
@@ -41,12 +43,13 @@ function component(componentType, positionIndex, overrides = {}) {
 function validInput(overrides = {}) {
   return {
     aircraftId: AIRCRAFT_ID,
+    trackingMode: "CURRENT_REFERENCE",
     propulsionType: "PISTON",
     engineCount: 2,
     propellerCount: 2,
     components: [
       component("ENGINE", 1),
-      component("ENGINE", 2, { manufacturer: "Lycoming", openingTisHours: 12.3 }),
+      component("ENGINE", 2, { manufacturer: "Lycoming", trackingReferenceTisHours: 12.3 }),
       component("PROPELLER", 1),
       component("PROPELLER", 2),
     ],
@@ -85,6 +88,7 @@ function createMockRepository({
   const client = {
     async query(text, params = []) {
       queries.push({ text, params });
+      if (text.includes("information_schema.columns")) return { rows: [{field_count: 2}] };
       if (text.includes("FROM app.aircraft aircraft")) {
         return { rows: ownerAllowed ? [{ aircraft_id: AIRCRAFT_ID }] : [] };
       }
@@ -213,13 +217,13 @@ test("exige posiciones 1..N, fecha explícita y preserva identidad/TIS desconoci
   assert.throws(
     () => normalizeAircraftConfigurationInput(validInput({
       components: [
-        component("ENGINE", 1, { installedOn: "" }),
+        component("ENGINE", 1, { trackingStartedOn: "" }),
         component("ENGINE", 2),
         component("PROPELLER", 1),
         component("PROPELLER", 2),
       ],
     })),
-    /installedOn/
+    /trackingStartedOn/
   );
 });
 
@@ -538,19 +542,21 @@ test("lectura Postgres limita el resumen a installations activas", async () => {
 
 test("UI genera componentes dinámicos, fecha explícita y unknown como NULL", () => {
   const values = {
+    trackingMode: "CURRENT_REFERENCE",
     propulsionType: "TURBOJET",
     engineCount: "2",
     propellerCount: "0",
     installedOn: "2026-09-29",
     components: [
-      { componentType: "ENGINE", positionIndex: 1, manufacturer: "GE", openingTisHours: "", installedOn: "2026-09-29" },
-      { componentType: "ENGINE", positionIndex: 2, serialNumber: "SN-2", openingTisHours: "5.5", installedOn: "2026-09-28" },
+      { componentType: "ENGINE", positionIndex: 1, manufacturer: "GE", trackingReferenceTisHours: "", trackingStartedOn: "2026-10-20", installedOn: "2026-09-29" },
+      { componentType: "ENGINE", positionIndex: 2, serialNumber: "SN-2", trackingReferenceTisHours: "5.5", trackingStartedOn: "2026-10-20", installedOn: "2026-09-28" },
     ],
   };
   assert.equal(validateAircraftConfiguration(values).valid, true);
   const payload = buildAircraftConfigurationPayload(AIRCRAFT_ID, values);
   assert.deepEqual(Object.keys(payload), [
     "action",
+    "trackingMode",
     "aircraftId",
     "propulsionType",
     "engineCount",
@@ -560,7 +566,7 @@ test("UI genera componentes dinámicos, fecha explícita y unknown como NULL", (
   assert.equal(payload.components.length, 2);
   assert.equal(payload.components[0].openingTisHours, null);
   assert.equal(payload.components[0].installedOn, "2026-09-29");
-  assert.equal(payload.components[1].openingTisHours, 5.5);
+  assert.equal(payload.components[1].trackingReferenceTisHours, 5.5);
 });
 
 test("UI de adopcion envia solo topologia y no solicita identidad fisica/TIS", async () => {
@@ -648,7 +654,7 @@ test("persistencia V1 2+2 conserva cada fecha, identidad y NULL en instalaciones
   const inserts = mock.queries.filter(q => q.text.includes("INSERT INTO app.component_installations"));
   assert.equal(inserts.length, 4);
   assert.deepEqual(inserts.map(q => q.params[4]), dates);
-  assert.deepEqual(inserts.map(q => q.params[5]), [null, 12.3, null, null]);
+  assert.deepEqual(inserts.map(q => q.params[8]), [null, 12.3, null, null]);
   assert.ok(inserts.every(q => q.params[2] === AIRCRAFT_ID));
   assert.equal(new Set(inserts.map(q => q.params[0])).size, 4);
   const audit = mock.queries.filter(q => q.text.includes("INSERT INTO audit.audit_events"));

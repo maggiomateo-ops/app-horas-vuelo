@@ -54,7 +54,7 @@ function sanitizeAircraft(aircraft) {
 
 async function loadAircrafts(userId, session) {
   const source = resolveDataSource("AIRCRAFT_DATA_SOURCE");
-  if (process.env.VERCEL_GIT_COMMIT_REF === 'codex/lv-sim-v1-functional'
+  if (['codex/lv-sim-v1-functional', 'codex/lv-sim-v1-tracking-reference'].includes(process.env.VERCEL_GIT_COMMIT_REF)
     && !functionalCanaryAllows({source,session,aircraftId:'96d849aa-2827-4aa3-b02b-6671577444a7'})) {
     throw Object.assign(new Error('Este Preview TEST todavía no está configurado para LV-SIM.'),{statusCode:503,code:'FUNCTIONAL_PREVIEW_NOT_CONFIGURED'});
   }

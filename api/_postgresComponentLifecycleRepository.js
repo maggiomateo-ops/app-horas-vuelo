@@ -226,6 +226,8 @@ function mapInstallation(row) {
     serialNumber: row.serial_number ?? null,
     notes: row.notes ?? null,
     status: row.component_status,
+    trackingStartedOn: row.tracking_started_on ?? null,
+    trackingReferenceTisHours: row.tracking_reference_tis_hours == null ? null : Number(row.tracking_reference_tis_hours),
     installedOn: row.installed_on instanceof Date
       ? row.installed_on.toISOString().slice(0, 10)
       : row.installed_on ?? null,
@@ -319,6 +321,8 @@ async function lockActivePosition(client, aircraftId, componentType, positionInd
         installation.installed_on,
         installation.removed_on,
         installation.opening_tis_hours,
+        to_jsonb(installation)->>'tracking_started_on' AS tracking_started_on,
+        (to_jsonb(installation)->>'tracking_reference_tis_hours')::numeric AS tracking_reference_tis_hours,
         installation.first_applicable_flight_id,
         installation.last_applicable_flight_id
       FROM app.component_installations installation
@@ -358,6 +362,8 @@ async function lockInstallation(client, aircraftId, componentInstallationId) {
         installation.installed_on,
         installation.removed_on,
         installation.opening_tis_hours,
+        to_jsonb(installation)->>'tracking_started_on' AS tracking_started_on,
+        (to_jsonb(installation)->>'tracking_reference_tis_hours')::numeric AS tracking_reference_tis_hours,
         installation.first_applicable_flight_id,
         installation.last_applicable_flight_id
       FROM app.component_installations installation

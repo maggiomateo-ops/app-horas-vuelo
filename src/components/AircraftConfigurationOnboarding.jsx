@@ -24,6 +24,7 @@ function ComponentFields({ component, disabled, errors, onChange }) {
     <fieldset className="aircraft-component-card" disabled={disabled}>
       <legend>{label} {component.positionIndex}</legend>
       <div className="aircraft-component-grid">
+        <p className="configuration-section-label">Instalación física <small>Datos opcionales</small></p>
         <label>
           <span>Fabricante</span>
           <input
@@ -49,28 +50,31 @@ function ComponentFields({ component, disabled, errors, onChange }) {
           />
         </label>
         <label>
-          <span>Fecha de instalación *</span>
-          <input type="date" required value={component.installedOn}
+          <span>Instalación física · fecha</span>
+          <input type="date" value={component.installedOn}
             aria-invalid={Boolean(errors[`${key}.installedOn`])}
             aria-describedby={errors[`${key}.installedOn`] ? `${key}-date-error` : undefined}
             onChange={(event) => onChange("installedOn", event.target.value)} />
           {errors[`${key}.installedOn`] ? <small id={`${key}-date-error`} className="component-field-error">{errors[`${key}.installedOn`]}</small> : null}
         </label>
+        <p className="configuration-section-label">Inicio del seguimiento</p>
         <label>
-          <span>TIS al instalar (h)</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.1"
-            value={component.openingTisHours}
-            onChange={(event) => onChange("openingTisHours", event.target.value)}
+          <span>Fecha de inicio *</span>
+          <input type="date" required value={component.trackingStartedOn}
+            aria-invalid={Boolean(errors[`${key}.trackingStartedOn`])}
+            onChange={(event) => onChange("trackingStartedOn", event.target.value)} />
+          {errors[`${key}.trackingStartedOn`] ? <small className="component-field-error">{errors[`${key}.trackingStartedOn`]}</small> : null}
+        </label>
+        <label>
+          <span>Referencia TIS al iniciar (h)</span>
+          <input type="number" inputMode="decimal" min="0" step="0.1"
+            value={component.trackingReferenceTisHours}
+            onChange={(event) => onChange("trackingReferenceTisHours", event.target.value)}
             placeholder="Desconocido"
-            aria-invalid={Boolean(errors[`${key}.openingTisHours`])}
-            aria-describedby={`${key}-tis-help${errors[`${key}.openingTisHours`] ? ` ${key}-tis-error` : ""}`}
-          />
-          <small id={`${key}-tis-help`}>TIS del componente al instalarlo. No es TSN ni TSO. Vacío si no se conoce.</small>
-          {errors[`${key}.openingTisHours`] ? <small id={`${key}-tis-error`} className="component-field-error">{errors[`${key}.openingTisHours`]}</small> : null}
+            aria-invalid={Boolean(errors[`${key}.trackingReferenceTisHours`])}
+            aria-describedby={`${key}-tis-help`} />
+          <small id={`${key}-tis-help`}>Referencia V1, no TSN ni TSO. Vacío si no se conoce.</small>
+          {errors[`${key}.trackingReferenceTisHours`] ? <small className="component-field-error">{errors[`${key}.trackingReferenceTisHours`]}</small> : null}
         </label>
       </div>
     </fieldset>
@@ -91,6 +95,7 @@ export default function AircraftConfigurationOnboarding({
   const [showForm, setShowForm] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [values, setValues] = useState({
+    trackingMode: "",
     propulsionType: "",
     engineCount: "",
     propellerCount: "",
@@ -181,6 +186,7 @@ export default function AircraftConfigurationOnboarding({
               <small>
                 Instalado: {installation.installedOn || "Desconocido"} · TIS al instalar: {installation.openingTisHours == null ? "Desconocido" : `${installation.openingTisHours} h`}
               </small>
+              {installation.trackingStartedOn ? <small>Seguimiento desde {installation.trackingStartedOn} · Referencia TIS: {installation.trackingReferenceTisHours == null ? "Desconocida" : `${installation.trackingReferenceTisHours} h`}</small> : null}
             </article>
           ))}
         </div>
@@ -287,6 +293,16 @@ export default function AircraftConfigurationOnboarding({
 
           {errors.topology ? <p className="flight-form-message is-error">{errors.topology}</p> : null}
 
+          {!adoptingExisting ? <fieldset className="aircraft-component-card configuration-tracking-choice" disabled={submitting}>
+            <legend>¿Cómo vas a comenzar a registrar las horas?</legend>
+            <label><input type="radio" name="trackingMode" value="CURRENT_REFERENCE"
+              checked={values.trackingMode === "CURRENT_REFERENCE"}
+              onChange={() => { setValues(current => ({ ...current, trackingMode: "CURRENT_REFERENCE" })); setReviewing(false); setErrors({}); }} />
+              Comenzar desde una referencia actual
+            </label>
+            <small>La importación histórica estará disponible en una etapa posterior. La fecha física y la identidad pueden quedar desconocidas.</small>
+            {errors.trackingMode ? <p role="alert">{errors.trackingMode}</p> : null}
+          </fieldset> : null}
           {!adoptingExisting ? (
             <div className="aircraft-component-list">
               {values.components.map((component) => (
@@ -314,7 +330,9 @@ export default function AircraftConfigurationOnboarding({
                   {values.components.map((component) => (
                     <li key={componentKey(component.componentType, component.positionIndex)}>
                       <strong>{component.componentType === "ENGINE" ? "Motor" : "Hélice"} {component.positionIndex}</strong>
-                      <span>{component.installedOn} · {component.openingTisHours === "" ? "TIS desconocido" : `${component.openingTisHours} h TIS`}</span>
+                      <span>{[component.manufacturer, component.model, component.serialNumber].filter(Boolean).join(" · ") || "Identidad desconocida"}</span>
+                      <span>Instalación: {component.installedOn || "Desconocida"} · Seguimiento: {component.trackingStartedOn}</span>
+                      <span>Referencia TIS: {component.trackingReferenceTisHours === "" ? "Desconocida" : `${component.trackingReferenceTisHours} h`}</span>
                     </li>
                   ))}
                 </ul>
