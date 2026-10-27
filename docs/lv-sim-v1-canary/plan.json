@@ -1,0 +1,53 @@
+{
+  "status": "PREPARATION_ONLY_NOT_AUTHORIZED_TO_EXECUTE",
+  "baseCommit": "f5e8934861cd1dd83b897af7f4c66f51c1cff452",
+  "aircraftId": "96d849aa-2827-4aa3-b02b-6671577444a7",
+  "target": { "projectId": "red-pine-78283204", "branchId": "br-billowing-band-b62jj1ab", "database": "app_horas", "environment": "preview" },
+  "identity": {
+    "observed": { "manufacturer": "Cessna", "model": "C182", "serialState": "EXISTING_REQUIRES_EXPLICIT_REVIEW" },
+    "proposed": { "manufacturer": "Piper", "model": "PA-34 Seneca" },
+    "writeOperation": "PROPOSED_NOT_IMPLEMENTED",
+    "serialDecision": "PENDING_DO_NOT_INFER_OR_COPY",
+    "auditActionProposed": "AIRCRAFT_IDENTITY_CORRECTED"
+  },
+  "configuration": {
+    "propulsionType": "PISTON", "engineCount": 2, "propellerCount": 2,
+    "components": [
+      { "componentType": "ENGINE", "positionIndex": 1, "manufacturer": null, "model": null, "serialNumber": null, "openingTisHours": null, "installedOn": null },
+      { "componentType": "ENGINE", "positionIndex": 2, "manufacturer": null, "model": null, "serialNumber": null, "openingTisHours": null, "installedOn": null },
+      { "componentType": "PROPELLER", "positionIndex": 1, "manufacturer": null, "model": null, "serialNumber": null, "openingTisHours": null, "installedOn": null },
+      { "componentType": "PROPELLER", "positionIndex": 2, "manufacturer": null, "model": null, "serialNumber": null, "openingTisHours": null, "installedOn": null }
+    ]
+  },
+  "environmentProposal": {
+    "apply": false,
+    "branch": "codex/lv-sim-v1-configuration",
+    "target": "preview",
+    "nonSecretOverrides": {
+      "GOOGLE_USER_RESOLUTION_SOURCE": "POSTGRES",
+      "AIRCRAFT_DATA_SOURCE": "POSTGRES",
+      "SETTINGS_DATA_SOURCE": "POSTGRES",
+      "HISTORIALES_DATA_SOURCE": "POSTGRES",
+      "FLIGHT_DATA_SOURCE": "POSTGRES",
+      "POSTGRES_AIRCRAFT_CONFIGURATION_WRITES_ENABLED": "true",
+      "POSTGRES_AIRCRAFT_CONFIGURATION_CANARY_AIRCRAFT_ID": "96d849aa-2827-4aa3-b02b-6671577444a7",
+      "POSTGRES_FLIGHT_WRITES_ENABLED": "false",
+      "POSTGRES_OWNERSHIP_WRITES_ENABLED": "false",
+      "POSTGRES_COMPONENT_LIFECYCLE_WRITES_ENABLED": "false",
+      "POSTGRES_ONBOARDING_WRITES_ENABLED": "false",
+      "POSTGRES_SETTINGS_WRITES_ENABLED": "false",
+      "POSTGRES_TRACKING_WRITES_ENABLED": "false",
+      "POSTGRES_SQUAWK_WRITES_ENABLED": "false",
+      "POSTGRES_SELF_SERVICE_USER_CREATION_ENABLED": "false",
+      "USER_MANAGEMENT_WRITES_ENABLED": "false"
+    },
+    "managedBindingsRequired": ["DATABASE_URL", "SESSION_SECRET", "GOOGLE_CLIENT_ID", "VITE_GOOGLE_CLIENT_ID"],
+    "authenticationPrerequisites": ["GOOGLE_AUTH_ENABLED=true", "VITE_GOOGLE_AUTH_ENABLED=true", "Approved Google authorized origin for the exact Preview hostname"],
+    "forbiddenBindings": ["DATABASE_MIGRATION_URL"],
+    "databaseBindingRequirements": { "role": "app_horas_runtime", "database": "app_horas", "projectId": "red-pine-78283204", "branchId": "br-billowing-band-b62jj1ab", "copyCredentialValues": false },
+    "costs": "NO_CHANGES"
+  },
+  "executionAuthorization": false,
+  "missingInputs": ["ENGINE:1.installedOn", "ENGINE:2.installedOn", "PROPELLER:1.installedOn", "PROPELLER:2.installedOn"],
+  "postconditions": { "configurations": 1, "engineInstallations": 2, "propellerInstallations": 2, "uniqueComponents": 4, "configurationAuditEvents": 1, "repeatStatus": 409 }
+}
