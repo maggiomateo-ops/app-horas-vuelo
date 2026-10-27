@@ -1,8 +1,9 @@
 // Local visual review only. All app API calls are intercepted; simulated mutations never leave the page.
 import { createServer } from 'vite';
 
+const reviewPort = Number(process.env.REVIEW_PORT || 5173);
 const server = await createServer({
-  server: { host: '127.0.0.1', port: 5173, strictPort: true },
+  server: { host: '127.0.0.1', port: reviewPort, strictPort: true },
   plugins: [{
     name: 'settings-v2-local-review',
     configureServer(server) {
@@ -25,11 +26,19 @@ const onboardingAvailable = ['enabled','disabled'].includes(params.get('onboardi
 const onboardingEnabled = params.get('onboarding') === 'enabled';
 const aircraft = (id,matricula) => ({aircraft_id:id,matricula,modelo:'PA-28 Demo',rol:role,ownershipConfigured:true,configurationConfigured:true,flightWritesReady:true,trackingAvailable:true,configuration:{propulsionType:'PISTON',engineCount:1,propellerCount:1},componentInstallations:[],componentInstallationHistory:[], ...(params.get('setup') === '1' ? {configurationSetupAvailable:params.get('canary')==='1'?id==='fixture-two'&&role==='OWNER':true,configurationConfigured:params.get('canary')==='1'?false:id==='fixture-one',ownershipConfigured:id==='fixture-one',flightWritesReady:id==='fixture-one',configuration:id==='fixture-one'?{propulsionType:'PISTON',engineCount:1,propellerCount:1}:null,ownershipInterests:role==='OWNER'?(id==='fixture-one'?[{ownershipInterestId:'fictional-legal',partyId:'fictional-party',partyType:'PERSON',name:'Titular ficticio',share:100,effectiveFrom:'2026-01-01T00:00:00Z',effectiveTo:null,partyStatus:'ACTIVE'}]:[]):undefined}: {})});
 let reviewAircrafts = params.get('count') === '0' ? [] : [aircraft('fixture-one',params.get('canary')==='1'?'LV-MHZ':'LV-DEMO'), ...(params.get('count') === '1' ? [] : [aircraft('fixture-two',params.get('setup')==='1'?'LV-SIM':'LV-OTHER')])];
+if(params.get('functional')==='1') reviewAircrafts=reviewAircrafts.map((a,i)=>i===1?{...a,aircraft_id:'96d849aa-2827-4aa3-b02b-6671577444a7',fabricante:'Cessna',modelo:'C182',identityCorrectionAvailable:true,identityCorrectionSnapshot:{manufacturer:'Cessna',model:'C182',serialNumber:'FIXTURE-ONLY',updatedAt:'2026-10-20T12:00:00.123456Z'},configurationSetupAvailable:false,ownershipSetupAvailable:true,flightMutationAvailable:false}:a);
+
 if(params.get('simulateSetup')==='1') {
   const saved=JSON.parse(sessionStorage.getItem('lv-sim-v1-fixture')||'null');
   if(saved) reviewAircrafts=reviewAircrafts.map(a=>a.aircraft_id===saved.aircraft_id?saved:a);
 }
 window.fetch = async (url,options={}) => {
+  if(url === '/api/aircraft' && options.method === 'PATCH' && params.get('functional')==='1' && JSON.parse(options.body).action==='correct-pending-aircraft-identity') {
+    const input=JSON.parse(options.body);const a=reviewAircrafts.find(a=>a.aircraft_id===input.aircraftId);
+    if(!a||a.rol!=='OWNER') return Response.json({ok:false},{status:403});
+    Object.assign(a,{fabricante:'Piper',modelo:'PA-34 Seneca',identityCorrectionAvailable:false,configurationSetupAvailable:true,identityCorrectionSnapshot:{manufacturer:'Piper',model:'PA-34 Seneca',serialNumber:null,updatedAt:'2026-10-26T12:00:00.654321Z'}});
+    return Response.json({ok:true,identity:a.identityCorrectionSnapshot});
+  }
   if(url === '/api/aircraft' && options.method === 'POST') {
     if(!onboardingEnabled) return Response.json({ok:false,code:'POSTGRES_ONBOARDING_WRITES_NOT_ENABLED'},{status:503});
     if(params.get('failure') === '1') return Response.json({ok:false,error:'Simulated failure'},{status:503});
@@ -70,4 +79,4 @@ window.fetch = async (url,options={}) => {
   }],
 });
 await server.listen();
-console.log('Fictional, isolated review: http://127.0.0.1:5173/__settings-review?edit=1&theme=light');
+console.log(`Fictional, isolated review: http://127.0.0.1:${reviewPort}/__settings-review?edit=1&theme=light`);

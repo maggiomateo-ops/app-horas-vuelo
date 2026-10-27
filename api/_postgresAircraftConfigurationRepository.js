@@ -310,7 +310,7 @@ export function createPostgresAircraftConfigurationRepository({
     return transaction(async (client) => {
       const { rows: accessRows } = await client.query(
         `
-          SELECT aircraft.aircraft_id
+          SELECT aircraft.aircraft_id, aircraft.manufacturer, aircraft.model
           FROM app.aircraft aircraft
           JOIN app.aircraft_memberships membership
             ON membership.aircraft_id = aircraft.aircraft_id
@@ -332,6 +332,12 @@ export function createPostgresAircraftConfigurationRepository({
           "AIRCRAFT_CONFIGURATION_ACCESS_DENIED",
           403
         );
+      }
+
+      if (process.env.POSTGRES_V1_FUNCTIONAL_CANARY_AIRCRAFT_ID !== undefined
+        && (normalizedInput.aircraftId !== '96d849aa-2827-4aa3-b02b-6671577444a7'
+          || accessRows[0].manufacturer !== 'Piper' || accessRows[0].model !== 'PA-34 Seneca')) {
+        throw repositoryError('Corregí la identidad de LV-SIM antes de configurar los componentes.', 'AIRCRAFT_IDENTITY_NOT_READY', 409);
       }
 
       const { rows: existingRows } = await client.query(

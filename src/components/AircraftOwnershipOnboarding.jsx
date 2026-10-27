@@ -28,11 +28,14 @@ function OwnerFieldError({ message }) {
 
 export default function AircraftOwnershipOnboarding({
   ownershipConfigured,
+  explicit = false,
+  canSubmit = true,
   onComplete,
   onUnauthorized,
 }) {
+  const [accepted,setAccepted] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [owners, setOwners] = useState(() => [createOwner()]);
+  const [owners, setOwners] = useState(() => [createOwner(explicit ? "PERSON" : "CREATOR_PERSON")]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const guardRef = useRef(null);
@@ -49,16 +52,18 @@ export default function AircraftOwnershipOnboarding({
       )
     );
     setSubmitError("");
+    setAccepted(false);
   };
 
   const handleRemove = (ownerId) => {
     setOwners((current) => removeOwnershipOwner(current, ownerId));
     setSubmitError("");
+    setAccepted(false);
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!validation.valid || !guardRef.current.tryStart()) return;
+    if (!canSubmit || (explicit && !accepted) || !validation.valid || !guardRef.current.tryStart()) return;
 
     setSubmitting(true);
     setSubmitError("");
@@ -82,8 +87,7 @@ export default function AircraftOwnershipOnboarding({
         <p className="dashboard-eyebrow">Configuración inicial</p>
         <h2>Propiedad configurada</h2>
         <p>
-          La propiedad legal ya existe, pero la aeronave todavía no está habilitada
-          para registrar vuelos. Contactá a soporte para revisar su configuración.
+          La propiedad está configurada. El registro de vuelos aún no está habilitado para esta aeronave.
         </p>
       </section>
     );
@@ -100,7 +104,7 @@ export default function AircraftOwnershipOnboarding({
         </p>
       </header>
 
-      {!showForm ? (
+      {!canSubmit ? <p role="status">La configuración de propiedad está deshabilitada para esta aeronave.</p> : !showForm ? (
         <button
           type="button"
           className="form-action-button is-primary ownership-primary-action"
@@ -234,11 +238,12 @@ export default function AircraftOwnershipOnboarding({
             <p className="flight-form-message is-error" role="alert">{submitError}</p>
           ) : null}
 
+          {explicit ? <label><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)} disabled={submitting} /> Confirmo los titulares y porcentajes declarados para esta aeronave de prueba; no se deducen de mi acceso OWNER.</label> : null}
           <div className="ownership-submit-actions">
             <button
               type="submit"
               className="form-action-button is-primary"
-              disabled={submitting || !validation.valid}
+              disabled={submitting || !validation.valid || (explicit && !accepted) || !canSubmit}
             >
               {submitting ? "Guardando propiedad..." : "Confirmar propiedad"}
             </button>

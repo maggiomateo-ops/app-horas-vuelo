@@ -1,5 +1,6 @@
+import { requireFunctionalCanaryIfConfigured, functionalCanaryAllows } from './_functionalCanary.js';
 import { correctAircraftIdentityInPostgres } from './_postgresAircraftIdentityRepository.js';
-import { identityCorrectionReadAllowed } from './_aircraftIdentityCorrectionPolicy.js';
+import { identityCorrectionReadAllowed, requireIdentityCorrection } from './_aircraftIdentityCorrectionPolicy.js';
 import { requireAircraftConfigurationCanary, aircraftConfigurationSetupAvailable } from "./_aircraftConfigurationCanary.js";
 import { requireAuth } from "./_auth.js";
 import { getAircraftsForUser } from "./_adminRepository.js";
@@ -10,6 +11,7 @@ import { createAircraftOnboardingInPostgres } from "./_postgresOnboardingReposit
 import { setupInitialAircraftOwnershipInPostgres } from "./_postgresOwnershipRepository.js";
 import { mutateComponentLifecycleInPostgres } from "./_postgresComponentLifecycleRepository.js";
 import {
+  resolvePostgresFlightWriteCapability,
   resolvePostgresOnboardingWriteCapability,
   resolvePostgresOwnershipWriteCapability,
   resolvePostgresComponentLifecycleWriteCapability,
@@ -27,6 +29,9 @@ const AIRCRAFT_RESPONSE_FIELDS = [
   "fabricante",
   "modelo",
   "identityCorrectionSnapshot",
+  "identityCorrectionAvailable",
+  "ownershipSetupAvailable",
+  "flightMutationAvailable",
   "rol",
   "ownershipConfigured",
   "ownershipInterests",
@@ -57,9 +62,13 @@ async function loadAircrafts(userId, session) {
   const aircrafts = await getAircraftsForUserFromPostgres(userId);
   return aircrafts.map((aircraft) => ({
     ...aircraft,
+    identityCorrectionAvailable: (() => { try { requireIdentityCorrection({source,session,aircraftId:aircraft.aircraft_id}); return aircraft.rol === 'OWNER' && aircraft.configurationConfigured === false && aircraft.identityCorrectionSnapshot?.manufacturer === 'Cessna' && aircraft.identityCorrectionSnapshot?.model === 'C182'; } catch { return false; } })(),
+    ownershipSetupAvailable: aircraft.rol === 'OWNER' && !aircraft.ownershipConfigured && resolvePostgresOwnershipWriteCapability(source).enabled && functionalCanaryAllows({source,session,aircraftId:aircraft.aircraft_id}),
+    flightMutationAvailable: resolvePostgresFlightWriteCapability('POSTGRES').enabled && functionalCanaryAllows({source,session,aircraftId:aircraft.aircraft_id}) && aircraft.configurationConfigured && aircraft.flightWritesReady,
     identityCorrectionSnapshot: aircraft.rol === 'OWNER' && identityCorrectionReadAllowed({ source, session, aircraftId: aircraft.aircraft_id })
       ? aircraft.identityCorrectionSnapshot : undefined,
-    configurationSetupAvailable: aircraftConfigurationSetupAvailable({ source, session, aircraft }),
+    configurationSetupAvailable: aircraftConfigurationSetupAvailable({ source, session, aircraft })
+      && (process.env.POSTGRES_V1_FUNCTIONAL_CANARY_AIRCRAFT_ID === undefined || (functionalCanaryAllows({source,session,aircraftId:aircraft.aircraft_id}) && aircraft.fabricante === 'Piper' && aircraft.modelo === 'PA-34 Seneca')),
     componentLifecycleWritesAvailable: componentLifecycleCapability.enabled,
     trackingAvailable,
   }));
@@ -152,6 +161,7 @@ export default async function handler(req, res) {
 
     if (action === "setup-configuration") {
       try {
+        requireFunctionalCanaryIfConfigured({source,session,aircraftId:req.body?.aircraftId});
         requireAircraftConfigurationCanary({ source, session, aircraftId: req.body?.aircraftId });
       } catch (error) {
         return res.status(error.statusCode || 503).json({
@@ -195,6 +205,7 @@ export default async function handler(req, res) {
       });
     }
     try {
+      requireFunctionalCanaryIfConfigured({source,session,aircraftId:req.body?.aircraftId});
       const result = await setupInitialAircraftOwnershipInPostgres({ userId, input: req.body });
       return res.status(201).json(result);
     } catch (error) {

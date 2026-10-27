@@ -80,6 +80,7 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
           historialAeronave: Array.isArray(response.historialAeronave)
             ? response.historialAeronave
             : [],
+          componentHistories: Array.isArray(response.componentHistories) ? response.componentHistories : [],
           historialMotor: Array.isArray(response.historialMotor)
             ? response.historialMotor
             : [],
@@ -141,6 +142,15 @@ function DashboardPanel({ aircraftId, onUnauthorized, settings, settingsLoading,
       detail: "Ultimo valor registrado",
     },
   ];
+
+  if ((historiales.componentHistories || []).some(i=>i.positionIndex>1)) {
+    totalCards.splice(1,3,...historiales.componentHistories.filter(i=>!i.removedOn).map(i=>{
+      const last=i.rows[i.rows.length-1];
+      const raw=i.componentType==='ENGINE'?last?.tiempoTotalEnServicio:last?.durg;
+      return {title:`${i.componentType==='ENGINE'?'Motor':'Hélice'} ${i.positionIndex} · TIS V1`,
+        value:raw==null||raw===''?'—':String(raw),suffix:'hrs',detail:'No equivale a tiempo de operación, TSN o TSO'};
+    }));
+  }
 
   const ownerUsageSections = metrics.ownerUsageSections.map((section) => ({
     ...section,

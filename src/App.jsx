@@ -1,4 +1,5 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import AircraftIdentityCorrection from './components/AircraftIdentityCorrection';
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import DashboardPanel from "./components/DashboardPanel";
 import AircraftOwnershipOnboarding from "./components/AircraftOwnershipOnboarding";
@@ -447,7 +448,8 @@ function App() {
         : null)
     : null;
   const canMutateFlights =
-    canEditAircraft && selectedAircraftOnboarding?.flightWritesReady !== false;
+    canEditAircraft && selectedAircraftOnboarding?.flightWritesReady !== false
+    && selectedAircraft?.flightMutationAvailable !== false;
   const hasCanonicalConfigurationState =
     typeof selectedAircraft?.configurationConfigured === "boolean";
   const configurationConfigured = selectedAircraft?.configurationConfigured === true;
@@ -1345,6 +1347,8 @@ function App() {
       </nav>
 
       <div className="app-content">
+      <AircraftIdentityCorrection key={`identity-${selectedAircraft.aircraft_id}`} aircraft={selectedAircraft}
+        onReadback={setAircrafts} onUnauthorized={handleUnauthorized} />
       {effectiveActiveMainTab === "registro" ? hasCanonicalConfigurationState && !configurationConfigured ? (
         canConfigureAircraft ? (
           <AircraftConfigurationOnboarding
@@ -1484,7 +1488,9 @@ function App() {
               <div className="flight-field-grid flight-field-grid-three">
                 <div className={`flight-field ${formErrors.aceiteAgregado ? "has-error" : ""}`}>
                   <FieldLabel htmlFor="aceiteAgregado" title="Aceite agregado" />
-                  <input id="aceiteAgregado" type="number" inputMode="decimal" min="0" step="any" value={aceiteAgregado} onChange={(e) => { setAceiteAgregado(e.target.value); clearFieldError("aceiteAgregado"); }} placeholder="0" className={placeholderClassName} />
+                  <input disabled={Number(selectedAircraft.configuration?.engineCount)>1} id="aceiteAgregado" type="number" inputMode="decimal" min="0" step="any" value={aceiteAgregado} onChange={(e) => { setAceiteAgregado(e.target.value); clearFieldError("aceiteAgregado"); }} placeholder="0" className={placeholderClassName} />
+                  {Number(selectedAircraft.configuration?.engineCount)>1 ? <small>En bimotor, el aceite requiere atribución por motor. Dejalo desconocido en este flujo V1.
+                    {aceiteAgregado !== '' ? <button type="button" onClick={()=>setAceiteAgregado('')}>Dejar desconocido</button> : null}</small> : null}
                   <FieldError name="aceiteAgregado" />
                 </div>
                 <div className={`flight-field ${formErrors.combustibleTanqueIzquierdo ? "has-error" : ""}`}>
@@ -1613,6 +1619,9 @@ function App() {
             />
           ) : null}
           <AircraftOwnershipOnboarding
+            key={`ownership-${selectedAircraft.aircraft_id}`}
+            explicit={selectedAircraft.aircraft_id === '96d849aa-2827-4aa3-b02b-6671577444a7'}
+            canSubmit={selectedAircraft.ownershipSetupAvailable !== false}
             ownershipConfigured={selectedAircraftOnboarding?.ownershipConfigured === true}
             onComplete={handleConfigureOwnership}
             onUnauthorized={handleUnauthorized}

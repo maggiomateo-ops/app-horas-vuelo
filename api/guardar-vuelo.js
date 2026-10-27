@@ -1,3 +1,4 @@
+import { requireFunctionalCanaryIfConfigured } from './_functionalCanary.js';
 import { requireAuth } from "./_auth.js";
 import { DATA_SOURCE, resolveDataSource } from "./_dataSource.js";
 import { saveFlightFromSheets } from "./_flightRepository.js";
@@ -31,6 +32,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ ok: false, error: "Falta aircraft_id o LEGACY_AIRCRAFT_ID." });
     }
 
+    requireFunctionalCanaryIfConfigured({source,session,aircraftId});
     if (source === DATA_SOURCE.POSTGRES) {
       await requireCanonicalOwnershipReadyForFlightFromPostgres({ userId, aircraftId });
       const capability = resolvePostgresFlightWriteCapability(source);

@@ -1,3 +1,4 @@
+import { requireFunctionalCanaryIfConfigured, functionalCanaryAllows, functionalPilotWritesEnabled } from './_functionalCanary.js';
 import { getSessionUserId, requireAuth } from "./_auth.js";
 import { getAircraftPilotsForManager } from "./_adminRepository.js";
 import { DATA_SOURCE } from "./_dataSource.js";
@@ -83,6 +84,8 @@ export default async function handler(req, res) {
         source,
         canManagePilots: result.canManagePilots,
       });
+      const scoped = functionalCanaryAllows({source,session,aircraftId});
+      if (capabilities) capabilities.can_create_pilot = result.canManagePilots === true && scoped && (userManagementWritesEnabled() || functionalPilotWritesEnabled({source,session,aircraftId}));
       const publicResult = { ...result };
       delete publicResult.canManagePilots;
       return res.status(200).json({
@@ -107,7 +110,10 @@ export default async function handler(req, res) {
     }
   }
 
-  if (!userManagementWritesEnabled()) {
+  const mutationAircraftId = String(req.body?.aircraft_id || '').trim();
+  try { requireFunctionalCanaryIfConfigured({source,session,aircraftId:mutationAircraftId}); }
+  catch (error) { return res.status(error.statusCode).json({ok:false,code:error.code,error:error.message}); }
+  if (!userManagementWritesEnabled() && !functionalPilotWritesEnabled({source,session,aircraftId:mutationAircraftId})) {
     return res.status(503).json({
       ok: false,
       error: "La gestion de pilotos no esta disponible en este momento.",

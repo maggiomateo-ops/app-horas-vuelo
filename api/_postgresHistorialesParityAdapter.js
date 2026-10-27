@@ -270,7 +270,7 @@ function applicableFlightsForInstallation(flights, installation) {
     if (firstIndex < 0 && installedOn && flightDate < installedOn) {
       return false;
     }
-    if (lastIndex < 0 && removedOn && flightDate > removedOn) {
+    if (lastIndex < 0 && removedOn && flightDate >= removedOn) {
       return false;
     }
 
@@ -380,6 +380,23 @@ function buildComputacionRows(
     });
 }
 
+export function buildInstallationHistories(flights, installations, aircraftTotals, provenanceByFlight = new Map()) {
+  return installations.map(installation => {
+    const applicable = applicableFlightsForInstallation(flights, installation);
+    const totals = buildRunningTotals(applicable, installation.opening_tis_hours, installation.adjustments);
+    return {
+      componentInstallationId: installation.component_installation_id,
+      componentType: installation.component_type,
+      positionIndex: Number(installation.position_index),
+      installedOn: dateText(installation.installed_on) || null,
+      removedOn: dateText(installation.removed_on) || null,
+      rows: installation.component_type === 'ENGINE'
+        ? buildEngineHistoryRows(applicable, totals, provenanceByFlight)
+        : buildPropellerHistoryRows(applicable, aircraftTotals, totals, provenanceByFlight),
+    };
+  });
+}
+
 export async function getLegacyHistorialesShapeFromPostgres({ userId, aircraftId, mode }) {
   const [aircraftHistory, componentSources] = await Promise.all([
     getAircraftOperationalHistoryFromPostgres({ userId, aircraftId }),
@@ -413,6 +430,7 @@ export async function getLegacyHistorialesShapeFromPostgres({ userId, aircraftId
 
   const result = {
     ok: true,
+    componentHistories: buildInstallationHistories(flights, installations, aircraftTotals, provenanceByFlight),
     historialAeronave: buildAircraftHistoryRows(flights, aircraftTotals, provenanceByFlight),
     historialMotor: buildEngineHistoryRows(engineFlights, engineTotals, provenanceByFlight),
     historialHelice: buildPropellerHistoryRows(
